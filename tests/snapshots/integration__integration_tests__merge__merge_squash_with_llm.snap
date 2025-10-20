@@ -1,0 +1,37 @@
+---
+source: tests/integration_tests/merge.rs
+info:
+  program: wt
+  args:
+    - merge
+    - main
+    - "--squash"
+  env:
+    CLICOLOR_FORCE: "1"
+    GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
+    GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
+    GIT_CONFIG_GLOBAL: /dev/null
+    GIT_CONFIG_SYSTEM: /dev/null
+    GIT_EDITOR: ""
+    LANG: C
+    LC_ALL: C
+    SOURCE_DATE_EPOCH: "1704067200"
+    WORKTRUNK_LLM__ARGS: "feat: implement user authentication system"
+    WORKTRUNK_LLM__COMMAND: echo
+---
+success: true
+exit_code: 0
+----- stdout -----
+Squashing 2 commits into one...
+Successfully squashed 2 commits into one
+Rebasing onto 'main'...
+Fast-forwarding 'main' to current HEAD...
+Pushing 1 commit to 'main'
+Successfully pushed to 'main'
+Cleaning up worktree...
+Moved to primary worktree and removed worktree
+Path: [REPO]
+Note: Use 'wt remove' (with shell integration) for automatic cd
+
+----- stderr -----
+Warning: LLM generation failed, using deterministic message

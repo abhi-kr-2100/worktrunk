@@ -11,6 +11,24 @@ fn snapshot_merge(test_name: &str, repo: &TestRepo, args: &[&str], cwd: Option<&
     });
 }
 
+/// Helper to create snapshot with custom environment (for LLM testing)
+fn snapshot_merge_with_env(
+    test_name: &str,
+    repo: &TestRepo,
+    args: &[&str],
+    cwd: Option<&std::path::Path>,
+    env_vars: &[(&str, &str)],
+) {
+    let settings = setup_snapshot_settings(repo);
+    settings.bind(|| {
+        let mut cmd = make_snapshot_cmd(repo, "merge", args, cwd);
+        for (key, value) in env_vars {
+            cmd.env(key, value);
+        }
+        assert_cmd_snapshot!(test_name, cmd);
+    });
+}
+
 #[test]
 fn test_merge_fast_forward() {
     let mut repo = TestRepo::new();
@@ -227,5 +245,236 @@ fn test_merge_error_detached_head() {
         &repo,
         &["main"],
         Some(repo.root_path()),
+    );
+}
+
+#[test]
+fn test_merge_squash_deterministic() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create a worktree for main
+    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to add worktree");
+
+    // Create a feature worktree and make multiple commits
+    let feature_wt = repo.add_worktree("feature", "feature");
+
+    std::fs::write(feature_wt.join("file1.txt"), "content 1").expect("Failed to write file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "file1.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "feat: add file 1"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    std::fs::write(feature_wt.join("file2.txt"), "content 2").expect("Failed to write file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "file2.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "fix: update logic"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    std::fs::write(feature_wt.join("file3.txt"), "content 3").expect("Failed to write file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "file3.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "docs: update readme"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    // Merge with squash (no LLM configured - should use deterministic message)
+    snapshot_merge(
+        "merge_squash_deterministic",
+        &repo,
+        &["main", "--squash"],
+        Some(&feature_wt),
+    );
+}
+
+#[test]
+fn test_merge_squash_with_llm() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create a worktree for main
+    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to add worktree");
+
+    // Create a feature worktree and make multiple commits
+    let feature_wt = repo.add_worktree("feature", "feature");
+
+    std::fs::write(feature_wt.join("auth.txt"), "auth module").expect("Failed to write file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "auth.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "feat: add authentication"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    std::fs::write(feature_wt.join("auth.txt"), "auth module updated")
+        .expect("Failed to write file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "auth.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "fix: handle edge case"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    // Configure mock LLM command via environment variable
+    // Use echo to return a fixed message
+    snapshot_merge_with_env(
+        "merge_squash_with_llm",
+        &repo,
+        &["main", "--squash"],
+        Some(&feature_wt),
+        &[
+            ("WORKTRUNK_LLM__COMMAND", "echo"),
+            (
+                "WORKTRUNK_LLM__ARGS",
+                "feat: implement user authentication system",
+            ),
+        ],
+    );
+}
+
+#[test]
+fn test_merge_squash_llm_fallback() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create a worktree for main
+    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to add worktree");
+
+    // Create a feature worktree and make multiple commits
+    let feature_wt = repo.add_worktree("feature", "feature");
+
+    std::fs::write(feature_wt.join("file1.txt"), "content 1").expect("Failed to write file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "file1.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "feat: new feature"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    std::fs::write(feature_wt.join("file2.txt"), "content 2").expect("Failed to write file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "file2.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "fix: bug fix"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    // Configure LLM command that will fail (non-existent command)
+    // Should fall back to deterministic message and print warning
+    snapshot_merge_with_env(
+        "merge_squash_llm_fallback",
+        &repo,
+        &["main", "--squash"],
+        Some(&feature_wt),
+        &[("WORKTRUNK_LLM__COMMAND", "nonexistent-llm-command")],
+    );
+}
+
+#[test]
+fn test_merge_squash_single_commit() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create a worktree for main
+    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to add worktree");
+
+    // Create a feature worktree with only one commit
+    let feature_wt = repo.add_worktree("feature", "feature");
+
+    std::fs::write(feature_wt.join("file1.txt"), "content").expect("Failed to write file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "file1.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "feat: single commit"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    // Merge with squash - should skip squashing since there's only one commit
+    snapshot_merge(
+        "merge_squash_single_commit",
+        &repo,
+        &["main", "--squash"],
+        Some(&feature_wt),
     );
 }

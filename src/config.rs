@@ -3,7 +3,7 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-/// Configuration for worktree path formatting.
+/// Configuration for worktree path formatting and LLM integration.
 ///
 /// The `worktree-path` template is relative to the repository root and supports:
 /// - `{repo}` - Repository name
@@ -23,6 +23,11 @@ use std::path::PathBuf;
 ///
 /// # Repository-namespaced shared directory (avoids conflicts)
 /// worktree-path = "../worktrees/{repo}/{branch}"
+///
+/// # LLM configuration for commit message generation
+/// [llm]
+/// command = "llm"  # Command to invoke LLM (e.g., "llm", "claude")
+/// args = ["-s"]    # Arguments to pass to the command
 /// ```
 ///
 /// Config file location:
@@ -35,12 +40,37 @@ use std::path::PathBuf;
 pub struct WorktrunkConfig {
     #[serde(rename = "worktree-path")]
     pub worktree_path: String,
+
+    #[serde(default)]
+    pub llm: LlmConfig,
+}
+
+/// Configuration for LLM integration
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LlmConfig {
+    /// Command to invoke LLM (e.g., "llm", "claude")
+    #[serde(default)]
+    pub command: Option<String>,
+
+    /// Arguments to pass to the LLM command
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+
+impl Default for LlmConfig {
+    fn default() -> Self {
+        Self {
+            command: None,
+            args: vec![],
+        }
+    }
 }
 
 impl Default for WorktrunkConfig {
     fn default() -> Self {
         Self {
             worktree_path: "../{repo}.{branch}".to_string(),
+            llm: LlmConfig::default(),
         }
     }
 }
@@ -52,7 +82,10 @@ fn get_config_path() -> Option<PathBuf> {
 pub fn load_config() -> Result<WorktrunkConfig, ConfigError> {
     let defaults = WorktrunkConfig::default();
 
-    let mut builder = Config::builder().set_default("worktree-path", defaults.worktree_path)?;
+    let mut builder = Config::builder()
+        .set_default("worktree-path", defaults.worktree_path)?
+        .set_default("llm.command", defaults.llm.command.unwrap_or_default())?
+        .set_default("llm.args", defaults.llm.args)?;
 
     // Add config file if it exists
     if let Some(config_path) = get_config_path()
