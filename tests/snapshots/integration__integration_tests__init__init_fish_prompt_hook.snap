@@ -41,12 +41,12 @@ function _wt_exec
     return $exit_code
 end
 
-# Override wt command to add --internal flag for switch and finish
+# Override wt command to add --internal flag for switch and remove
 function wt
     set -l subcommand $argv[1]
 
     switch $subcommand
-        case switch finish
+        case switch remove
             # Commands that need --internal for directory change support
             _wt_exec $subcommand --internal $argv[2..-1]
         case '*'
@@ -107,11 +107,10 @@ complete -c wt -n "__fish_wt_needs_command" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_needs_command" -s V -l version -d 'Print version'
 complete -c wt -n "__fish_wt_needs_command" -f -a "init" -d 'Generate shell integration code'
 complete -c wt -n "__fish_wt_needs_command" -f -a "list" -d 'List all worktrees'
-complete -c wt -n "__fish_wt_needs_command" -f -a "switch" -d 'Switch to a worktree (creates if doesn\'t exist)'
-complete -c wt -n "__fish_wt_needs_command" -f -a "finish" -d 'Finish current worktree and return to primary'
+complete -c wt -n "__fish_wt_needs_command" -f -a "switch" -d 'Switch to a worktree'
+complete -c wt -n "__fish_wt_needs_command" -f -a "remove" -d 'Finish current worktree, returning to primary if current'
 complete -c wt -n "__fish_wt_needs_command" -f -a "push" -d 'Push changes between worktrees'
-complete -c wt -n "__fish_wt_needs_command" -f -a "merge" -d 'Merge and cleanup worktree'
-complete -c wt -n "__fish_wt_needs_command" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
+complete -c wt -n "__fish_wt_needs_command" -f -a "merge" -d 'Merge worktree into target branch'
 complete -c wt -n "__fish_wt_using_subcommand init" -l cmd -d 'Command prefix (default: wt)' -r
 complete -c wt -n "__fish_wt_using_subcommand init" -l hook -d 'Hook mode (none, prompt)' -r
 complete -c wt -n "__fish_wt_using_subcommand init" -s h -l help -d 'Print help'
@@ -120,21 +119,14 @@ complete -c wt -n "__fish_wt_using_subcommand switch" -s b -l base -d 'Base bran
 complete -c wt -n "__fish_wt_using_subcommand switch" -s c -l create -d 'Create a new branch'
 complete -c wt -n "__fish_wt_using_subcommand switch" -l internal -d 'Use internal mode (outputs directives for shell wrapper)'
 complete -c wt -n "__fish_wt_using_subcommand switch" -s h -l help -d 'Print help'
-complete -c wt -n "__fish_wt_using_subcommand finish" -l internal -d 'Use internal mode (outputs directives for shell wrapper)'
-complete -c wt -n "__fish_wt_using_subcommand finish" -s h -l help -d 'Print help'
+complete -c wt -n "__fish_wt_using_subcommand remove" -l internal -d 'Use internal mode (outputs directives for shell wrapper)'
+complete -c wt -n "__fish_wt_using_subcommand remove" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_using_subcommand push" -l allow-merge-commits -d 'Allow pushing merge commits (non-linear history)'
 complete -c wt -n "__fish_wt_using_subcommand push" -s h -l help -d 'Print help'
-complete -c wt -n "__fish_wt_using_subcommand merge" -s k -l keep -d 'Keep worktree after merging (don\'t finish)'
+complete -c wt -n "__fish_wt_using_subcommand merge" -s k -l keep -d 'Keep worktree after merging (don\'t remove)'
 complete -c wt -n "__fish_wt_using_subcommand merge" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_using_subcommand hook" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_using_subcommand completion" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_using_subcommand complete" -s h -l help -d 'Print help'
-complete -c wt -n "__fish_wt_using_subcommand help; and not __fish_seen_subcommand_from init list switch finish push merge hook completion complete help" -f -a "init" -d 'Generate shell integration code'
-complete -c wt -n "__fish_wt_using_subcommand help; and not __fish_seen_subcommand_from init list switch finish push merge hook completion complete help" -f -a "list" -d 'List all worktrees'
-complete -c wt -n "__fish_wt_using_subcommand help; and not __fish_seen_subcommand_from init list switch finish push merge hook completion complete help" -f -a "switch" -d 'Switch to a worktree (creates if doesn\'t exist)'
-complete -c wt -n "__fish_wt_using_subcommand help; and not __fish_seen_subcommand_from init list switch finish push merge hook completion complete help" -f -a "finish" -d 'Finish current worktree and return to primary'
-complete -c wt -n "__fish_wt_using_subcommand help; and not __fish_seen_subcommand_from init list switch finish push merge hook completion complete help" -f -a "push" -d 'Push changes between worktrees'
-complete -c wt -n "__fish_wt_using_subcommand help; and not __fish_seen_subcommand_from init list switch finish push merge hook completion complete help" -f -a "merge" -d 'Merge and cleanup worktree'
-complete -c wt -n "__fish_wt_using_subcommand help; and not __fish_seen_subcommand_from init list switch finish push merge hook completion complete help" -f -a "help" -d 'Print this message or the help of the given subcommand(s)'
 
 ----- stderr -----

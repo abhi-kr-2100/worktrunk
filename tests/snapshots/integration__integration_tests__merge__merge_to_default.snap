@@ -24,6 +24,6 @@ Successfully pushed to 'main'
 Cleaning up worktree...
 Moved to primary worktree and removed worktree
 Path: [REPO]
-Note: Use 'wt finish' (with shell integration) for automatic cd
+Note: Use 'wt remove' (with shell integration) for automatic cd
 
 ----- stderr -----

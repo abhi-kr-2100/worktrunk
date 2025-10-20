@@ -15,7 +15,7 @@ fn test_completion_command_static() {
     assert!(stdout.contains("__fish_wt_needs_command"));
     assert!(stdout.contains("complete -c wt"));
     assert!(stdout.contains("switch"));
-    assert!(stdout.contains("finish"));
+    assert!(stdout.contains("remove"));
     assert!(stdout.contains("push"));
     assert!(stdout.contains("merge"));
 }
@@ -560,11 +560,11 @@ fn test_complete_finish_command_returns_empty() {
     let temp = TestRepo::new();
     temp.commit("initial");
 
-    // Test completion for finish command (doesn't take arguments)
+    // Test completion for remove command (doesn't take arguments)
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(temp.root_path())
-        .args(&["complete", "wt", "finish", ""])
+        .args(["complete", "wt", "remove", ""])
         .output()
         .unwrap();
 

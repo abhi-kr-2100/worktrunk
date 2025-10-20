@@ -47,9 +47,9 @@ fn test_switch_without_internal() {
     });
 }
 
-/// Test finish command with internal flag
+/// Test remove command with internal flag
 #[test]
-fn test_finish_internal_directive() {
+fn test_remove_internal_directive() {
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -62,17 +62,17 @@ fn test_finish_internal_directive() {
     settings.bind(|| {
         let mut cmd = Command::new(get_cargo_bin("wt"));
         repo.clean_cli_env(&mut cmd);
-        cmd.arg("finish")
+        cmd.arg("remove")
             .arg("--internal")
             .current_dir(repo.root_path());
 
-        assert_cmd_snapshot!("finish_internal_directive", cmd);
+        assert_cmd_snapshot!("remove_internal_directive", cmd);
     });
 }
 
-/// Test finish without internal flag
+/// Test remove without internal flag
 #[test]
-fn test_finish_without_internal() {
+fn test_remove_without_internal() {
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
@@ -82,8 +82,8 @@ fn test_finish_without_internal() {
     settings.bind(|| {
         let mut cmd = Command::new(get_cargo_bin("wt"));
         repo.clean_cli_env(&mut cmd);
-        cmd.arg("finish").current_dir(repo.root_path());
+        cmd.arg("remove").current_dir(repo.root_path());
 
-        assert_cmd_snapshot!("finish_without_internal", cmd);
+        assert_cmd_snapshot!("remove_without_internal", cmd);
     });
 }

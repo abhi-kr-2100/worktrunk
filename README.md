@@ -67,12 +67,12 @@ eval "$(wt init oil)"
 ```
 
 This single command provides:
-- Shell integration for automatic `cd` on `wt switch` and `wt finish`
+- Shell integration for automatic `cd` on `wt switch` and `wt remove`
 - TAB completion for commands, flags, and branch names (Bash, Fish, Zsh, Oil only)
 
 ### What Gets Completed
 
-- **Subcommands**: `wt <TAB>` → shows `list`, `switch`, `finish`, `push`, `merge`
+- **Subcommands**: `wt <TAB>` → shows `list`, `switch`, `remove`, `push`, `merge`
 - **Flags**: `wt switch --<TAB>` → shows `--create`, `--base`, `--internal`
 - **Branch names**: `wt switch <TAB>` → shows branches without worktrees
 - **Target branches**: `wt push <TAB>` → shows all branches
@@ -92,16 +92,16 @@ This single command provides:
 # List all worktrees
 wt list
 
-# Switch to a worktree (creates if doesn't exist)
+# Switch to a worktree
 wt switch feature-branch
 
-# Finish current worktree and return to primary
-wt finish
+# Finish current worktree, returning to primary if current
+wt remove
 
 # Push changes between worktrees
 wt push target-worktree
 
-# Merge and cleanup
+# Merge worktree into target branch
 wt merge main
 ```
 
@@ -112,7 +112,7 @@ wt merge main
 # Use a custom prefix instead of 'wt'
 eval "$(wt init bash --cmd myprefix)"
 
-# Now use: myprefix switch, myprefix finish, etc.
+# Now use: myprefix switch, myprefix remove, etc.
 ```
 
 **Enable prompt hook:**
@@ -191,7 +191,7 @@ wt (Rust binary)
 │   └── wt merge
 ├── Internal commands (for shell wrapper)
 │   ├── wt switch --internal → outputs __WORKTRUNK_CD__ directives
-│   ├── wt finish --internal → outputs __WORKTRUNK_CD__ directives
+│   ├── wt remove --internal → outputs __WORKTRUNK_CD__ directives
 │   └── wt hook prompt → for prompt integration
 └── Shell integration
     └── wt init <shell> → outputs shell wrapper function

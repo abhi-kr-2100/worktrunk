@@ -158,7 +158,7 @@ fn test_e2e_switch_changes_directory(#[case] shell: &str) {
 #[cfg_attr(feature = "tier-2-integration-tests", case("oil"))]
 #[cfg_attr(feature = "tier-2-integration-tests", case("powershell"))]
 #[cfg_attr(feature = "tier-2-integration-tests", case("xonsh"))]
-fn test_e2e_finish_returns_to_main(#[case] shell: &str) {
+fn test_e2e_remove_returns_to_main(#[case] shell: &str) {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
     repo.setup_remote("main");
@@ -176,7 +176,7 @@ fn test_e2e_finish_returns_to_main(#[case] shell: &str) {
         {}
         {}
         wt switch --create my-feature
-        wt finish
+        wt remove
         pwd
         "#,
         path_export_syntax(shell, &bin_path),
@@ -455,7 +455,7 @@ fn test_bash_e2e_multiple_switches() {
         {}
         wt switch --create test-branch
         pwd
-        wt finish
+        wt remove
         pwd
         "#,
         get_cargo_bin("wt").parent().unwrap().to_string_lossy(),
@@ -471,10 +471,10 @@ fn test_bash_e2e_multiple_switches() {
         output
     );
 
-    // Should have returned to main (wt finish should work)
+    // Should have returned to main (wt remove should work)
     assert!(
         output.contains("main"),
-        "Expected wt finish to work, got: {}",
+        "Expected wt remove to work, got: {}",
         output
     );
 }

@@ -16,6 +16,7 @@ use worktrunk::shell;
 #[command(name = "wt")]
 #[command(about = "Git worktree management", long_about = None)]
 #[command(version = env!("VERGEN_GIT_DESCRIBE"))]
+#[command(disable_help_subcommand = true)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -40,7 +41,7 @@ enum Commands {
     /// List all worktrees
     List,
 
-    /// Switch to a worktree (creates if doesn't exist)
+    /// Switch to a worktree
     Switch {
         /// Branch name or worktree path
         branch: String,
@@ -58,8 +59,8 @@ enum Commands {
         internal: bool,
     },
 
-    /// Finish current worktree and return to primary
-    Finish {
+    /// Finish current worktree, returning to primary if current
+    Remove {
         /// Use internal mode (outputs directives for shell wrapper)
         #[arg(long, hide = true)]
         internal: bool,
@@ -75,12 +76,12 @@ enum Commands {
         allow_merge_commits: bool,
     },
 
-    /// Merge and cleanup worktree
+    /// Merge worktree into target branch
     Merge {
         /// Target branch to merge into (defaults to default branch)
         target: Option<String>,
 
-        /// Keep worktree after merging (don't finish)
+        /// Keep worktree after merging (don't remove)
         #[arg(short, long)]
         keep: bool,
     },
@@ -130,7 +131,7 @@ fn main() {
             base,
             internal,
         } => handle_switch(&branch, create, base.as_deref(), internal),
-        Commands::Finish { internal } => handle_finish(internal),
+        Commands::Remove { internal } => handle_remove(internal),
         Commands::Push {
             target,
             allow_merge_commits,
@@ -562,7 +563,7 @@ fn handle_switch(
     Ok(())
 }
 
-fn handle_finish(internal: bool) -> Result<(), GitError> {
+fn handle_remove(internal: bool) -> Result<(), GitError> {
     // Check for uncommitted changes
     if is_dirty()? {
         return Err(GitError::CommandFailed(
@@ -616,7 +617,7 @@ fn handle_finish(internal: bool) -> Result<(), GitError> {
         if !internal {
             println!("Moved to primary worktree and removed worktree");
             println!("Path: {}", primary_worktree_dir.display());
-            println!("Note: Use 'wt finish' (with shell integration) for automatic cd");
+            println!("Note: Use 'wt remove' (with shell integration) for automatic cd");
         }
     } else {
         // In main repo but not on default branch: switch to default
@@ -812,7 +813,7 @@ fn handle_merge(target: Option<&str>, keep: bool) -> Result<(), GitError> {
             .ok_or_else(|| GitError::CommandFailed("Invalid git directory".to_string()))?
             .to_path_buf();
 
-        handle_finish(false)?;
+        handle_remove(false)?;
 
         // Check if we need to switch to target branch
         let new_branch = get_current_branch_in(&primary_worktree_dir)?;
