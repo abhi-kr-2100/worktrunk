@@ -11,9 +11,9 @@ use worktrunk::git::{
     GitError, Worktree, branch_exists_in, count_commits_in, get_ahead_behind_in,
     get_all_branches_in, get_available_branches, get_branch_diff_stats_in, get_changed_files_in,
     get_commit_subjects_in, get_commit_timestamp_in, get_current_branch_in, get_default_branch_in,
-    get_git_common_dir_in, get_merge_base_in, get_working_tree_diff_stats_in, get_worktree_root_in,
-    has_merge_commits_in, has_staged_changes_in, is_ancestor_in, is_dirty_in, is_in_worktree_in,
-    list_worktrees, worktree_for_branch,
+    get_git_common_dir_in, get_merge_base_in, get_repo_root_in, get_working_tree_diff_stats_in,
+    get_worktree_root_in, has_merge_commits_in, has_staged_changes_in, is_ancestor_in, is_dirty_in,
+    is_in_worktree_in, list_worktrees, worktree_for_branch,
 };
 use worktrunk::shell;
 
@@ -498,6 +498,14 @@ fn format_worktree_line(info: &WorktreeInfo, widths: &ColumnWidths) {
     }
 }
 
+fn print_worktree_info(path: &std::path::Path, command: &str) {
+    println!("Path: {}", path.display());
+    println!(
+        "Note: Use 'wt {}' (with shell integration) for automatic cd",
+        command
+    );
+}
+
 fn handle_switch(
     branch: &str,
     create: bool,
@@ -539,13 +547,7 @@ fn handle_switch(
     }
 
     // No existing worktree, create one
-    let git_common_dir = get_git_common_dir_in(Path::new("."))?
-        .canonicalize()
-        .map_err(|e| GitError::CommandFailed(format!("Failed to canonicalize path: {}", e)))?;
-
-    let repo_root = git_common_dir
-        .parent()
-        .ok_or_else(|| GitError::CommandFailed("Invalid git directory".to_string()))?;
+    let repo_root = get_repo_root_in(Path::new("."))?;
 
     let repo_name = repo_root
         .file_name()
@@ -591,8 +593,7 @@ fn handle_switch(
         println!("{} at {}", success_msg, worktree_path.display());
     } else {
         println!("{}", success_msg);
-        println!("Path: {}", worktree_path.display());
-        println!("Note: Use 'wt switch' (with shell integration) for automatic cd");
+        print_worktree_info(&worktree_path, "switch");
     }
 
     Ok(())
@@ -622,13 +623,7 @@ fn handle_remove(internal: bool) -> Result<(), GitError> {
     if in_worktree {
         // In worktree: navigate to primary worktree and remove this one
         let worktree_root = get_worktree_root_in(Path::new("."))?;
-        let common_dir = get_git_common_dir_in(Path::new("."))?
-            .canonicalize()
-            .map_err(|e| GitError::CommandFailed(format!("Failed to canonicalize path: {}", e)))?;
-
-        let primary_worktree_dir = common_dir
-            .parent()
-            .ok_or_else(|| GitError::CommandFailed("Invalid git directory".to_string()))?;
+        let primary_worktree_dir = get_repo_root_in(Path::new("."))?;
 
         if internal {
             println!("__WORKTRUNK_CD__{}", primary_worktree_dir.display());
@@ -651,8 +646,7 @@ fn handle_remove(internal: bool) -> Result<(), GitError> {
 
         if !internal {
             println!("Moved to primary worktree and removed worktree");
-            println!("Path: {}", primary_worktree_dir.display());
-            println!("Note: Use 'wt remove' (with shell integration) for automatic cd");
+            print_worktree_info(&primary_worktree_dir, "remove");
         }
     } else {
         // In main repo but not on default branch: switch to default
@@ -995,13 +989,7 @@ fn handle_merge(target: Option<&str>, squash: bool, keep: bool) -> Result<(), Gi
         println!("Cleaning up worktree...");
 
         // Get primary worktree path before finishing (while we can still run git commands)
-        let common_dir = get_git_common_dir_in(Path::new("."))?
-            .canonicalize()
-            .map_err(|e| GitError::CommandFailed(format!("Failed to canonicalize path: {}", e)))?;
-        let primary_worktree_dir = common_dir
-            .parent()
-            .ok_or_else(|| GitError::CommandFailed("Invalid git directory".to_string()))?
-            .to_path_buf();
+        let primary_worktree_dir = get_repo_root_in(Path::new("."))?;
 
         handle_remove(false)?;
 
@@ -1080,18 +1068,25 @@ fn parse_completion_context(args: &[String]) -> CompletionContext {
     }
 }
 
+fn get_branches_for_completion<F>(get_branches_fn: F) -> Vec<String>
+where
+    F: FnOnce() -> Result<Vec<String>, GitError>,
+{
+    get_branches_fn().unwrap_or_else(|e| {
+        if std::env::var("WT_DEBUG_COMPLETION").is_ok() {
+            eprintln!("completion error: {}", e);
+        }
+        Vec::new()
+    })
+}
+
 fn handle_complete(args: Vec<String>) -> Result<(), GitError> {
     let context = parse_completion_context(&args);
 
     match context {
         CompletionContext::SwitchBranch => {
             // Complete with available branches (excluding those with worktrees)
-            let branches = get_available_branches().unwrap_or_else(|e| {
-                if std::env::var("WT_DEBUG_COMPLETION").is_ok() {
-                    eprintln!("completion error: {}", e);
-                }
-                Vec::new()
-            });
+            let branches = get_branches_for_completion(get_available_branches);
             for branch in branches {
                 println!("{}", branch);
             }
@@ -1100,12 +1095,7 @@ fn handle_complete(args: Vec<String>) -> Result<(), GitError> {
         | CompletionContext::MergeTarget
         | CompletionContext::BaseFlag => {
             // Complete with all branches
-            let branches = get_all_branches_in(Path::new(".")).unwrap_or_else(|e| {
-                if std::env::var("WT_DEBUG_COMPLETION").is_ok() {
-                    eprintln!("completion error: {}", e);
-                }
-                Vec::new()
-            });
+            let branches = get_branches_for_completion(|| get_all_branches_in(Path::new(".")));
             for branch in branches {
                 println!("{}", branch);
             }

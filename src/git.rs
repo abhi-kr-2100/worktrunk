@@ -265,6 +265,26 @@ pub fn get_git_dir_in(path: &std::path::Path) -> Result<PathBuf, GitError> {
     Ok(PathBuf::from(stdout.trim()))
 }
 
+/// Get the canonicalized repository root directory (parent of .git) for a repository at the given path.
+///
+/// This function:
+/// - Retrieves the git common directory
+/// - Canonicalizes the path (resolves symlinks and relative paths)
+/// - Returns the parent directory (the repository root)
+///
+/// The canonicalization is important for worktree operations as it ensures
+/// consistent path handling across symlinks and relative references.
+pub fn get_repo_root_in(path: &std::path::Path) -> Result<PathBuf, GitError> {
+    let git_common_dir = get_git_common_dir_in(path)?
+        .canonicalize()
+        .map_err(|e| GitError::CommandFailed(format!("Failed to canonicalize path: {}", e)))?;
+
+    git_common_dir
+        .parent()
+        .ok_or_else(|| GitError::CommandFailed("Invalid git directory".to_string()))
+        .map(|p| p.to_path_buf())
+}
+
 /// Find the worktree path for a given branch, if one exists
 pub fn worktree_for_branch(branch: &str) -> Result<Option<PathBuf>, GitError> {
     let worktrees = list_worktrees()?;
