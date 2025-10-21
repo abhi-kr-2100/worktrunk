@@ -9,6 +9,7 @@ info:
     - main
     - feature-with-base
   env:
+    CLICOLOR_FORCE: "1"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
@@ -21,8 +22,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-Created new branch and worktree for 'feature-with-base'
-Path: [REPO]/../main.feature-with-base
+Created new branch and worktree for 'feature-with-base' at [REPO]/../main.feature-with-base
 Note: Use 'wt switch' (with shell integration) for automatic cd
 
 ----- stderr -----

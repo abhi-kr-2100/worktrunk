@@ -23,11 +23,7 @@ pub fn handle_merge(target: Option<&str>, squash: bool, keep: bool) -> Result<()
     }
 
     // Check for uncommitted changes
-    if repo.is_dirty()? {
-        return Err(GitError::CommandFailed(format_error(
-            "Working tree has uncommitted changes. Commit or stash them first.",
-        )));
-    }
+    repo.ensure_clean_working_tree()?;
 
     // Squash commits if requested
     if squash {

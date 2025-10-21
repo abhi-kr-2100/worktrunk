@@ -76,18 +76,20 @@ pub fn handle_switch(
 
     // Output success message
     let success_msg = if create {
-        format!("Created new branch and worktree for '{}'", branch)
+        format!(
+            "Created new branch and worktree for '{}' at {}",
+            branch,
+            worktree_path.display()
+        )
     } else {
-        format!("Added worktree for existing branch '{}'", branch)
+        format!(
+            "Added worktree for existing branch '{}' at {}",
+            branch,
+            worktree_path.display()
+        )
     };
 
-    if internal {
-        println!("__WORKTRUNK_CD__{}", worktree_path.display());
-        println!("{} at {}", success_msg, worktree_path.display());
-    } else {
-        println!("{}", success_msg);
-        print_worktree_info(&worktree_path, "switch");
-    }
+    output_with_cd(internal, &worktree_path, &success_msg, "switch");
 
     Ok(())
 }
@@ -96,11 +98,7 @@ pub fn handle_remove(internal: bool) -> Result<(), GitError> {
     let repo = Repository::current();
 
     // Check for uncommitted changes
-    if repo.is_dirty()? {
-        return Err(GitError::CommandFailed(format_error(
-            "Working tree has uncommitted changes. Commit or stash them first.",
-        )));
-    }
+    repo.ensure_clean_working_tree()?;
 
     // Get current state
     let current_branch = repo.current_branch()?;
@@ -294,4 +292,21 @@ fn print_worktree_info(path: &std::path::Path, command: &str) {
 
 fn format_warning(msg: &str) -> String {
     worktrunk::error_format::format_warning(msg)
+}
+
+/// Output message with optional CD directive for internal mode.
+///
+/// In internal mode: prints CD directive and message
+/// In normal mode: prints message and shell integration note
+fn output_with_cd(internal: bool, path: &std::path::Path, message: &str, command: &str) {
+    if internal {
+        println!("__WORKTRUNK_CD__{}", path.display());
+        println!("{}", message);
+    } else {
+        println!("{}", message);
+        println!(
+            "Note: Use 'wt {}' (with shell integration) for automatic cd",
+            command
+        );
+    }
 }

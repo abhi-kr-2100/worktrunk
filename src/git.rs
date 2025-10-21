@@ -178,6 +178,18 @@ impl Repository {
         Ok(!stdout.trim().is_empty())
     }
 
+    /// Ensure the working tree is clean (no uncommitted changes).
+    ///
+    /// Returns an error if there are uncommitted changes.
+    pub fn ensure_clean_working_tree(&self) -> Result<(), GitError> {
+        if self.is_dirty()? {
+            return Err(GitError::CommandFailed(crate::error_format::format_error(
+                "Working tree has uncommitted changes. Commit or stash them first.",
+            )));
+        }
+        Ok(())
+    }
+
     /// Get the worktree root directory (top-level of the working tree).
     pub fn worktree_root(&self) -> Result<PathBuf, GitError> {
         let stdout = self.run_command(&["rev-parse", "--show-toplevel"])?;
