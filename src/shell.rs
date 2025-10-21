@@ -135,6 +135,86 @@ impl Shell {
             }
         }
     }
+
+    /// Check if shell integration is configured in any shell's config file
+    ///
+    /// Returns the path to the first config file with integration if found.
+    /// This helps detect the "configured but not restarted shell" state.
+    ///
+    /// This function is prefix-agnostic - it detects integration patterns regardless
+    /// of what cmd_prefix was used during configuration (wt, worktree, etc).
+    pub fn is_integration_configured() -> Option<PathBuf> {
+        use std::fs;
+        use std::io::{BufRead, BufReader};
+
+        let home = PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".to_string()));
+
+        // Check common shell config files for integration patterns
+        let config_files = vec![
+            // Bash
+            home.join(".bashrc"),
+            home.join(".bash_profile"),
+            home.join(".profile"),
+            // Zsh
+            home.join(".zshrc"),
+            std::env::var("ZDOTDIR")
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| home.clone())
+                .join(".zshrc"),
+            // Nushell
+            home.join(".config/nushell/config.nu"),
+            // Elvish
+            home.join(".config/elvish/rc.elv"),
+            // Xonsh
+            home.join(".xonshrc"),
+            // Powershell
+            home.join(".config/powershell/Microsoft.PowerShell_profile.ps1"),
+        ];
+
+        // Check standard config files for eval pattern (any prefix)
+        for path in config_files {
+            if !path.exists() {
+                continue;
+            }
+
+            if let Ok(file) = fs::File::open(&path) {
+                let reader = BufReader::new(file);
+                for line in reader.lines().map_while(Result::ok) {
+                    let trimmed = line.trim();
+                    // Match: eval "$(anything init bash/zsh/etc)"
+                    // This catches both wt and custom prefixes
+                    if (trimmed.starts_with("eval \"$(") || trimmed.starts_with("eval '$("))
+                        && trimmed.contains(" init ")
+                    {
+                        return Some(path);
+                    }
+                }
+            }
+        }
+
+        // Check Fish conf.d directory for any .fish files (Fish integration)
+        let fish_conf_d = home.join(".config/fish/conf.d");
+        if fish_conf_d.exists()
+            && let Ok(entries) = fs::read_dir(&fish_conf_d)
+        {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("fish")
+                    && let Ok(content) = fs::read_to_string(&path)
+                {
+                    // Look for function definitions with switch/remove/merge handling
+                    if content.contains("function ")
+                        && content.contains("switch")
+                        && content.contains("__WORKTRUNK_CD__")
+                    {
+                        return Some(path);
+                    }
+                }
+            }
+        }
+
+        None
+    }
 }
 
 /// Shell integration configuration

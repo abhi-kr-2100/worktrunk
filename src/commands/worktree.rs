@@ -70,7 +70,24 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use worktrunk::config::{ProjectConfig, WorktrunkConfig};
 use worktrunk::git::{GitError, Repository};
+use worktrunk::shell::Shell;
 use worktrunk::styling::{format_error, format_error_with_bold, format_hint};
+
+/// Generate hint message for shell integration setup
+///
+/// Returns a hint message based on whether shell integration is configured:
+/// - If configured but not active: provides exact source command
+/// - If not configured: suggests running configure-shell
+fn shell_integration_hint() -> String {
+    if let Some(config_path) = Shell::is_integration_configured() {
+        format!(
+            "\n\nShell integration configured. Restart your shell or run: source {}",
+            config_path.display()
+        )
+    } else {
+        "\n\nTo enable automatic cd, run: wt configure-shell".to_string()
+    }
+}
 
 /// Result of a worktree switch operation
 pub enum SwitchResult {
@@ -102,10 +119,8 @@ impl SwitchResult {
                         path.display()
                     )
                 };
-                Some(format!(
-                    "{}\n\nTo enable automatic cd, run: wt configure-shell",
-                    msg
-                ))
+
+                Some(format!("{}{}", msg, shell_integration_hint()))
             }
         }
     }
@@ -154,8 +169,9 @@ impl RemoveResult {
                 Some(format!("Already on default branch '{}'", branch))
             }
             RemoveResult::RemovedWorktree { primary_path } => Some(format!(
-                "Moved to primary worktree and removed worktree\nPath: {}\n\nTo enable automatic cd, run: wt configure-shell",
-                primary_path.display()
+                "Moved to primary worktree and removed worktree\nPath: {}{}",
+                primary_path.display(),
+                shell_integration_hint()
             )),
             RemoveResult::SwitchedToDefault(branch) => {
                 Some(format!("Switched to default branch '{}'", branch))
@@ -363,41 +379,6 @@ fn check_worktree_conflicts(
         return Err(GitError::CommandFailed(format!(
             "Commit or stash changes in {} first",
             wt_path.display()
-        )));
-    }
-
-    Ok(())
-}
-
-/// Execute a command in the specified worktree directory
-fn execute_command_in_worktree(
-    worktree_path: &std::path::Path,
-    command: &str,
-) -> Result<(), GitError> {
-    use std::process::Command;
-
-    // Use platform-specific shell
-    #[cfg(target_os = "windows")]
-    let (shell, shell_arg) = ("cmd", "/C");
-    #[cfg(not(target_os = "windows"))]
-    let (shell, shell_arg) = ("sh", "-c");
-
-    let output = Command::new(shell)
-        .arg(shell_arg)
-        .arg(command)
-        .current_dir(worktree_path)
-        .output()
-        .map_err(|e| GitError::CommandFailed(format!("Failed to execute command: {}", e)))?;
-
-    // Forward stdout/stderr to user
-    std::io::stdout().write_all(&output.stdout).ok();
-    std::io::stderr().write_all(&output.stderr).ok();
-
-    if !output.status.success() {
-        return Err(GitError::CommandFailed(format!(
-            "Command '{}' exited with status: {}",
-            command,
-            output.status.code().unwrap_or(-1)
         )));
     }
 
