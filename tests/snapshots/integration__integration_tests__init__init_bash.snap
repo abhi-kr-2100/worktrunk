@@ -265,7 +265,7 @@ _wt() {
             return 0
             ;;
         wt__switch)
-            opts="-c -b -h --create --base --help <BRANCH>"
+            opts="-c -b -x -h --create --base --execute --help <BRANCH>"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
@@ -276,6 +276,14 @@ _wt() {
                     return 0
                     ;;
                 -b)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                --execute)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
+                -x)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
                     ;;

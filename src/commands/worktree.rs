@@ -110,6 +110,7 @@ pub fn handle_switch(
     branch: &str,
     create: bool,
     base: Option<&str>,
+    execute: Option<&str>,
     config: &WorktrunkConfig,
 ) -> Result<SwitchResult, GitError> {
     let repo = Repository::current();
@@ -134,6 +135,9 @@ pub fn handle_switch(
     // Check if worktree already exists for this branch
     match repo.worktree_for_branch(branch)? {
         Some(existing_path) if existing_path.exists() => {
+            if let Some(cmd) = execute {
+                execute_command_in_worktree(&existing_path, cmd)?;
+            }
             // Canonicalize the path for cleaner display
             let canonical_existing_path = existing_path.canonicalize().unwrap_or(existing_path);
             return Ok(SwitchResult::ExistingWorktree(canonical_existing_path));
@@ -175,6 +179,10 @@ pub fn handle_switch(
     repo.run_command(&args)
         .map_err(|e| GitError::CommandFailed(format!("Failed to create worktree: {}", e)))?;
 
+    if let Some(cmd) = execute {
+        execute_command_in_worktree(&worktree_path, cmd)?;
+    }
+
     // Canonicalize the path for cleaner display
     let canonical_path = worktree_path.canonicalize().unwrap_or(worktree_path);
 
@@ -182,6 +190,42 @@ pub fn handle_switch(
         path: canonical_path,
         created_branch: create,
     })
+}
+
+/// Execute a command in the specified worktree directory
+fn execute_command_in_worktree(
+    worktree_path: &std::path::Path,
+    command: &str,
+) -> Result<(), GitError> {
+    use std::io::Write;
+    use std::process::Command;
+
+    // Use platform-specific shell
+    #[cfg(target_os = "windows")]
+    let (shell, shell_arg) = ("cmd", "/C");
+    #[cfg(not(target_os = "windows"))]
+    let (shell, shell_arg) = ("sh", "-c");
+
+    let output = Command::new(shell)
+        .arg(shell_arg)
+        .arg(command)
+        .current_dir(worktree_path)
+        .output()
+        .map_err(|e| GitError::CommandFailed(format!("Failed to execute command: {}", e)))?;
+
+    // Forward stdout/stderr to user
+    std::io::stdout().write_all(&output.stdout).ok();
+    std::io::stderr().write_all(&output.stderr).ok();
+
+    if !output.status.success() {
+        return Err(GitError::CommandFailed(format!(
+            "Command '{}' exited with status: {}",
+            command,
+            output.status.code().unwrap_or(-1)
+        )));
+    }
+
+    Ok(())
 }
 
 pub fn handle_remove() -> Result<RemoveResult, GitError> {

@@ -131,6 +131,8 @@ json\:"JSON format"))' \
 _arguments "${_arguments_options[@]}" : \
 '-b+[Base branch to create from (only with --create)]:BASE:_default' \
 '--base=[Base branch to create from (only with --create)]:BASE:_default' \
+'-x+[Execute command after switching]:EXECUTE:_default' \
+'--execute=[Execute command after switching]:EXECUTE:_default' \
 '-c[Create a new branch]' \
 '--create[Create a new branch]' \
 '-h[Print help]' \

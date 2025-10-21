@@ -81,6 +81,10 @@ enum Commands {
         #[arg(short = 'b', long)]
         base: Option<String>,
 
+        /// Execute command after switching
+        #[arg(short = 'x', long)]
+        execute: Option<String>,
+
         /// Use internal mode (outputs directives for shell wrapper)
         #[arg(long, hide = true)]
         internal: bool,
@@ -163,20 +167,37 @@ fn main() {
             branch,
             create,
             base,
+            execute,
             internal,
-        } => WorktrunkConfig::load()
-            .map_err(|e| GitError::CommandFailed(format!("Failed to load config: {}", e)))
-            .and_then(|config| {
-                handle_switch(&branch, create, base.as_deref(), &config).map(|result| {
-                    if internal {
-                        if let Some(output) = result.format_internal_output(&branch) {
-                            println!("{}", output);
-                        }
-                    } else if let Some(output) = result.format_user_output(&branch) {
-                        println!("{}", output);
-                    }
-                })
-            }),
+        } => {
+            // Validate that --execute is not used with --internal
+            if execute.is_some() && internal {
+                Err(GitError::CommandFailed(
+                    "--execute flag cannot be used with --internal mode".to_string(),
+                ))
+            } else {
+                WorktrunkConfig::load()
+                    .map_err(|e| GitError::CommandFailed(format!("Failed to load config: {}", e)))
+                    .and_then(|config| {
+                        handle_switch(
+                            &branch,
+                            create,
+                            base.as_deref(),
+                            execute.as_deref(),
+                            &config,
+                        )
+                        .map(|result| {
+                            if internal {
+                                if let Some(output) = result.format_internal_output(&branch) {
+                                    println!("{}", output);
+                                }
+                            } else if let Some(output) = result.format_user_output(&branch) {
+                                println!("{}", output);
+                            }
+                        })
+                    })
+            }
+        }
         Commands::Remove { internal } => handle_remove().map(|result| {
             if internal {
                 if let Some(output) = result.format_internal_output() {

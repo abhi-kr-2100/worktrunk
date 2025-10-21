@@ -110,3 +110,84 @@ fn test_switch_error_missing_worktree_directory() {
     // Try to switch to the missing worktree (should fail)
     snapshot_switch("switch_error_missing_directory", &repo, &["missing-wt"]);
 }
+
+#[test]
+fn test_switch_execute_success() {
+    let repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    snapshot_switch(
+        "switch_execute_success",
+        &repo,
+        &["--create", "exec-test", "--execute", "echo 'test output'"],
+    );
+}
+
+#[test]
+fn test_switch_execute_creates_file() {
+    let repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    // Use platform-specific command
+    #[cfg(target_os = "windows")]
+    let create_file_cmd = "echo test > test.txt";
+    #[cfg(not(target_os = "windows"))]
+    let create_file_cmd = "echo 'test content' > test.txt";
+
+    snapshot_switch(
+        "switch_execute_creates_file",
+        &repo,
+        &["--create", "file-test", "--execute", create_file_cmd],
+    );
+}
+
+#[test]
+fn test_switch_execute_failure() {
+    let repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    snapshot_switch(
+        "switch_execute_failure",
+        &repo,
+        &["--create", "fail-test", "--execute", "exit 1"],
+    );
+}
+
+#[test]
+fn test_switch_execute_with_existing_worktree() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    // Create a worktree first
+    repo.add_worktree("existing-exec", "existing-exec");
+
+    // Use platform-specific command
+    #[cfg(target_os = "windows")]
+    let create_file_cmd = "echo existing > existing.txt";
+    #[cfg(not(target_os = "windows"))]
+    let create_file_cmd = "echo 'existing worktree' > existing.txt";
+
+    snapshot_switch(
+        "switch_execute_existing",
+        &repo,
+        &["existing-exec", "--execute", create_file_cmd],
+    );
+}
+
+#[test]
+fn test_switch_execute_with_internal_error() {
+    let repo = TestRepo::new();
+    repo.commit("Initial commit");
+
+    snapshot_switch(
+        "switch_execute_internal_error",
+        &repo,
+        &[
+            "--create",
+            "internal-test",
+            "--execute",
+            "echo test",
+            "--internal",
+        ],
+    );
+}
