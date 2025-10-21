@@ -14,19 +14,16 @@ use clap::Command;
 use clap_complete::{Shell as CompletionShell, generate};
 use std::io;
 use worktrunk::git::{GitError, Repository};
-
-#[derive(clap::ValueEnum, Clone, Copy)]
-pub enum Shell {
-    Bash,
-    Fish,
-    Zsh,
-}
+use worktrunk::shell::Shell;
 
 pub fn handle_completion(shell: Shell, cli_cmd: &mut Command) {
     let completion_shell = match shell {
-        Shell::Bash => CompletionShell::Bash,
+        Shell::Bash | Shell::Oil => CompletionShell::Bash,
         Shell::Fish => CompletionShell::Fish,
         Shell::Zsh => CompletionShell::Zsh,
+        _ => unreachable!(
+            "CLI parsing ensures only shells that support completion can be passed here"
+        ),
     };
     generate(completion_shell, cli_cmd, "wt", &mut io::stdout());
 }

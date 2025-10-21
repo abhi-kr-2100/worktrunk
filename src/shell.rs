@@ -2,7 +2,7 @@ use askama::Template;
 use std::fmt;
 
 /// Supported shells
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
 pub enum Shell {
     Bash,
     Elvish,
@@ -44,6 +44,13 @@ impl fmt::Display for Shell {
             Shell::Xonsh => write!(f, "xonsh"),
             Shell::Zsh => write!(f, "zsh"),
         }
+    }
+}
+
+impl Shell {
+    /// Returns true if this shell supports completion generation
+    pub fn supports_completion(&self) -> bool {
+        matches!(self, Self::Bash | Self::Fish | Self::Zsh | Self::Oil)
     }
 }
 

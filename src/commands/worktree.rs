@@ -127,7 +127,7 @@ pub fn handle_switch(
     if base.is_some() && !create {
         eprintln!(
             "{}",
-            format_warning("--base flag is only used with --create, ignoring")
+            worktrunk::styling::format_warning("--base flag is only used with --create, ignoring")
         );
     }
 
@@ -337,8 +337,4 @@ pub fn handle_push(target: Option<&str>, allow_merge_commits: bool) -> Result<()
 
     println!("Successfully pushed to '{}'", target_branch);
     Ok(())
-}
-
-fn format_warning(msg: &str) -> String {
-    worktrunk::styling::format_warning(msg)
 }

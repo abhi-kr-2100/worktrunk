@@ -148,7 +148,7 @@ _wt() {
             return 0
             ;;
         wt__completion)
-            opts="-h --help bash fish zsh"
+            opts="-h --help bash elvish fish nushell oil powershell xonsh zsh"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0

@@ -18,22 +18,21 @@ pub fn handle_init(shell_name: &str, cmd_name: &str, cli_cmd: &mut Command) -> R
     println!();
     println!("# Static completions (commands and flags)");
 
+    // Check if shell supports completion
+    if !shell.supports_completion() {
+        eprintln!("Completion not yet supported for {}", shell);
+        std::process::exit(1);
+    }
+
     // Generate completions to a string so we can filter out hidden commands
     let mut completion_output = Vec::new();
     let completion_shell = match shell {
-        shell::Shell::Bash => CompletionShell::Bash,
+        shell::Shell::Bash | shell::Shell::Oil => CompletionShell::Bash,
         shell::Shell::Fish => CompletionShell::Fish,
         shell::Shell::Zsh => CompletionShell::Zsh,
-        // Oil Shell is POSIX-compatible, use Bash completions
-        shell::Shell::Oil => CompletionShell::Bash,
-        // Other shells don't have completion support yet
-        shell::Shell::Elvish
-        | shell::Shell::Nushell
-        | shell::Shell::Powershell
-        | shell::Shell::Xonsh => {
-            eprintln!("Completion not yet supported for {}", shell);
-            std::process::exit(1);
-        }
+        _ => unreachable!(
+            "supports_completion() check above ensures we only reach this for supported shells"
+        ),
     };
     generate(completion_shell, cli_cmd, "wt", &mut completion_output);
 

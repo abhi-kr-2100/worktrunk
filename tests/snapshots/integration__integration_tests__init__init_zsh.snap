@@ -159,7 +159,7 @@ _arguments "${_arguments_options[@]}" : \
 _arguments "${_arguments_options[@]}" : \
 '-h[Print help]' \
 '--help[Print help]' \
-':shell -- Shell to generate completions for:(bash fish zsh)' \
+':shell -- Shell to generate completions for:(bash elvish fish nushell oil powershell xonsh zsh)' \
 && ret=0
 ;;
 (complete)
