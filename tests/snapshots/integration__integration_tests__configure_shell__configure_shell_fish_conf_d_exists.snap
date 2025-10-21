@@ -4,8 +4,7 @@ info:
   program: wt
   args:
     - configure-shell
-    - "--shell"
-    - zsh
+    - "--dry-run"
   env:
     CLICOLOR_FORCE: "1"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
@@ -13,7 +12,7 @@ info:
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_EDITOR: ""
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpQbOOEv
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpFrHXtL
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1704067200"
@@ -21,7 +20,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-Added        zsh [TEMP_HOME]/.zshrc
-  [2meval "$(wt init zsh)"[0m
+Would create fish [TEMP_HOME]/.config/fish/conf.d/wt.fish
+  [2mwt init fish | source[0m
 
 ----- stderr -----

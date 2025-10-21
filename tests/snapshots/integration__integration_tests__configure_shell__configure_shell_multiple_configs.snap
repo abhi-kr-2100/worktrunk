@@ -11,7 +11,7 @@ info:
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_EDITOR: ""
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpybQMOW
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpV1fR3f
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1704067200"
@@ -20,6 +20,8 @@ success: true
 exit_code: 0
 ----- stdout -----
 Added        bash [TEMP_HOME]/.bash_profile
+  [2meval "$(wt init bash)"[0m
 Added        zsh [TEMP_HOME]/.zshrc
+  [2meval "$(wt init zsh)"[0m
 
 ----- stderr -----

@@ -122,17 +122,12 @@ impl Shell {
 
     /// Returns the line to add to the config file for shell integration
     ///
-    /// For most shells, this is an eval statement. For Fish, this returns
-    /// the full integration code since it goes into a separate conf.d/ file.
+    /// All shells use an eval-like pattern now.
     pub fn config_line(&self, cmd_prefix: &str) -> String {
         match self {
             Self::Fish => {
-                // Fish uses a separate file in conf.d/, so we generate the full content
-                ShellInit::new(*self, cmd_prefix.to_string())
-                    .generate()
-                    .unwrap_or_else(|_| {
-                        format!("# Error generating fish config for {}", cmd_prefix)
-                    })
+                // Fish uses 'source' instead of 'eval'
+                format!("{} init {} | source", cmd_prefix, self)
             }
             _ => {
                 // All other shells use eval pattern

@@ -2,6 +2,7 @@ use clap::{CommandFactory, Parser, Subcommand};
 use std::process;
 use worktrunk::config::WorktrunkConfig;
 use worktrunk::git::GitError;
+use worktrunk::styling::{dim_style, should_use_color};
 
 mod commands;
 mod display;
@@ -163,6 +164,17 @@ fn main() {
                         result.shell,
                         result.path.display()
                     );
+                    // Indent each line of the config content with dim/gray color
+                    if should_use_color() {
+                        let style = dim_style();
+                        for line in result.config_line.lines() {
+                            println!("  {}{}{}", style.render(), line, style.render_reset());
+                        }
+                    } else {
+                        for line in result.config_line.lines() {
+                            println!("  {}", line);
+                        }
+                    }
                 }
             })
             .map_err(GitError::CommandFailed),

@@ -7,6 +7,7 @@ pub struct ConfigureResult {
     pub shell: Shell,
     pub path: PathBuf,
     pub action: ConfigAction,
+    pub config_line: String,
 }
 
 #[derive(Debug, PartialEq)]
@@ -60,11 +61,24 @@ pub fn handle_configure_shell(
         // Find the first existing config file
         let target_path = paths.iter().find(|p| p.exists());
 
+        // For Fish, also check if the parent directory (conf.d/) exists
+        // since we create the file there rather than modifying an existing one
+        let has_config_location = if matches!(shell, Shell::Fish) {
+            paths
+                .first()
+                .and_then(|p| p.parent())
+                .map(|p| p.exists())
+                .unwrap_or(false)
+                || target_path.is_some()
+        } else {
+            target_path.is_some()
+        };
+
         // Track all checked paths for better error messages
         checked_paths.extend(paths.iter().map(|p| (shell, p.clone())));
 
-        // Only configure if explicitly targeting this shell OR if config file exists
-        let should_configure = shell_filter.is_some() || target_path.is_some();
+        // Only configure if explicitly targeting this shell OR if config file/location exists
+        let should_configure = shell_filter.is_some() || has_config_location;
 
         if should_configure {
             let path = target_path.or_else(|| paths.first());
@@ -144,6 +158,7 @@ fn configure_shell_file(
                     shell,
                     path: path.to_path_buf(),
                     action: ConfigAction::AlreadyExists,
+                    config_line: config_content.to_string(),
                 }));
             }
         }
@@ -154,6 +169,7 @@ fn configure_shell_file(
                 shell,
                 path: path.to_path_buf(),
                 action: ConfigAction::WouldAdd,
+                config_line: config_content.to_string(),
             }));
         }
 
@@ -171,6 +187,7 @@ fn configure_shell_file(
             shell,
             path: path.to_path_buf(),
             action: ConfigAction::Added,
+            config_line: config_content.to_string(),
         }))
     } else {
         // File doesn't exist
@@ -181,6 +198,7 @@ fn configure_shell_file(
                     shell,
                     path: path.to_path_buf(),
                     action: ConfigAction::WouldCreate,
+                    config_line: config_content.to_string(),
                 }));
             }
 
@@ -199,6 +217,7 @@ fn configure_shell_file(
                 shell,
                 path: path.to_path_buf(),
                 action: ConfigAction::Created,
+                config_line: config_content.to_string(),
             }))
         } else {
             // Don't create config files for shells the user might not use
@@ -222,23 +241,30 @@ fn configure_fish_file(
         let existing_content = fs::read_to_string(path)
             .map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
 
-        // Check for specific patterns that indicate our integration is present
-        let function_pattern = format!("function {}", cmd_prefix);
-        let has_integration = existing_content.contains(&function_pattern);
+        // Check for the init pattern (either old function-based or new eval-based)
+        let init_pattern = format!("{} init", cmd_prefix);
+        let has_integration = existing_content.contains(&init_pattern);
 
         if has_integration {
             return Ok(Some(ConfigureResult {
                 shell,
                 path: path.to_path_buf(),
                 action: ConfigAction::AlreadyExists,
+                config_line: content.to_string(),
             }));
         }
     }
 
     // File doesn't exist or doesn't have our integration
-    // Only create if explicitly targeting this shell (consistent with other shells)
+    // For Fish, create if parent directory exists or if explicitly targeting this shell
+    // This is different from other shells because Fish uses conf.d/ which may exist
+    // even if the specific wt.fish file doesn't
     if !explicit_shell && !path.exists() {
-        return Ok(None);
+        // Check if parent directory exists
+        let parent_exists = path.parent().map(|p| p.exists()).unwrap_or(false);
+        if !parent_exists {
+            return Ok(None);
+        }
     }
 
     if dry_run {
@@ -250,6 +276,7 @@ fn configure_fish_file(
             } else {
                 ConfigAction::WouldCreate
             },
+            config_line: content.to_string(),
         }));
     }
 
@@ -259,13 +286,14 @@ fn configure_fish_file(
             .map_err(|e| format!("Failed to create directory {}: {}", parent.display(), e))?;
     }
 
-    // Write the full content
-    fs::write(path, content)
+    // Write the config content with newline
+    fs::write(path, format!("{}\n", content))
         .map_err(|e| format!("Failed to write to {}: {}", path.display(), e))?;
 
     Ok(Some(ConfigureResult {
         shell,
         path: path.to_path_buf(),
         action: ConfigAction::Created,
+        config_line: content.to_string(),
     }))
 }
