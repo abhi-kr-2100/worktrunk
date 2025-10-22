@@ -595,14 +595,22 @@ fn execute_post_start_commands(
                 expand_command_template(command, repo_name, branch, worktree_path, &repo_root);
 
             use anstyle::{AnsiColor, Color};
+            use std::io::Write;
             let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
             eprintln!("🔄 {cyan}Executing: {expanded_command}{cyan:#}");
+            // Flush stderr to ensure message is displayed before command execution
+            let _ = std::io::stderr().flush();
             if let Err(e) = execute_command_in_worktree(worktree_path, &expanded_command) {
                 eprintln!("{WARNING_EMOJI} {WARNING}Command failed: {e}{WARNING:#}");
                 // Continue with other commands even if one fails
             }
         }
     }
+
+    // Flush all output before returning to ensure proper display order
+    use std::io::Write;
+    let _ = std::io::stdout().flush();
+    let _ = std::io::stderr().flush();
 
     Ok(())
 }
