@@ -39,5 +39,8 @@ To enable automatic cd, run: wt configure-shell
 
 ✅ [32mMerge complete[0m
 
+  [2mMerged: [1m[32mfeature[0m → [1m[32mmain[0m[0m
+  [2mWorktree: Removed[0m
+
 ----- stderr -----
 🟡 [33mLLM generation failed, using deterministic message[0m

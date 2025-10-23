@@ -32,4 +32,7 @@ exit_code: 0
 
 ✅ [32mMerge complete[0m
 
+  [2mMerged: [1m[32mfeature[0m → [1m[32mmain[0m[0m
+  [2mWorktree: Kept (use 'wt remove' to clean up)[0m
+
 ----- stderr -----

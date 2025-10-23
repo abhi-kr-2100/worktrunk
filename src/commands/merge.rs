@@ -130,14 +130,34 @@ pub fn handle_merge(
 
 /// Print a comprehensive summary of the merge operation
 fn print_merge_summary(
-    _from_branch: &str,
-    _to_branch: &str,
-    _squashed_count: Option<usize>,
-    _cleaned_up: bool,
+    from_branch: &str,
+    to_branch: &str,
+    squashed_count: Option<usize>,
+    cleaned_up: bool,
 ) {
     let green = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
+    let green_bold = green.bold();
+    let dim = AnstyleStyle::new().dimmed();
 
     println!("✅ {green}Merge complete{green:#}");
+    println!();
+
+    // Show what was merged
+    println!(
+        "  {dim}Merged: {green_bold}{from_branch}{green_bold:#} → {green_bold}{to_branch}{green_bold:#}{dim:#}"
+    );
+
+    // Show squash info if applicable
+    if let Some(count) = squashed_count {
+        println!("  {dim}Squashed: {count} commits into 1{dim:#}");
+    }
+
+    // Show worktree status
+    if cleaned_up {
+        println!("  {dim}Worktree: Removed{dim:#}");
+    } else {
+        println!("  {dim}Worktree: Kept (use 'wt remove' to clean up){dim:#}");
+    }
 }
 
 /// Commit uncommitted changes with LLM-generated message
