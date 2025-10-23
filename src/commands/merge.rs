@@ -359,8 +359,7 @@ fn run_pre_merge_checks(
 
     // Execute each command sequentially, fail-fast on errors
     for (name, command) in commands {
-        // Project config commands are automatically trusted (from .config/wt.toml)
-        if !check_and_approve_command(&project_id, &command, config, force, true)? {
+        if !check_and_approve_command(&project_id, &command, config, force)? {
             let dim = AnstyleStyle::new().dimmed();
             eprintln!("{dim}Skipping pre-merge check: {command}{dim:#}");
             continue;

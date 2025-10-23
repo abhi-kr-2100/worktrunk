@@ -409,8 +409,7 @@ fn execute_post_create_commands(
 
     // Execute each command sequentially
     for (name, command) in commands {
-        // Project config commands are automatically trusted (from .config/wt.toml)
-        if !check_and_approve_command(&project_id, &command, config, force, true)? {
+        if !check_and_approve_command(&project_id, &command, config, force)? {
             let dim = AnstyleStyle::new().dimmed();
             eprintln!("{dim}Skipping command: {command}{dim:#}");
             continue;
@@ -470,8 +469,7 @@ fn spawn_post_start_commands(
 
     // Spawn each command as a detached background process
     for (name, command) in commands {
-        // Project config commands are automatically trusted (from .config/wt.toml)
-        if !check_and_approve_command(&project_id, &command, config, force, true)? {
+        if !check_and_approve_command(&project_id, &command, config, force)? {
             let dim = AnstyleStyle::new().dimmed();
             eprintln!("{dim}Skipping command: {command}{dim:#}");
             continue;

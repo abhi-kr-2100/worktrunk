@@ -45,53 +45,58 @@ pub fn command_config_to_vec(
 ///
 /// Returns `Ok(true)` if the command is approved (either already approved or user approved it),
 /// `Ok(false)` if the user declined, or `Err` if there was a system error.
-///
-/// # Arguments
-/// * `from_project_config` - If true, command is from project config (.config/wt.toml)
-///   and auto-approved without prompting (since it's checked into the repo)
 pub fn check_and_approve_command(
     project_id: &str,
     command: &str,
     config: &WorktrunkConfig,
     force: bool,
-    from_project_config: bool,
 ) -> Result<bool, GitError> {
-    // Project config commands are implicitly trusted (they're checked into the repo)
-    if from_project_config || force || config.is_command_approved(project_id, command) {
+    // If already approved in user config, no need to prompt or save again
+    if config.is_command_approved(project_id, command) {
         return Ok(true);
     }
 
-    match prompt_for_approval(command, project_id) {
-        Ok(true) => {
-            // Reload config and save approval
-            match WorktrunkConfig::load() {
-                Ok(mut fresh_config) => {
-                    if let Err(e) =
-                        fresh_config.approve_command(project_id.to_string(), command.to_string())
-                    {
-                        use worktrunk::styling::eprintln;
-                        eprintln!(
-                            "{WARNING_EMOJI} {WARNING}Failed to save command approval: {e}{WARNING:#}"
-                        );
-                        eprintln!("You will be prompted again next time.");
-                    }
-                }
-                Err(e) => {
+    // Determine if we should approve (and save for future use)
+    let should_approve = if force {
+        // Force flag means auto-approve and save
+        true
+    } else {
+        // Otherwise, prompt the user
+        match prompt_for_approval(command, project_id) {
+            Ok(approved) => approved,
+            Err(e) => {
+                use worktrunk::styling::eprintln;
+                eprintln!("{WARNING_EMOJI} {WARNING}Failed to read user input: {e}{WARNING:#}");
+                return Ok(false);
+            }
+        }
+    };
+
+    if should_approve {
+        // Reload config and save approval for future use
+        match WorktrunkConfig::load() {
+            Ok(mut fresh_config) => {
+                if let Err(e) =
+                    fresh_config.approve_command(project_id.to_string(), command.to_string())
+                {
                     use worktrunk::styling::eprintln;
                     eprintln!(
-                        "{WARNING_EMOJI} {WARNING}Failed to reload config for saving approval: {e}{WARNING:#}"
+                        "{WARNING_EMOJI} {WARNING}Failed to save command approval: {e}{WARNING:#}"
                     );
                     eprintln!("You will be prompted again next time.");
                 }
             }
-            Ok(true)
+            Err(e) => {
+                use worktrunk::styling::eprintln;
+                eprintln!(
+                    "{WARNING_EMOJI} {WARNING}Failed to reload config for saving approval: {e}{WARNING:#}"
+                );
+                eprintln!("You will be prompted again next time.");
+            }
         }
-        Ok(false) => Ok(false),
-        Err(e) => {
-            use worktrunk::styling::eprintln;
-            eprintln!("{WARNING_EMOJI} {WARNING}Failed to read user input: {e}{WARNING:#}");
-            Ok(false)
-        }
+        Ok(true)
+    } else {
+        Ok(false)
     }
 }
 

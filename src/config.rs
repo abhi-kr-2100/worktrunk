@@ -268,11 +268,38 @@ impl WorktrunkConfig {
         self.save()
     }
 
-    /// Save the current configuration to the config file
+    /// Add an approved command and save to a specific config file (for testing)
+    ///
+    /// This is the same as `approve_command()` but saves to an explicit path
+    /// instead of the default user config location. Use this in tests to avoid
+    /// polluting the user's actual config.
+    pub fn approve_command_to(
+        &mut self,
+        project: String,
+        command: String,
+        config_path: &std::path::Path,
+    ) -> Result<(), ConfigError> {
+        // Don't add duplicates
+        if self.is_command_approved(&project, &command) {
+            return Ok(());
+        }
+
+        self.approved_commands
+            .push(ApprovedCommand { project, command });
+        self.save_to(config_path)
+    }
+
+    /// Save the current configuration to the default config file location
     fn save(&self) -> Result<(), ConfigError> {
         let config_path = get_config_path()
             .ok_or_else(|| ConfigError::Message("Could not determine config path".to_string()))?;
+        self.save_to(&config_path)
+    }
 
+    /// Save the current configuration to a specific file path
+    ///
+    /// Use this in tests to save to a temporary location instead of the user's config.
+    pub fn save_to(&self, config_path: &std::path::Path) -> Result<(), ConfigError> {
         // Create parent directory if it doesn't exist
         if let Some(parent) = config_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| {
@@ -283,10 +310,37 @@ impl WorktrunkConfig {
         let toml_string = toml::to_string_pretty(self)
             .map_err(|e| ConfigError::Message(format!("Failed to serialize config: {}", e)))?;
 
-        std::fs::write(&config_path, toml_string)
+        std::fs::write(config_path, toml_string)
             .map_err(|e| ConfigError::Message(format!("Failed to write config file: {}", e)))?;
 
         Ok(())
+    }
+
+    /// Test helper: Simulate the approval save flow used by check_and_approve_command
+    ///
+    /// This is used in integration tests to verify the --force flag behavior without
+    /// requiring access to the internal commands module.
+    #[doc(hidden)]
+    pub fn test_save_approval_flow(
+        project_id: &str,
+        command: &str,
+        config_path: &std::path::Path,
+    ) -> Result<(), ConfigError> {
+        // This simulates what check_and_approve_command does:
+        // 1. Load config (in our case, from the test path)
+        // 2. Add approval
+        // 3. Save back
+        let mut config = Self::default();
+
+        // Try to load existing config if it exists
+        if config_path.exists() {
+            let content = std::fs::read_to_string(config_path)
+                .map_err(|e| ConfigError::Message(format!("Failed to read config: {}", e)))?;
+            config = toml::from_str(&content)
+                .map_err(|e| ConfigError::Message(format!("Failed to parse config: {}", e)))?;
+        }
+
+        config.approve_command_to(project_id.to_string(), command.to_string(), config_path)
     }
 }
 

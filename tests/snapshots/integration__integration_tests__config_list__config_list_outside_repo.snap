@@ -1,12 +1,13 @@
 ---
 source: tests/integration_tests/config_list.rs
+assertion_line: 128
 info:
   program: wt
   args:
     - config
     - list
   env:
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpfgWomq
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpEhOevy
 ---
 success: true
 exit_code: 0

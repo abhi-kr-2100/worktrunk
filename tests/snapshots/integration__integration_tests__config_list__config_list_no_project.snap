@@ -1,5 +1,6 @@
 ---
 source: tests/integration_tests/config_list.rs
+assertion_line: 94
 info:
   program: wt
   args:
@@ -12,7 +13,7 @@ info:
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_EDITOR: ""
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpJLGPUB
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpROELyU
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1704067200"
