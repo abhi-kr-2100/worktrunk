@@ -166,6 +166,48 @@ impl ListItem {
             ListItem::Branch(info) => info.commit.timestamp,
         }
     }
+
+    pub fn head(&self) -> &str {
+        match self {
+            ListItem::Worktree(info) => &info.worktree.head,
+            ListItem::Branch(info) => &info.head,
+        }
+    }
+
+    pub fn commit_details(&self) -> &CommitDetails {
+        match self {
+            ListItem::Worktree(info) => &info.commit,
+            ListItem::Branch(info) => &info.commit,
+        }
+    }
+
+    pub fn counts(&self) -> &AheadBehind {
+        match self {
+            ListItem::Worktree(info) => &info.counts,
+            ListItem::Branch(info) => &info.counts,
+        }
+    }
+
+    pub fn branch_diff(&self) -> &BranchDiffTotals {
+        match self {
+            ListItem::Worktree(info) => &info.branch_diff,
+            ListItem::Branch(info) => &info.branch_diff,
+        }
+    }
+
+    pub fn upstream(&self) -> &UpstreamStatus {
+        match self {
+            ListItem::Worktree(info) => &info.upstream,
+            ListItem::Branch(info) => &info.upstream,
+        }
+    }
+
+    pub fn worktree_info(&self) -> Option<&WorktreeInfo> {
+        match self {
+            ListItem::Worktree(info) => Some(info),
+            ListItem::Branch(_) => None,
+        }
+    }
 }
 
 impl BranchInfo {
@@ -372,29 +414,22 @@ struct SummaryMetrics {
 
 impl SummaryMetrics {
     fn update(&mut self, item: &ListItem) {
-        match item {
-            ListItem::Worktree(wt) => {
-                self.worktrees += 1;
-                let (added, deleted) = wt.working_tree_diff;
-                if added > 0 || deleted > 0 {
-                    self.dirty_worktrees += 1;
-                }
-                if wt.counts.ahead > 0 {
-                    self.ahead_items += 1;
-                }
-                if wt.counts.behind > 0 {
-                    self.behind_items += 1;
-                }
+        if let Some(info) = item.worktree_info() {
+            self.worktrees += 1;
+            let (added, deleted) = info.working_tree_diff;
+            if added > 0 || deleted > 0 {
+                self.dirty_worktrees += 1;
             }
-            ListItem::Branch(br) => {
-                self.branches += 1;
-                if br.counts.ahead > 0 {
-                    self.ahead_items += 1;
-                }
-                if br.counts.behind > 0 {
-                    self.behind_items += 1;
-                }
-            }
+        } else {
+            self.branches += 1;
+        }
+
+        let counts = item.counts();
+        if counts.ahead > 0 {
+            self.ahead_items += 1;
+        }
+        if counts.behind > 0 {
+            self.behind_items += 1;
         }
     }
 }

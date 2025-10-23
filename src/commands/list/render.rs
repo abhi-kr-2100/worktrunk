@@ -45,6 +45,29 @@ fn format_diff_column(
     diff_segment
 }
 
+fn append_line(target: &mut StyledLine, source: StyledLine) {
+    for segment in source.segments {
+        target.push(segment);
+    }
+}
+
+fn push_gap(line: &mut StyledLine) {
+    line.push_raw("  ");
+}
+
+fn push_blank(line: &mut StyledLine, width: usize) {
+    if width > 0 {
+        line.push_raw(" ".repeat(width));
+    }
+}
+
+fn push_diff(line: &mut StyledLine, added: usize, deleted: usize, widths: &DiffWidths) {
+    append_line(
+        line,
+        format_diff_column(added, deleted, widths, ADDITION, DELETION),
+    );
+}
+
 pub fn format_all_states(info: &WorktreeInfo) -> String {
     let mut states = Vec::new();
 
@@ -126,24 +149,12 @@ fn format_item_line(
 ) {
     let widths = &layout.widths;
 
-    let (head, commit, counts, branch_diff, upstream, worktree_info) = match item {
-        ListItem::Worktree(info) => (
-            &info.worktree.head,
-            &info.commit,
-            &info.counts,
-            info.branch_diff.diff,
-            &info.upstream,
-            Some(info),
-        ),
-        ListItem::Branch(info) => (
-            &info.head,
-            &info.commit,
-            &info.counts,
-            info.branch_diff.diff,
-            &info.upstream,
-            None,
-        ),
-    };
+    let head = item.head();
+    let commit = item.commit_details();
+    let counts = item.counts();
+    let branch_diff = item.branch_diff().diff;
+    let upstream = item.upstream();
+    let worktree_info = item.worktree_info();
     let short_head = &head[..8.min(head.len())];
 
     // Determine styling (worktree-specific)
@@ -168,7 +179,7 @@ fn format_item_line(
     } else {
         line.push_raw(branch_text);
     }
-    line.push_raw("  ");
+    push_gap(&mut line);
 
     // Age (Time)
     if widths.time > 0 {
@@ -178,7 +189,7 @@ fn format_item_line(
             width = widths.time
         );
         line.push_styled(time_str, Style::new().dimmed());
-        line.push_raw("  ");
+        push_gap(&mut line);
     }
 
     // Ahead/behind (commits difference)
@@ -194,54 +205,34 @@ fn format_item_line(
                     ahead_behind_text,
                     Style::new().fg_color(Some(Color::Ansi(AnsiColor::Yellow))),
                 );
-                line.push_raw("  ");
             } else {
-                line.push_raw(" ".repeat(widths.ahead_behind));
-                line.push_raw("  ");
+                push_blank(&mut line, widths.ahead_behind);
             }
         } else {
-            line.push_raw(" ".repeat(widths.ahead_behind));
-            line.push_raw("  ");
+            push_blank(&mut line, widths.ahead_behind);
         }
+        push_gap(&mut line);
     }
 
     // Branch diff (line diff in commits)
     if widths.branch_diff.total > 0 {
         if !item.is_primary() {
-            let diff_segment = format_diff_column(
-                branch_diff.0,
-                branch_diff.1,
-                &widths.branch_diff,
-                ADDITION,
-                DELETION,
-            );
-            for segment in diff_segment.segments {
-                line.push(segment);
-            }
+            push_diff(&mut line, branch_diff.0, branch_diff.1, &widths.branch_diff);
         } else {
-            line.push_raw(" ".repeat(widths.branch_diff.total));
+            push_blank(&mut line, widths.branch_diff.total);
         }
-        line.push_raw("  ");
+        push_gap(&mut line);
     }
 
     // Working tree diff (worktrees only)
     if widths.working_diff.total > 0 {
-        if let ListItem::Worktree(info) = item {
+        if let Some(info) = worktree_info {
             let (wt_added, wt_deleted) = info.working_tree_diff;
-            let diff_segment = format_diff_column(
-                wt_added,
-                wt_deleted,
-                &widths.working_diff,
-                ADDITION,
-                DELETION,
-            );
-            for segment in diff_segment.segments {
-                line.push(segment);
-            }
+            push_diff(&mut line, wt_added, wt_deleted, &widths.working_diff);
         } else {
-            line.push_raw(" ".repeat(widths.working_diff.total));
+            push_blank(&mut line, widths.working_diff.total);
         }
-        line.push_raw("  ");
+        push_gap(&mut line);
     }
 
     // Upstream tracking
@@ -254,13 +245,11 @@ fn format_item_line(
             upstream_segment.push_raw(" ");
             upstream_segment.push_styled(format!("↓{}", upstream_behind), DELETION);
             upstream_segment.pad_to(widths.upstream);
-            for segment in upstream_segment.segments {
-                line.push(segment);
-            }
+            append_line(&mut line, upstream_segment);
         } else {
-            line.push_raw(" ".repeat(widths.upstream));
+            push_blank(&mut line, widths.upstream);
         }
-        line.push_raw("  ");
+        push_gap(&mut line);
     }
 
     // Commit (short HEAD)
@@ -269,7 +258,7 @@ fn format_item_line(
     } else {
         line.push_styled(short_head, Style::new().dimmed());
     }
-    line.push_raw("  ");
+    push_gap(&mut line);
 
     // Message
     if widths.message > 0 {
@@ -278,7 +267,7 @@ fn format_item_line(
         line.push_styled(msg, Style::new().dimmed());
         // Pad to correct visual width (not character count - important for unicode!)
         line.pad_to(msg_start + widths.message);
-        line.push_raw("  ");
+        push_gap(&mut line);
     }
 
     // States (worktrees only)
@@ -289,12 +278,12 @@ fn format_item_line(
                 let states_text = format!("{:width$}", states, width = widths.states);
                 line.push_raw(states_text);
             } else {
-                line.push_raw(" ".repeat(widths.states));
+                push_blank(&mut line, widths.states);
             }
         } else {
-            line.push_raw(" ".repeat(widths.states));
+            push_blank(&mut line, widths.states);
         }
-        line.push_raw("  ");
+        push_gap(&mut line);
     }
 
     // Path (worktrees only)

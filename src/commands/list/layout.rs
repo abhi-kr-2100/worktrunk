@@ -65,22 +65,11 @@ pub fn calculate_column_widths(items: &[ListItem]) -> ColumnWidths {
     let mut max_br_deleted_digits = 0;
 
     for item in items {
-        let (commit, counts, branch_diff, upstream, worktree_info) = match item {
-            ListItem::Worktree(info) => (
-                &info.commit,
-                &info.counts,
-                info.branch_diff.diff,
-                &info.upstream,
-                Some(info),
-            ),
-            ListItem::Branch(info) => (
-                &info.commit,
-                &info.counts,
-                info.branch_diff.diff,
-                &info.upstream,
-                None,
-            ),
-        };
+        let commit = item.commit_details();
+        let counts = item.counts();
+        let branch_diff = item.branch_diff().diff;
+        let upstream = item.upstream();
+        let worktree_info = item.worktree_info();
 
         // Branch name
         max_branch = max_branch.max(item.branch_name().width());
