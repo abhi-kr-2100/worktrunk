@@ -216,6 +216,11 @@ pub fn handle_switch(
     repo.run_command(&args)
         .map_err(|e| GitError::CommandFailed(format!("Failed to create worktree: {}", e)))?;
 
+    // Canonicalize the path to resolve any .. components
+    let worktree_path = worktree_path.canonicalize().map_err(|e| {
+        GitError::CommandFailed(format!("Failed to canonicalize worktree path: {}", e))
+    })?;
+
     // Execute post-create commands (sequential, blocking)
     if !no_config_commands {
         execute_post_create_commands(&worktree_path, &repo, config, branch, force)?;
