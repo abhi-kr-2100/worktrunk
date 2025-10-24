@@ -34,6 +34,7 @@ enum CompletionContext {
     SwitchBranch,
     PushTarget,
     MergeTarget,
+    RemoveBranch,
     BaseFlag,
     Unknown,
 }
@@ -99,6 +100,7 @@ fn parse_completion_context(args: &[String]) -> CompletionContext {
         "switch" => CompletionContext::SwitchBranch,
         "push" => CompletionContext::PushTarget,
         "merge" => CompletionContext::MergeTarget,
+        "remove" => CompletionContext::RemoveBranch,
         _ => return CompletionContext::Unknown,
     };
 
@@ -134,6 +136,7 @@ pub fn handle_complete(args: Vec<String>) -> Result<(), GitError> {
         }
         CompletionContext::PushTarget
         | CompletionContext::MergeTarget
+        | CompletionContext::RemoveBranch
         | CompletionContext::BaseFlag => {
             // Complete with all branches
             let branches = get_branches_for_completion(|| Repository::current().all_branches());
@@ -177,6 +180,15 @@ mod tests {
         assert_eq!(
             parse_completion_context(&args),
             CompletionContext::MergeTarget
+        );
+    }
+
+    #[test]
+    fn test_parse_completion_context_remove() {
+        let args = vec!["wt".to_string(), "remove".to_string(), "feat".to_string()];
+        assert_eq!(
+            parse_completion_context(&args),
+            CompletionContext::RemoveBranch
         );
     }
 

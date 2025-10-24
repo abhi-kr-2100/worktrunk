@@ -204,20 +204,11 @@ fn test_complete_edge_cases_return_empty() {
     assert!(output.status.success());
     assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "");
 
-    // Test 4: Commands that don't take branch arguments (list, remove)
+    // Test 4: Commands that don't take branch arguments (list)
     let mut cmd = Command::cargo_bin("wt").unwrap();
     let output = cmd
         .current_dir(repo.root_path())
         .args(["complete", "wt", "list", ""])
-        .output()
-        .unwrap();
-    assert!(output.status.success());
-    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "");
-
-    let mut cmd = Command::cargo_bin("wt").unwrap();
-    let output = cmd
-        .current_dir(repo.root_path())
-        .args(["complete", "wt", "remove", ""])
         .output()
         .unwrap();
     assert!(output.status.success());
@@ -576,4 +567,36 @@ fn test_complete_switch_base_flag_after_branch() {
 
     // Should complete base flag value with branches
     assert!(stdout.contains("develop"));
+}
+
+#[test]
+fn test_complete_remove_shows_branches() {
+    let mut temp = TestRepo::new();
+    temp.commit("initial");
+
+    // Create worktree (creates "feature/new" branch)
+    temp.add_worktree("feature-worktree", "feature/new");
+
+    // Create another branch without worktree
+    StdCommand::new("git")
+        .args(["branch", "hotfix/bug"])
+        .current_dir(temp.root_path())
+        .output()
+        .unwrap();
+
+    // Test completion for remove (should show ALL branches)
+    let mut cmd = Command::cargo_bin("wt").unwrap();
+    let output = cmd
+        .current_dir(temp.root_path())
+        .args(["complete", "wt", "remove", ""])
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let branches: Vec<&str> = stdout.lines().collect();
+
+    // Should include both branches
+    assert!(branches.iter().any(|b| b.contains("feature/new")));
+    assert!(branches.iter().any(|b| b.contains("hotfix/bug")));
 }
