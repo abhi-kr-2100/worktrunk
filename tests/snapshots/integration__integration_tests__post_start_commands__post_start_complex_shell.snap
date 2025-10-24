@@ -12,8 +12,7 @@ info:
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
-    GIT_EDITOR: ""
-    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpJdNF1s
+    HOME: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpbxqPsC
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1704067200"
@@ -27,14 +26,7 @@ exit_code: 0
 To enable automatic cd, run: wt configure-shell
 
 ----- stderr -----
-
-🟡 [33mPermission required to execute in worktree[0m
-
-[1mtest-repo[0m ([2mtest-repo[0m) wants to execute:
-[40m [0m echo 'line1
-[40m [0m line2
-[40m [0m line3' | grep line2 > filtered.txt
-
-💡 Allow and remember? [1m[y/N][0m [2mSkipping command: echo 'line1
+🔄 [36mStarting (background): echo 'line1
 line2
 line3' | grep line2 > filtered.txt[0m
+  [2m→ Logs: .git/wt-logs/post-start-[NAME]-[TIMESTAMP].log[0m
