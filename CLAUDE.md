@@ -359,6 +359,168 @@ print!("{}", format_with_gutter(&config));
 pub fn format_with_gutter(content: &str) -> String
 ```
 
+## Output System Architecture
+
+### Two Output Modes
+
+Worktrunk supports two output modes, selected once at program startup:
+
+1. **Interactive Mode** - Human-friendly output with colors, emojis, and hints
+2. **Directive Mode** - Machine-readable NUL-terminated directives for shell integration
+
+The mode is determined at initialization in `main()` and never changes during execution.
+
+### The Cardinal Rule: Never Check Mode in Command Code
+
+**CRITICAL: Command code must NEVER check which output mode is active.**
+
+The output system uses enum dispatch with a global context. Commands call output functions (`output::success()`, `output::change_directory()`, etc.) without knowing or caring which mode is active. The output system dispatches to the appropriate handler.
+
+**Bad - mode conditionals scattered through commands:**
+```rust
+// ❌ NEVER DO THIS
+use crate::output::OutputMode;
+
+fn some_command(mode: OutputMode) {
+    if mode == OutputMode::Interactive {
+        println!("✅ Success!");
+    } else {
+        println!("Success!\0");
+    }
+}
+```
+
+**Good - use the output system:**
+```rust
+// ✅ ALWAYS DO THIS
+use crate::output;
+
+fn some_command() {
+    output::success("Success!")?;
+    // The output system handles formatting for both modes
+}
+```
+
+### How It Works
+
+The output system implements the "trust boundaries" principle:
+
+1. **Decide once at the edge** - `main()` determines mode from CLI flags
+2. **Initialize globally** - `output::initialize(mode)` sets up the handler
+3. **Trust internally** - Commands just call output functions
+4. **Dispatch handles adaptation** - Enum dispatch routes to appropriate handler
+
+```rust
+// In main.rs - the only place that knows about modes
+let mode = if internal {
+    OutputMode::Directive
+} else {
+    OutputMode::Interactive
+};
+output::initialize(mode);
+
+// Everywhere else - just use the output functions
+output::success("Created worktree")?;
+output::change_directory(&path)?;
+output::execute("git pull")?;
+```
+
+### Available Output Functions
+
+The output module (`src/output/global.rs`) provides these functions:
+
+- `success(message)` - Emit success messages (both modes)
+- `progress(message)` - Emit progress updates (interactive only, suppressed in directive)
+- `change_directory(path)` - Request directory change (directive) or store for execution (interactive)
+- `execute(command)` - Execute command (interactive) or emit directive (directive mode)
+- `command_output(stdout, stderr)` - Display output from external commands
+- `flush()` - Flush output buffers
+
+For the complete API, see `src/output/global.rs`.
+
+### Adding New Output Functions
+
+When adding new output capabilities:
+
+1. **Add the function to both handlers** - `InteractiveOutput` and `DirectiveOutput`
+2. **Add dispatch in global.rs** - Route to both handlers via enum match
+3. **Never add mode parameters** - The handlers already know their mode
+
+**Example: Adding a hypothetical `warning()` function**
+
+This illustrates the pattern - follow these steps when adding any new output capability:
+
+```rust
+// In interactive.rs
+impl InteractiveOutput {
+    pub fn warning(&mut self, message: String) -> io::Result<()> {
+        eprintln!("{WARNING_EMOJI} {WARNING}{message}{WARNING:#}");
+        Ok(())
+    }
+}
+
+// In directive.rs
+impl DirectiveOutput {
+    pub fn warning(&mut self, message: String) -> io::Result<()> {
+        // Warnings go to stderr in directive mode
+        write!(io::stderr(), "{}\0", strip_str(&message))?;
+        io::stderr().flush()
+    }
+}
+
+// In global.rs
+pub fn warning(message: impl Into<String>) -> io::Result<()> {
+    OUTPUT_CONTEXT.with(|ctx| {
+        let msg = message.into();
+        match &mut *ctx.borrow_mut() {
+            OutputHandler::Interactive(i) => i.warning(msg),
+            OutputHandler::Directive(d) => d.warning(msg),
+        }
+    })
+}
+```
+
+### Why This Matters
+
+This architecture maintains the "one canonical path" principle from the global guidelines:
+
+**Without this architecture**, you'd see:
+- Mode conditionals scattered throughout 50+ command functions
+- HIGH CARDINALITY: Two divergent code paths that must be kept in sync
+- Mode parameters threading through the entire call stack
+- Easy to forget one branch when changing behavior
+
+**With this architecture**:
+- Commands have ONE code path that works for both modes (LOW CARDINALITY)
+- Mode-specific behavior encapsulated in two handler files
+- Adding new commands requires zero mode awareness
+- Changing behavior means updating one function, not hunting down 50+ conditionals
+
+This is the same pattern as logging frameworks (`log`, `tracing`) - you configure once at startup, then the rest of the code just logs without caring where it goes.
+
+### Red Flags and Solutions
+
+**Red Flag: "I need to check if we're in interactive mode"**
+
+This is always wrong. If you're tempted to check the mode, you have two options:
+
+1. **The behavior should be the same in both modes** - Just do it directly, no check needed
+2. **The behavior should differ between modes** - Add a new output function that encapsulates the difference
+
+**Example scenario**: "I want to print a hint in interactive mode but not directive mode"
+
+```rust
+// ❌ DON'T DO THIS
+if mode == OutputMode::Interactive {
+    println!("💡 Use 'wt list' to see all worktrees");
+}
+
+// ✅ DO THIS - progress() already handles this (shown in interactive, suppressed in directive)
+output::progress("💡 Use 'wt list' to see all worktrees")?;
+```
+
+If the output function you need doesn't exist yet, follow the pattern in "Adding New Output Functions" above.
+
 ## Testing Guidelines
 
 ### Testing with --execute Commands
