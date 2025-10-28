@@ -196,6 +196,99 @@ fn test_merge_not_fast_forward() {
 }
 
 #[test]
+fn test_merge_rebase_conflict() {
+    let mut repo = TestRepo::new();
+
+    // Create a shared file
+    std::fs::write(repo.root_path().join("shared.txt"), "initial content\n")
+        .expect("Failed to write file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "shared.txt"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to add file");
+
+    repo.commit("Add shared file");
+    repo.setup_remote("main");
+
+    // Create a worktree for main
+    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to add worktree");
+
+    // Modify shared.txt in main branch (from the base commit)
+    std::fs::write(repo.root_path().join("shared.txt"), "main version\n")
+        .expect("Failed to write file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "shared.txt"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to add file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "Update shared.txt in main"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to commit");
+
+    // Create a feature worktree branching from before the main commit
+    // We need to create it from the original commit, not current main
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    let output = cmd
+        .args(["rev-parse", "HEAD~1"])
+        .current_dir(repo.root_path())
+        .output()
+        .expect("Failed to get previous commit");
+    let base_commit = String::from_utf8_lossy(&output.stdout).trim().to_string();
+
+    let feature_wt = repo.root_path().parent().unwrap().join("test-repo.feature");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args([
+        "worktree",
+        "add",
+        feature_wt.to_str().unwrap(),
+        "-b",
+        "feature",
+        &base_commit,
+    ])
+    .current_dir(repo.root_path())
+    .output()
+    .expect("Failed to add feature worktree");
+
+    // Modify the same file with conflicting content
+    std::fs::write(feature_wt.join("shared.txt"), "feature version\n")
+        .expect("Failed to write file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "shared.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to add file");
+
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "Update shared.txt in feature"])
+        .current_dir(&feature_wt)
+        .output()
+        .expect("Failed to commit");
+
+    // Try to merge - should fail with rebase conflict
+    snapshot_merge("merge_rebase_conflict", &repo, &["main"], Some(&feature_wt));
+}
+
+#[test]
 fn test_merge_to_default_branch() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");

@@ -81,9 +81,32 @@ pub fn handle_merge(
     ))
     .map_err(|e| GitError::CommandFailed(e.to_string()))?;
 
-    repo.run_command(&["rebase", &target_branch]).map_err(|e| {
-        GitError::CommandFailed(format!("Failed to rebase onto '{}': {}", target_branch, e))
-    })?;
+    let rebase_result = repo.run_command(&["rebase", &target_branch]);
+
+    // If rebase failed, check if it's due to conflicts
+    if let Err(e) = rebase_result {
+        if let Some(state) = repo.worktree_state()?
+            && state.starts_with("REBASING")
+        {
+            return Err(GitError::RebaseConflict {
+                state,
+                target_branch: target_branch.to_string(),
+            });
+        }
+        // Not a rebase conflict, return original error
+        return Err(GitError::CommandFailed(format!(
+            "Failed to rebase onto '{}': {}",
+            target_branch, e
+        )));
+    }
+
+    // Verify rebase completed successfully (safety check for edge cases)
+    if let Some(state) = repo.worktree_state()? {
+        return Err(GitError::RebaseConflict {
+            state,
+            target_branch: target_branch.to_string(),
+        });
+    }
 
     // Fast-forward push to target branch (reuse handle_push logic)
     handle_push(Some(&target_branch), false)?;

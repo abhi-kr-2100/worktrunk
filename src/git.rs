@@ -47,6 +47,11 @@ pub enum GitError {
     CommandNotApproved,
     /// Push operation failed
     PushFailed { error: String },
+    /// Rebase resulted in a conflict or incomplete state
+    RebaseConflict {
+        state: String,
+        target_branch: String,
+    },
 }
 
 impl std::fmt::Display for GitError {
@@ -177,6 +182,18 @@ impl std::fmt::Display for GitError {
             // Push failed
             GitError::PushFailed { error } => {
                 write!(f, "{ERROR_EMOJI} {ERROR}Push failed: {error}{ERROR:#}")
+            }
+
+            // Rebase conflict
+            GitError::RebaseConflict {
+                state,
+                target_branch,
+            } => {
+                let error_bold = ERROR.bold();
+                write!(
+                    f,
+                    "{ERROR_EMOJI} {ERROR}Rebase onto {error_bold}{target_branch}{error_bold:#} incomplete: {state}{ERROR:#}\n\n{HINT_EMOJI} {HINT}Resolve conflicts and run 'git rebase --continue'{HINT:#}\n{HINT_EMOJI} {HINT}Or abort with 'git rebase --abort'{HINT:#}"
+                )
             }
         }
     }

@@ -1,0 +1,30 @@
+---
+source: tests/integration_tests/merge.rs
+info:
+  program: wt
+  args:
+    - merge
+    - main
+  env:
+    CLICOLOR_FORCE: "1"
+    GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
+    GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
+    GIT_CONFIG_GLOBAL: /dev/null
+    GIT_CONFIG_SYSTEM: /dev/null
+    GIT_EDITOR: ""
+    LANG: C
+    LC_ALL: C
+    SOURCE_DATE_EPOCH: "1761609600"
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpA0Yk8D/test-config.toml
+---
+success: false
+exit_code: 1
+----- stdout -----
+🔄 [36mValidating merge...[0m
+🔄 [36mRebasing onto [1m[36mmain[0m...[0m
+
+----- stderr -----
+❌ [31mRebase onto [1m[31mmain[0m incomplete: REBASING 1/1[0m
+
+💡 [2mResolve conflicts and run 'git rebase --continue'[0m
+💡 [2mOr abort with 'git rebase --abort'[0m
