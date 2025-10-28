@@ -1,8 +1,8 @@
 use worktrunk::config::{ProjectConfig, WorktrunkConfig};
 use worktrunk::git::{GitError, Repository};
 use worktrunk::styling::{
-    AnstyleStyle, CYAN, CYAN_BOLD, ERROR, ERROR_EMOJI, GREEN, GREEN_BOLD, HINT, HINT_EMOJI,
-    SUCCESS_EMOJI, eprint, eprintln, format_with_gutter, println,
+    AnstyleStyle, CYAN, CYAN_BOLD, ERROR, ERROR_EMOJI, GREEN, HINT, HINT_EMOJI, SUCCESS_EMOJI,
+    eprint, eprintln, format_with_gutter, println,
 };
 
 use super::command_executor::{CommandContext, prepare_project_commands};
@@ -33,9 +33,11 @@ pub fn handle_merge(
 
     // Check if already on target branch
     if current_branch == target_branch {
-        println!(
-            "{SUCCESS_EMOJI} {GREEN}Already on {GREEN_BOLD}{target_branch}{GREEN_BOLD:#}, nothing to merge{GREEN:#}"
-        );
+        let bold = AnstyleStyle::new().bold();
+        crate::output::success(format!(
+            "Already on {bold}{target_branch}{bold:#}, nothing to merge"
+        ))
+        .map_err(|e| GitError::CommandFailed(e.to_string()))?;
         return Ok(());
     }
 
@@ -245,7 +247,8 @@ fn handle_commit_changes(
     repo.run_command(&["commit", "-m", &commit_message])
         .map_err(|e| GitError::CommandFailed(format!("Failed to commit: {}", e)))?;
 
-    println!("{SUCCESS_EMOJI} {GREEN}Committed changes{GREEN:#}");
+    crate::output::success("Committed changes")
+        .map_err(|e| GitError::CommandFailed(e.to_string()))?;
 
     Ok(())
 }
