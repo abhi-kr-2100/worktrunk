@@ -3,4 +3,4 @@ source: tests/integration_tests/shell_wrapper.rs
 expression: normalized.as_ref()
 ---
 🔄 [36mValidating merge...[0m
-Already on [1mmain[0m, nothing to merge
+✅ [32mAlready on [1m[32mmain[0m, nothing to merge[0m

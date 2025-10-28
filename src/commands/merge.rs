@@ -28,9 +28,10 @@ pub fn handle_merge(
 
     // Check if already on target branch
     if current_branch == target_branch {
-        let bold = AnstyleStyle::new().bold();
+        use worktrunk::styling::{GREEN, SUCCESS_EMOJI};
+        let green_bold = GREEN.bold();
         crate::output::success(format!(
-            "Already on {bold}{target_branch}{bold:#}, nothing to merge"
+            "{SUCCESS_EMOJI} {GREEN}Already on {green_bold}{target_branch}{green_bold:#}, nothing to merge{GREEN:#}"
         ))?;
         return Ok(());
     }
@@ -149,13 +150,18 @@ pub fn handle_merge(
     Ok(())
 }
 
-/// Format the merge summary message
+/// Format the merge summary message (includes emoji and color for consistency)
 fn format_merge_summary(primary_path: Option<&std::path::Path>) -> String {
+    use worktrunk::styling::{GREEN, SUCCESS_EMOJI};
+
     // Show where we ended up
     if let Some(path) = primary_path {
-        format!("Returned to primary at {}", path.display())
+        format!(
+            "{SUCCESS_EMOJI} {GREEN}Returned to primary at {}{GREEN:#}",
+            path.display()
+        )
     } else {
-        "Kept worktree (use 'wt remove' to clean up)".to_string()
+        format!("{SUCCESS_EMOJI} {GREEN}Kept worktree (use 'wt remove' to clean up){GREEN:#}")
     }
 }
 
@@ -224,7 +230,8 @@ fn handle_commit_changes(
     repo.run_command(&["commit", "-m", &commit_message])
         .git_context("Failed to commit")?;
 
-    crate::output::success("Committed changes")?;
+    use worktrunk::styling::{GREEN, SUCCESS_EMOJI};
+    crate::output::success(format!("{SUCCESS_EMOJI} {GREEN}Committed changes{GREEN:#}"))?;
 
     Ok(())
 }
@@ -297,7 +304,10 @@ fn handle_squash(target_branch: &str) -> Result<Option<usize>, GitError> {
         .git_context("Failed to create squash commit")?;
 
     // Show success immediately after completing the squash
-    crate::output::success(format!("Squashed {commit_count} commits into one"))?;
+    use worktrunk::styling::{GREEN, SUCCESS_EMOJI};
+    crate::output::success(format!(
+        "{SUCCESS_EMOJI} {GREEN}Squashed {commit_count} commits into one{GREEN:#}"
+    ))?;
 
     Ok(Some(commit_count))
 }

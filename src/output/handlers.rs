@@ -2,16 +2,16 @@
 
 use crate::commands::worktree::{RemoveResult, SwitchResult};
 use worktrunk::git::{GitError, GitResultExt};
-use worktrunk::styling::AnstyleStyle;
 
-/// Format plain message for switch operation (no emoji - added by OutputContext)
-fn format_switch_message_plain(result: &SwitchResult, branch: &str) -> String {
-    let bold = AnstyleStyle::new().bold();
+/// Format message for switch operation (includes emoji and color for consistency)
+fn format_switch_message(result: &SwitchResult, branch: &str) -> String {
+    use worktrunk::styling::{GREEN, SUCCESS_EMOJI};
+    let green_bold = GREEN.bold();
 
     match result {
         SwitchResult::ExistingWorktree(path) => {
             format!(
-                "Switched to worktree for {bold}{branch}{bold:#} at {}",
+                "{SUCCESS_EMOJI} {GREEN}Switched to worktree for {green_bold}{branch}{green_bold:#} at {}{GREEN:#}",
                 path.display()
             )
         }
@@ -21,12 +21,12 @@ fn format_switch_message_plain(result: &SwitchResult, branch: &str) -> String {
         } => {
             if *created_branch {
                 format!(
-                    "Created new worktree for {bold}{branch}{bold:#} at {}",
+                    "{SUCCESS_EMOJI} {GREEN}Created new worktree for {green_bold}{branch}{green_bold:#} at {}{GREEN:#}",
                     path.display()
                 )
             } else {
                 format!(
-                    "Added worktree for {bold}{branch}{bold:#} at {}",
+                    "{SUCCESS_EMOJI} {GREEN}Added worktree for {green_bold}{branch}{green_bold:#} at {}{GREEN:#}",
                     path.display()
                 )
             }
@@ -34,25 +34,32 @@ fn format_switch_message_plain(result: &SwitchResult, branch: &str) -> String {
     }
 }
 
-/// Format plain message for remove operation (no emoji - added by OutputContext)
-fn format_remove_message_plain(result: &RemoveResult) -> String {
-    let bold = AnstyleStyle::new().bold();
+/// Format message for remove operation (includes emoji and color for consistency)
+fn format_remove_message(result: &RemoveResult) -> String {
+    use worktrunk::styling::{GREEN, SUCCESS_EMOJI};
+    let green_bold = GREEN.bold();
 
     match result {
         RemoveResult::AlreadyOnDefault(branch) => {
-            format!("Already on default branch {bold}{branch}{bold:#}")
+            format!(
+                "{SUCCESS_EMOJI} {GREEN}Already on default branch {green_bold}{branch}{green_bold:#}{GREEN:#}"
+            )
         }
         RemoveResult::RemovedWorktree { primary_path } => {
             format!(
-                "Removed worktree, returned to primary at {}",
+                "{SUCCESS_EMOJI} {GREEN}Removed worktree, returned to primary at {}{GREEN:#}",
                 primary_path.display()
             )
         }
         RemoveResult::SwitchedToDefault(branch) => {
-            format!("Switched to default branch {bold}{branch}{bold:#}")
+            format!(
+                "{SUCCESS_EMOJI} {GREEN}Switched to default branch {green_bold}{branch}{green_bold:#}{GREEN:#}"
+            )
         }
         RemoveResult::RemovedOtherWorktree { branch } => {
-            format!("Removed worktree for {bold}{branch}{bold:#}")
+            format!(
+                "{SUCCESS_EMOJI} {GREEN}Removed worktree for {green_bold}{branch}{green_bold:#}{GREEN:#}"
+            )
         }
     }
 }
@@ -71,8 +78,8 @@ pub fn handle_switch_output(
     // Set target directory for command execution
     super::change_directory(result.path())?;
 
-    // Show success message (plain text - formatting added by OutputContext)
-    super::success(format_switch_message_plain(result, branch))?;
+    // Show success message (includes emoji and color)
+    super::success(format_switch_message(result, branch))?;
 
     // Execute command if provided
     if let Some(cmd) = execute {
@@ -96,8 +103,8 @@ pub fn handle_remove_output(result: &RemoveResult) -> Result<(), GitError> {
         super::change_directory(primary_path)?;
     }
 
-    // Show success message
-    super::success(format_remove_message_plain(result))?;
+    // Show success message (includes emoji and color)
+    super::success(format_remove_message(result))?;
 
     // Flush output
     super::flush()?;

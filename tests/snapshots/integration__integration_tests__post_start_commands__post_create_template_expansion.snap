@@ -16,7 +16,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpEM2Izh/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp6jYMFA/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -37,7 +37,7 @@ exit_code: 0
 [40m [0m [REPO]'
 [40m [0m >> info.txt
 
-✅ [32mCreated new worktree for [1mfeature/test[0m at [REPO].feature-test[0m
+✅ [32mCreated new worktree for [1m[32mfeature/test[0m at [REPO].feature-test[0m
 
 To enable automatic cd, run: wt configure-shell
 

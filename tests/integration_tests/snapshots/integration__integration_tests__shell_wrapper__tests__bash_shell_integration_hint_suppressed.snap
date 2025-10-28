@@ -2,4 +2,4 @@
 source: tests/integration_tests/shell_wrapper.rs
 expression: normalized.as_ref()
 ---
-Created new worktree for [1mbash-test[0m at [TMPDIR]/test-repo.bash-test
+✅ [32mCreated new worktree for [1m[32mbash-test[0m at [TMPDIR]/test-repo.bash-test[0m

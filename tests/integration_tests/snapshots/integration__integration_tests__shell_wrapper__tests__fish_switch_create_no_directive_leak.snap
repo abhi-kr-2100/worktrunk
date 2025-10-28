@@ -2,4 +2,4 @@
 source: tests/integration_tests/shell_wrapper.rs
 expression: normalized.as_ref()
 ---
-Created new worktree for [1mfish-feature[0m at [TMPDIR]/test-repo.fish-feature
+✅ [32mCreated new worktree for [1m[32mfish-feature[0m at [TMPDIR]/test-repo.fish-feature[0m

@@ -12,15 +12,16 @@ info:
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
+    GIT_EDITOR: ""
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpeToqnE/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp4VKpL3/test-config.toml
 ---
 success: true
 exit_code: 0
 ----- stdout -----
-✅ [32mCreated new worktree for [1mfeature[0m at [REPO].feature[0m
+✅ [32mCreated new worktree for [1m[32mfeature[0m at [REPO].feature[0m
 
 To enable automatic cd, run: wt configure-shell
 

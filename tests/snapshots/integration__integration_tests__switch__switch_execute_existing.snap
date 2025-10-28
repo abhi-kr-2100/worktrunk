@@ -13,14 +13,15 @@ info:
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
     GIT_CONFIG_GLOBAL: /dev/null
     GIT_CONFIG_SYSTEM: /dev/null
+    GIT_EDITOR: ""
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpjSqGVY/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpG1OQqC/test-config.toml
 ---
 success: true
 exit_code: 0
 ----- stdout -----
-✅ [32mSwitched to worktree for [1mexisting-exec[0m at [WORKTREE_EXISTING_EXEC][0m
+✅ [32mSwitched to worktree for [1m[32mexisting-exec[0m at [WORKTREE_EXISTING_EXEC][0m
 
 ----- stderr -----

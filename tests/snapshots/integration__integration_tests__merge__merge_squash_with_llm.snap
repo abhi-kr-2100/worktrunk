@@ -19,7 +19,7 @@ info:
     WORKTRUNK_COMMIT_GENERATION__ARGS__0: "-c"
     WORKTRUNK_COMMIT_GENERATION__ARGS__1: "cat >/dev/null && echo 'feat: implement user authentication system'"
     WORKTRUNK_COMMIT_GENERATION__COMMAND: sh
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpmCA23B/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp6eJmzb/test-config.toml
 ---
 success: true
 exit_code: 0
