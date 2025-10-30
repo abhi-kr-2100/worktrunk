@@ -324,7 +324,7 @@ fn handle_squash(
 }
 
 /// Run pre-merge commands sequentially (blocking, fail-fast)
-fn run_pre_merge_commands(
+pub fn run_pre_merge_commands(
     project_config: &ProjectConfig,
     current_branch: &str,
     target_branch: &str,
@@ -381,7 +381,7 @@ fn run_pre_merge_commands(
 }
 
 /// Execute post-merge commands sequentially in the main worktree (blocking)
-fn execute_post_merge_commands(
+pub fn execute_post_merge_commands(
     main_worktree_path: &std::path::Path,
     repo: &Repository,
     config: &WorktrunkConfig,

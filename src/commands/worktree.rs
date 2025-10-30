@@ -394,7 +394,7 @@ fn load_project_config(repo: &Repository) -> Result<Option<ProjectConfig>, GitEr
 }
 
 /// Execute post-create commands sequentially (blocking)
-fn execute_post_create_commands(
+pub fn execute_post_create_commands(
     worktree_path: &std::path::Path,
     repo: &Repository,
     config: &WorktrunkConfig,
@@ -508,6 +508,62 @@ fn spawn_post_start_commands(
                 };
                 crate::output::progress(message)?;
             }
+        }
+    }
+
+    crate::output::flush()?;
+
+    Ok(())
+}
+
+/// Execute post-start commands sequentially (blocking) - for testing
+pub fn execute_post_start_commands_sequential(
+    worktree_path: &std::path::Path,
+    repo: &Repository,
+    config: &WorktrunkConfig,
+    branch: &str,
+    force: bool,
+) -> Result<(), GitError> {
+    let project_config = match load_project_config(repo)? {
+        Some(cfg) => cfg,
+        None => return Ok(()),
+    };
+
+    let Some(post_start_config) = &project_config.post_start_command else {
+        return Ok(());
+    };
+
+    let repo_root = repo.main_worktree_root()?;
+    let ctx = CommandContext::new(repo, config, branch, worktree_path, &repo_root, force);
+    let commands = prepare_project_commands(
+        post_start_config,
+        &ctx,
+        false,
+        &[],
+        "Post-start commands",
+        |_name, command| {
+            let dim = AnstyleStyle::new().dimmed();
+            crate::output::progress(format!("{dim}Skipping command: {command}{dim:#}")).ok();
+        },
+    )?;
+
+    if commands.is_empty() {
+        return Ok(());
+    }
+
+    // Execute sequentially for testing
+    for prepared in commands {
+        crate::output::progress(format!("🔄 {CYAN}Executing (post-start):{CYAN:#}"))?;
+        crate::output::progress(format_with_gutter(&prepared.expanded, "", None))?;
+
+        if let Err(e) = execute_command_in_worktree(worktree_path, &prepared.expanded) {
+            let message = match &prepared.name {
+                Some(name) => {
+                    format!("{WARNING_EMOJI} {WARNING}Failed to execute '{name}': {e}{WARNING:#}")
+                }
+                None => format!("{WARNING_EMOJI} {WARNING}Command failed: {e}{WARNING:#}"),
+            };
+            crate::output::progress(message)?;
         }
     }
 

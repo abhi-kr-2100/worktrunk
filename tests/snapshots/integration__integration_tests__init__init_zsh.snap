@@ -210,6 +210,37 @@ _arguments "${_arguments_options[@]}" : \
     ;;
 esac
 ;;
+(dev)
+_arguments "${_arguments_options[@]}" : \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+":: :_wt__dev_commands" \
+"*::: :->dev" \
+&& ret=0
+
+    case $state in
+    (dev)
+        words=($line[1] "${words[@]}")
+        (( CURRENT += 1 ))
+        curcontext="${curcontext%:*:*}:wt-dev-command-$line[1]:"
+        case $line[1] in
+            (run-hook)
+_arguments "${_arguments_options[@]}" : \
+'-f[Skip command approval prompts]' \
+'--force[Skip command approval prompts]' \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+':hook_type -- Hook type to run:(post-create post-start pre-merge post-merge)' \
+&& ret=0
+;;
+        esac
+    ;;
+esac
+;;
 (list)
 _arguments "${_arguments_options[@]}" : \
 '--format=[Output format]:FORMAT:((table\:"Human-readable table format"
@@ -303,6 +334,7 @@ _wt_commands() {
 'init:Generate shell integration code' \
 'configure-shell:Configure shell by writing to config files' \
 'config:Manage configuration' \
+'dev:Development and testing utilities' \
 'list:List all worktrees' \
 'switch:Switch to a worktree' \
 'remove:Finish current worktree, returning to primary if current' \
@@ -345,6 +377,18 @@ _wt__config__list_commands() {
 _wt__configure-shell_commands() {
     local commands; commands=()
     _describe -t commands 'wt configure-shell commands' commands "$@"
+}
+(( $+functions[_wt__dev_commands] )) ||
+_wt__dev_commands() {
+    local commands; commands=(
+'run-hook:Run a project hook for testing' \
+    )
+    _describe -t commands 'wt dev commands' commands "$@"
+}
+(( $+functions[_wt__dev__run-hook_commands] )) ||
+_wt__dev__run-hook_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt dev run-hook commands' commands "$@"
 }
 (( $+functions[_wt__init_commands] )) ||
 _wt__init_commands() {

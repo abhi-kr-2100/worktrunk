@@ -12,8 +12,8 @@ mod output;
 
 use commands::{
     ConfigAction, Shell, handle_complete, handle_completion, handle_config_init,
-    handle_config_list, handle_configure_shell, handle_init, handle_list, handle_merge,
-    handle_push, handle_remove, handle_switch,
+    handle_config_list, handle_configure_shell, handle_dev_run_hook, handle_init, handle_list,
+    handle_merge, handle_push, handle_remove, handle_switch,
 };
 use output::{handle_remove_output, handle_switch_output};
 
@@ -52,6 +52,20 @@ enum ConfigCommand {
 }
 
 #[derive(Subcommand)]
+enum DevCommand {
+    /// Run a project hook for testing
+    RunHook {
+        /// Hook type to run
+        #[arg(value_parser = ["post-create", "post-start", "pre-merge", "post-merge"])]
+        hook_type: String,
+
+        /// Skip command approval prompts
+        #[arg(short, long)]
+        force: bool,
+    },
+}
+
+#[derive(Subcommand)]
 enum Commands {
     /// Generate shell integration code
     Init {
@@ -82,6 +96,13 @@ enum Commands {
     Config {
         #[command(subcommand)]
         action: ConfigCommand,
+    },
+
+    /// Development and testing utilities
+    #[command(hide = true)]
+    Dev {
+        #[command(subcommand)]
+        action: DevCommand,
     },
 
     /// List all worktrees
@@ -347,6 +368,9 @@ fn main() {
         Commands::Config { action } => match action {
             ConfigCommand::Init => handle_config_init(),
             ConfigCommand::List => handle_config_list(),
+        },
+        Commands::Dev { action } => match action {
+            DevCommand::RunHook { hook_type, force } => handle_dev_run_hook(&hook_type, force),
         },
         Commands::List { format, branches } => handle_list(format, branches),
         Commands::Switch {
