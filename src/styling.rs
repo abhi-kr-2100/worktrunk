@@ -424,6 +424,8 @@ pub fn format_bash_with_gutter(content: &str, left_margin: &str) -> String {
             }
         }
 
+        // Ensure all styles are reset at end of line to prevent leaking into child process output
+        output.push_str(&format!("{:#}", Style::new()));
         output.push('\n');
     }
 
