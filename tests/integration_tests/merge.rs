@@ -679,59 +679,6 @@ fn test_merge_auto_commit_with_llm() {
 }
 
 #[test]
-fn test_merge_auto_commit_with_message() {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
-
-    // Create a worktree for main
-    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
-        .current_dir(repo.root_path())
-        .output()
-        .expect("Failed to add worktree");
-
-    // Create a feature worktree with a commit
-    let feature_wt = repo.add_worktree("feature", "feature");
-    std::fs::write(feature_wt.join("feature.txt"), "initial").expect("Failed to write file");
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "feature.txt"])
-        .current_dir(&feature_wt)
-        .output()
-        .expect("Failed to add file");
-
-    let mut cmd = Command::new("git");
-    repo.configure_git_cmd(&mut cmd);
-    cmd.args(["commit", "-m", "feat: start feature"])
-        .current_dir(&feature_wt)
-        .output()
-        .expect("Failed to commit");
-
-    // Add uncommitted tracked changes
-    std::fs::write(feature_wt.join("feature.txt"), "completed feature")
-        .expect("Failed to write file");
-
-    // Merge with -m flag (custom instruction) and LLM configured
-    snapshot_merge_with_env(
-        "merge_auto_commit_with_message",
-        &repo,
-        &["main", "-m", "Complete the user dashboard feature"],
-        Some(&feature_wt),
-        &[
-            ("WORKTRUNK_COMMIT_GENERATION__COMMAND", "echo"),
-            (
-                "WORKTRUNK_COMMIT_GENERATION__ARGS",
-                "feat: complete user dashboard",
-            ),
-        ],
-    );
-}
-
-#[test]
 fn test_merge_auto_commit_and_squash() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");

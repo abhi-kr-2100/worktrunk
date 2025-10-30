@@ -16,7 +16,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpfnWawP/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpNfo5re/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -260,8 +260,6 @@ _arguments "${_arguments_options[@]}" : \
 ;;
 (merge)
 _arguments "${_arguments_options[@]}" : \
-'-m+[Custom instruction for commit message generation]:MESSAGE:_default' \
-'--message=[Custom instruction for commit message generation]:MESSAGE:_default' \
 '-s[Squash all commits into one before merging]' \
 '--squash[Squash all commits into one before merging]' \
 '-k[Keep worktree after merging (don'\''t remove)]' \

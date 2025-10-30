@@ -3,6 +3,37 @@ use std::process::{self, Stdio};
 use worktrunk::config::CommitGenerationConfig;
 use worktrunk::git::{GitError, Repository};
 
+/// Default template for commit message prompts
+const DEFAULT_TEMPLATE: &str = r#"Format
+- First line: <50 chars, present tense, describes WHAT and WHY (not HOW).
+- Blank line after first line.
+- Optional details with proper line breaks explaining context. Commits with more substantial changes should have more details.
+- Return ONLY the formatted message without quotes, code blocks, or preamble.
+
+Style
+- Do not give normative statements or otherwise speculate on why the change was made.
+- Broadly match the style of the previous commit messages.
+  - For example, if they're in conventional commit format, use conventional commits; if they're not, don't use conventional commits.
+
+The context contains:
+- <git-diff> with the staged changes. This is the ONLY content you should base your message on.
+- <git-info> with branch name and recent commit message titles for style reference ONLY. DO NOT use their content to inform your message.
+
+---
+The following is the context for your task:
+---
+<git-diff>
+```
+{git-diff}
+```
+</git-diff>
+
+<git-info>
+  <current-branch>{branch}</current-branch>
+{recent-commits}
+</git-info>
+"#;
+
 /// Execute an LLM command with the given prompt via stdin.
 ///
 /// This is the canonical way to execute LLM commands in this codebase.
@@ -10,17 +41,11 @@ use worktrunk::git::{GitError, Repository};
 fn execute_llm_command(
     command: &str,
     args: &[String],
-    system_instruction: Option<&str>,
     prompt: &str,
 ) -> Result<String, Box<dyn std::error::Error>> {
     // Build command args
     let mut cmd = process::Command::new(command);
     cmd.args(args);
-
-    // Add system instruction if provided
-    if let Some(instruction) = system_instruction {
-        cmd.arg("--system").arg(instruction);
-    }
 
     cmd.stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -28,9 +53,6 @@ fn execute_llm_command(
 
     // Log execution
     log::debug!("$ {} {}", command, args.join(" "));
-    if let Some(instruction) = system_instruction {
-        log::debug!("  System: {}", instruction);
-    }
     log::debug!("  Prompt (stdin):");
     for line in prompt.lines() {
         log::debug!("    {}", line);
@@ -60,8 +82,72 @@ fn execute_llm_command(
     Ok(message)
 }
 
+/// Format recent commits for template expansion
+fn format_recent_commits(commits: Option<&Vec<String>>) -> String {
+    match commits {
+        Some(commits) if !commits.is_empty() => {
+            let mut result = String::from("  <previous-commit-message-titles>\n");
+            for commit in commits {
+                result.push_str(&format!(
+                    "    <previous-commit-message-title>{}</previous-commit-message-title>\n",
+                    commit
+                ));
+            }
+            result.push_str("  </previous-commit-message-titles>");
+            result
+        }
+        _ => String::new(),
+    }
+}
+
+/// Build the commit prompt from config template or default
+fn build_commit_prompt(
+    config: &CommitGenerationConfig,
+    diff: &str,
+    branch: &str,
+    recent_commits: Option<&Vec<String>>,
+    repo_name: &str,
+) -> Result<String, Box<dyn std::error::Error>> {
+    // Get template source
+    let template = match (&config.template, &config.template_file) {
+        (Some(inline), None) => inline.clone(),
+        (None, Some(path)) => {
+            let expanded_path = worktrunk::config::expand_tilde(path);
+            std::fs::read_to_string(&expanded_path).map_err(|e| {
+                format!(
+                    "Failed to read template-file '{}': {}",
+                    expanded_path.display(),
+                    e
+                )
+            })?
+        }
+        (None, None) => DEFAULT_TEMPLATE.to_string(),
+        (Some(_), Some(_)) => {
+            unreachable!("Config validation should prevent both template and template-file")
+        }
+    };
+
+    // Validate non-empty
+    if template.trim().is_empty() {
+        return Err("Template is empty".into());
+    }
+
+    // Format recent commits
+    let recent_commits_formatted = format_recent_commits(recent_commits);
+
+    // Expand variables
+    let expanded = worktrunk::config::expand_commit_template(
+        &template,
+        diff,
+        branch,
+        &recent_commits_formatted,
+        repo_name,
+    );
+
+    Ok(expanded)
+}
+
 pub fn generate_commit_message(
-    custom_instruction: Option<&str>,
     commit_generation_config: &CommitGenerationConfig,
 ) -> Result<String, GitError> {
     // Check if commit generation is configured (non-empty command)
@@ -70,9 +156,9 @@ pub fn generate_commit_message(
     {
         // Commit generation is explicitly configured - fail if it doesn't work
         return try_generate_commit_message(
-            custom_instruction,
             command,
             &commit_generation_config.args,
+            commit_generation_config,
         )
         .map_err(|e| {
             GitError::CommandFailed(format!(
@@ -87,9 +173,9 @@ pub fn generate_commit_message(
 }
 
 fn try_generate_commit_message(
-    custom_instruction: Option<&str>,
     command: &str,
     args: &[String],
+    config: &CommitGenerationConfig,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let repo = Repository::current();
 
@@ -98,6 +184,13 @@ fn try_generate_commit_message(
 
     // Get current branch
     let current_branch = repo.current_branch()?.unwrap_or_else(|| "HEAD".to_string());
+
+    // Get repo name from directory
+    let repo_root = repo.worktree_root()?;
+    let repo_name = repo_root
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("repo");
 
     // Get recent commit messages for style reference
     let recent_commits = repo
@@ -111,66 +204,16 @@ fn try_generate_commit_message(
             }
         });
 
-    // Build the prompt following the Fish function format exactly
-    let user_instruction = custom_instruction
-        .unwrap_or("Write a concise, clear git commit message based on the provided diff.");
+    // Build prompt from template
+    let prompt = build_commit_prompt(
+        config,
+        &diff_output,
+        &current_branch,
+        recent_commits.as_ref(),
+        repo_name,
+    )?;
 
-    let mut prompt = String::new();
-
-    // Format section
-    prompt.push_str("Format\n");
-    prompt.push_str("- First line: <50 chars, present tense, describes WHAT and WHY (not HOW).\n");
-    prompt.push_str("- Blank line after first line.\n");
-    prompt.push_str("- Optional details with proper line breaks explaining context. Commits with more substantial changes should have more details.\n");
-    prompt.push_str(
-        "- Return ONLY the formatted message without quotes, code blocks, or preamble.\n",
-    );
-    prompt.push('\n');
-
-    // Style section
-    prompt.push_str("Style\n");
-    prompt.push_str(
-        "- Do not give normative statements or otherwise speculate on why the change was made.\n",
-    );
-    prompt.push_str("- Broadly match the style of the previous commit messages.\n");
-    prompt.push_str("  - For example, if they're in conventional commit format, use conventional commits; if they're not, don't use conventional commits.\n");
-    prompt.push('\n');
-
-    // Context description
-    prompt.push_str("The context contains:\n");
-    prompt.push_str("- <git-diff> with the staged changes. This is the ONLY content you should base your message on.\n");
-    prompt.push_str("- <git-info> with branch name and recent commit message titles for style reference ONLY. DO NOT use their content to inform your message.\n");
-    prompt.push('\n');
-    prompt.push_str("---\n");
-    prompt.push_str("The following is the context for your task:\n");
-    prompt.push_str("---\n");
-
-    // Git diff section
-    prompt.push_str("<git-diff>\n```\n");
-    prompt.push_str(&diff_output);
-    prompt.push_str("\n```\n</git-diff>\n\n");
-
-    // Git info section
-    prompt.push_str("<git-info>\n");
-    prompt.push_str(&format!(
-        "  <current-branch>{}</current-branch>\n",
-        current_branch
-    ));
-
-    if let Some(commits) = recent_commits {
-        prompt.push_str("  <previous-commit-message-titles>\n");
-        for commit in commits {
-            prompt.push_str(&format!(
-                "    <previous-commit-message-title>{}</previous-commit-message-title>\n",
-                commit
-            ));
-        }
-        prompt.push_str("  </previous-commit-message-titles>\n");
-    }
-
-    prompt.push_str("</git-info>\n\n");
-
-    execute_llm_command(command, args, Some(user_instruction), &prompt)
+    execute_llm_command(command, args, &prompt)
 }
 
 pub fn generate_squash_message(
@@ -220,5 +263,5 @@ fn try_generate_llm_message(
     let prompt = "Generate a conventional commit message (feat/fix/docs/style/refactor) that combines these changes into one cohesive message. Output only the commit message without any explanation.";
     let full_prompt = format!("{}\n\n{}", context, prompt);
 
-    execute_llm_command(command, args, None, &full_prompt)
+    execute_llm_command(command, args, &full_prompt)
 }

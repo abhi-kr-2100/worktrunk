@@ -11,7 +11,6 @@ pub fn handle_merge(
     target: Option<&str>,
     squash: bool,
     keep: bool,
-    message: Option<&str>,
     no_hooks: bool,
     force: bool,
 ) -> Result<(), GitError> {
@@ -61,13 +60,13 @@ pub fn handle_merge(
                 .git_context("Failed to stage changes")?;
         } else {
             // Commit immediately when not squashing
-            handle_commit_changes(message, &config.commit_generation)?;
+            handle_commit_changes(&config.commit_generation)?;
         }
     }
 
     // Squash commits if requested
     if squash {
-        handle_squash(&target_branch, message, &config.commit_generation)?;
+        handle_squash(&target_branch, &config.commit_generation)?;
     }
 
     // Rebase onto target
@@ -210,7 +209,6 @@ fn format_commit_message_for_display(message: &str) -> String {
 /// Commit already-staged changes with an LLM-generated message
 fn commit_with_generated_message(
     progress_msg: &str,
-    custom_instruction: Option<&str>,
     commit_generation_config: &worktrunk::config::CommitGenerationConfig,
 ) -> Result<(), GitError> {
     let repo = Repository::current();
@@ -218,8 +216,7 @@ fn commit_with_generated_message(
     crate::output::progress(format!("🔄 {CYAN}{progress_msg}{CYAN:#}"))?;
     crate::output::progress(format!("🔄 {CYAN}Generating commit message...{CYAN:#}"))?;
 
-    let commit_message =
-        crate::llm::generate_commit_message(custom_instruction, commit_generation_config)?;
+    let commit_message = crate::llm::generate_commit_message(commit_generation_config)?;
     let formatted_message = format_commit_message_for_display(&commit_message);
     crate::output::progress(format_with_gutter(&formatted_message, "", None))?;
 
@@ -234,7 +231,6 @@ fn commit_with_generated_message(
 
 /// Commit uncommitted changes with LLM-generated message
 fn handle_commit_changes(
-    custom_instruction: Option<&str>,
     commit_generation_config: &worktrunk::config::CommitGenerationConfig,
 ) -> Result<(), GitError> {
     let repo = Repository::current();
@@ -245,14 +241,12 @@ fn handle_commit_changes(
 
     commit_with_generated_message(
         "Committing uncommitted changes...",
-        custom_instruction,
         commit_generation_config,
     )
 }
 
 fn handle_squash(
     target_branch: &str,
-    custom_instruction: Option<&str>,
     commit_generation_config: &worktrunk::config::CommitGenerationConfig,
 ) -> Result<Option<usize>, GitError> {
     let repo = Repository::current();
@@ -278,11 +272,7 @@ fn handle_squash(
 
     if commit_count == 0 && has_staged {
         // Just staged changes, no commits - commit them directly (no squashing needed)
-        commit_with_generated_message(
-            "Committing staged changes...",
-            custom_instruction,
-            commit_generation_config,
-        )?;
+        commit_with_generated_message("Committing staged changes...", commit_generation_config)?;
         return Ok(None);
     }
 

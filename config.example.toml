@@ -17,9 +17,9 @@ worktree-path = "../{main-worktree}.{branch}"
 # Alternative: Shared directory for multiple repos
 # worktree-path = "../worktrees/{main-worktree}/{branch}"
 
-# LLM Integration (Optional)
+# Commit Message Generation (Optional)
 # For generating commit messages during merge operations (wt merge)
-[llm]
+[commit-generation]
 # Example: Simon Willison's llm CLI (https://github.com/simonw/llm)
 # Install: pip install llm llm-anthropic
 # command = "llm"
@@ -29,6 +29,44 @@ worktree-path = "../{main-worktree}.{branch}"
 # Install from: https://github.com/sigoden/aichat
 # command = "aichat"
 # args = ["-m", "claude:claude-haiku-4.5"]
+
+# Optional: Custom prompt template (inline)
+# Available variables: {git-diff}, {branch}, {recent-commits}, {repo}
+# If not specified, uses the default template shown below:
+# template = """
+# Format
+# - First line: <50 chars, present tense, describes WHAT and WHY (not HOW).
+# - Blank line after first line.
+# - Optional details with proper line breaks explaining context. Commits with more substantial changes should have more details.
+# - Return ONLY the formatted message without quotes, code blocks, or preamble.
+#
+# Style
+# - Do not give normative statements or otherwise speculate on why the change was made.
+# - Broadly match the style of the previous commit messages.
+#   - For example, if they're in conventional commit format, use conventional commits; if they're not, don't use conventional commits.
+#
+# The context contains:
+# - <git-diff> with the staged changes. This is the ONLY content you should base your message on.
+# - <git-info> with branch name and recent commit message titles for style reference ONLY. DO NOT use their content to inform your message.
+#
+# ---
+# The following is the context for your task:
+# ---
+# <git-diff>
+# ```
+# {git-diff}
+# ```
+# </git-diff>
+#
+# <git-info>
+#   <current-branch>{branch}</current-branch>
+# {recent-commits}
+# </git-info>
+# """
+
+# Optional: Load template from file (mutually exclusive with 'template')
+# Supports ~ expansion: ~/.config/worktrunk/commit-template.txt
+# template-file = "~/.config/worktrunk/commit-template.txt"
 
 # Approved Commands
 # Commands approved for automatic execution after switching worktrees

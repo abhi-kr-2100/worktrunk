@@ -155,7 +155,7 @@ The merge operation follows a strict order designed for fail-fast execution:
 
 3. Auto-commit uncommitted changes
    If working tree has uncommitted changes, stages all changes (git add -A) and commits
-   with LLM-generated message. Custom instructions can be provided via --message.
+   with LLM-generated message.
 
 4. Squash commits
    If --squash specified, counts commits since merge base with target branch. When
@@ -196,10 +196,6 @@ Skip pre-merge commands:
         /// Keep worktree after merging (don't remove)
         #[arg(short, long)]
         keep: bool,
-
-        /// Custom instruction for commit message generation
-        #[arg(short = 'm', long)]
-        message: Option<String>,
 
         /// Skip all project hooks (pre-merge-command)
         #[arg(long)]
@@ -435,17 +431,9 @@ fn main() {
             target,
             squash,
             keep,
-            message,
             no_hooks,
             force,
-        } => handle_merge(
-            target.as_deref(),
-            squash,
-            keep,
-            message.as_deref(),
-            no_hooks,
-            force,
-        ),
+        } => handle_merge(target.as_deref(), squash, keep, no_hooks, force),
         Commands::Completion { shell } => {
             let mut cli_cmd = Cli::command();
             handle_completion(shell, &mut cli_cmd);
