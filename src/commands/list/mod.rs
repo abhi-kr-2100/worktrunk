@@ -21,12 +21,7 @@ fn enrich_common_fields(
     branch_diff: &model::BranchDiffTotals,
     upstream: &model::UpstreamStatus,
     pr_status: &Option<ci_status::PrStatus>,
-) -> (
-    Option<String>,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-) {
+) -> model::DisplayFields {
     let commits_display = format_ahead_behind_plain(counts.ahead, counts.behind);
 
     let (added, deleted) = branch_diff.diff;
@@ -40,48 +35,36 @@ fn enrich_common_fields(
 
     let ci_status_display = pr_status.as_ref().map(format_ci_status_plain);
 
-    (
+    model::DisplayFields {
         commits_display,
         branch_diff_display,
         upstream_display,
         ci_status_display,
-    )
+    }
 }
 
 /// Enrich a ListItem with display fields for json-pretty format
 fn enrich_with_display_fields(mut item: ListItem) -> ListItem {
     match &mut item {
         ListItem::Worktree(info) => {
-            let (commits_display, branch_diff_display, upstream_display, ci_status_display) =
-                enrich_common_fields(
-                    &info.counts,
-                    &info.branch_diff,
-                    &info.upstream,
-                    &info.pr_status,
-                );
-
-            info.commits_display = commits_display;
-            info.branch_diff_display = branch_diff_display;
-            info.upstream_display = upstream_display;
-            info.ci_status_display = ci_status_display;
+            info.display = enrich_common_fields(
+                &info.counts,
+                &info.branch_diff,
+                &info.upstream,
+                &info.pr_status,
+            );
 
             // Working tree specific field
             let (added, deleted) = info.working_tree_diff;
             info.working_diff_display = format_diff_plain(added, deleted);
         }
         ListItem::Branch(info) => {
-            let (commits_display, branch_diff_display, upstream_display, ci_status_display) =
-                enrich_common_fields(
-                    &info.counts,
-                    &info.branch_diff,
-                    &info.upstream,
-                    &info.pr_status,
-                );
-
-            info.commits_display = commits_display;
-            info.branch_diff_display = branch_diff_display;
-            info.upstream_display = upstream_display;
-            info.ci_status_display = ci_status_display;
+            info.display = enrich_common_fields(
+                &info.counts,
+                &info.branch_diff,
+                &info.upstream,
+                &info.pr_status,
+            );
         }
     }
     item

@@ -427,7 +427,8 @@ mod tests {
     #[test]
     fn test_column_width_calculation_with_unicode() {
         use crate::commands::list::model::{
-            AheadBehind, BranchDiffTotals, CommitDetails, UpstreamStatus, WorktreeInfo,
+            AheadBehind, BranchDiffTotals, CommitDetails, DisplayFields, UpstreamStatus,
+            WorktreeInfo,
         };
 
         let info1 = WorktreeInfo {
@@ -454,11 +455,8 @@ mod tests {
             upstream: UpstreamStatus::from_parts(Some("origin".to_string()), 4, 0),
             worktree_state: None,
             pr_status: None,
-            commits_display: None,
+            display: DisplayFields::default(),
             working_diff_display: None,
-            branch_diff_display: None,
-            upstream_display: None,
-            ci_status_display: None,
         };
 
         let widths = calculate_column_widths(&[super::ListItem::Worktree(info1)]);
@@ -499,7 +497,8 @@ mod tests {
     #[test]
     fn test_visible_columns_follow_gap_rule() {
         use crate::commands::list::model::{
-            AheadBehind, BranchDiffTotals, CommitDetails, UpstreamStatus, WorktreeInfo,
+            AheadBehind, BranchDiffTotals, CommitDetails, DisplayFields, UpstreamStatus,
+            WorktreeInfo,
         };
 
         // Create test data with specific widths to verify position calculation
@@ -527,11 +526,8 @@ mod tests {
             upstream: UpstreamStatus::from_parts(Some("origin".to_string()), 4, 2),
             worktree_state: None,
             pr_status: None,
-            commits_display: None,
+            display: DisplayFields::default(),
             working_diff_display: None,
-            branch_diff_display: None,
-            upstream_display: None,
-            ci_status_display: None,
         };
 
         let items = vec![super::ListItem::Worktree(info)];
@@ -583,7 +579,8 @@ mod tests {
     #[test]
     fn test_column_positions_with_hidden_columns() {
         use crate::commands::list::model::{
-            AheadBehind, BranchDiffTotals, CommitDetails, UpstreamStatus, WorktreeInfo,
+            AheadBehind, BranchDiffTotals, CommitDetails, DisplayFields, UpstreamStatus,
+            WorktreeInfo,
         };
 
         // Create minimal data - most columns will be hidden
@@ -611,11 +608,8 @@ mod tests {
             upstream: UpstreamStatus::default(),
             worktree_state: None,
             pr_status: None,
-            commits_display: None,
+            display: DisplayFields::default(),
             working_diff_display: None,
-            branch_diff_display: None,
-            upstream_display: None,
-            ci_status_display: None,
         };
 
         let items = vec![super::ListItem::Worktree(info)];
@@ -645,7 +639,8 @@ mod tests {
     #[test]
     fn test_consecutive_hidden_columns_skip_correctly() {
         use crate::commands::list::model::{
-            AheadBehind, BranchDiffTotals, CommitDetails, UpstreamStatus, WorktreeInfo,
+            AheadBehind, BranchDiffTotals, CommitDetails, DisplayFields, UpstreamStatus,
+            WorktreeInfo,
         };
 
         // Create data where multiple consecutive columns are hidden:
@@ -675,11 +670,8 @@ mod tests {
             upstream: UpstreamStatus::default(), // Hidden: no upstream
             worktree_state: None,      // Hidden: no state
             pr_status: None,
-            commits_display: None,
+            display: DisplayFields::default(),
             working_diff_display: None,
-            branch_diff_display: None,
-            upstream_display: None,
-            ci_status_display: None,
         };
 
         let items = vec![super::ListItem::Worktree(info)];
