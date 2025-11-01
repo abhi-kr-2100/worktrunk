@@ -32,7 +32,7 @@ fn try_allocate(
 }
 
 /// Width information for diff columns (e.g., "+128 -147")
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct DiffWidths {
     pub total: usize,
     pub added_digits: usize,
@@ -53,10 +53,10 @@ pub struct ColumnWidths {
     pub branch: usize,
     pub time: usize,
     pub message: usize,
-    pub ahead_behind: usize,
+    pub ahead_behind: DiffWidths,
     pub working_diff: DiffWidths,
     pub branch_diff: DiffWidths,
-    pub upstream: usize,
+    pub upstream: DiffWidths,
     pub states: usize,
     pub commit: usize,
     pub path: usize,
@@ -73,15 +73,19 @@ pub fn calculate_column_widths(items: &[ListItem]) -> ColumnWidths {
     let mut max_branch = "Branch".width();
     let mut max_time = "Age".width();
     let mut max_message = "Message".width();
-    let mut max_ahead_behind = "Cmts".width();
-    let mut max_upstream = "Remote".width();
-    let mut max_states = "State".width();
+    let mut max_states = 0; // Start at 0, will use header width if needed
 
     // Track diff component widths separately
     let mut max_wt_added_digits = 0;
     let mut max_wt_deleted_digits = 0;
     let mut max_br_added_digits = 0;
     let mut max_br_deleted_digits = 0;
+
+    // Track ahead/behind digit widths separately for alignment
+    let mut max_ahead_digits = 0;
+    let mut max_behind_digits = 0;
+    let mut max_upstream_ahead_digits = 0;
+    let mut max_upstream_behind_digits = 0;
 
     for item in items {
         let commit = item.commit_details();
@@ -101,10 +105,10 @@ pub fn calculate_column_widths(items: &[ListItem]) -> ColumnWidths {
         let msg_len = commit.commit_message.chars().take(50).count();
         max_message = max_message.max(msg_len);
 
-        // Ahead/behind (only for non-primary items)
+        // Ahead/behind (only for non-primary items) - track digits separately
         if !item.is_primary() && (counts.ahead > 0 || counts.behind > 0) {
-            let ahead_behind_len = format!("↑{} ↓{}", counts.ahead, counts.behind).width();
-            max_ahead_behind = max_ahead_behind.max(ahead_behind_len);
+            max_ahead_digits = max_ahead_digits.max(counts.ahead.to_string().len());
+            max_behind_digits = max_behind_digits.max(counts.behind.to_string().len());
         }
 
         // Working tree diff (worktrees only) - track digits separately
@@ -123,11 +127,12 @@ pub fn calculate_column_widths(items: &[ListItem]) -> ColumnWidths {
             max_br_deleted_digits = max_br_deleted_digits.max(branch_diff.1.to_string().len());
         }
 
-        // Upstream tracking
-        if let Some((remote_name, upstream_ahead, upstream_behind)) = upstream.active() {
-            let upstream_len =
-                format!("{} ↑{} ↓{}", remote_name, upstream_ahead, upstream_behind).width();
-            max_upstream = max_upstream.max(upstream_len);
+        // Upstream tracking - track digits separately
+        if let Some((_remote_name, upstream_ahead, upstream_behind)) = upstream.active() {
+            max_upstream_ahead_digits =
+                max_upstream_ahead_digits.max(upstream_ahead.to_string().len());
+            max_upstream_behind_digits =
+                max_upstream_behind_digits.max(upstream_behind.to_string().len());
         }
 
         // States (worktrees only)
@@ -149,39 +154,42 @@ pub fn calculate_column_widths(items: &[ListItem]) -> ColumnWidths {
     };
     let branch_diff_total = if max_br_added_digits > 0 || max_br_deleted_digits > 0 {
         let data_width = 1 + max_br_added_digits + 1 + 1 + max_br_deleted_digits;
-        data_width.max("Cmt +/-".width()) // Ensure header fits if we have data
+        data_width.max("Branch +/-".width()) // Ensure header fits if we have data
     } else {
         0 // No data, no column
     };
 
-    // Reset sparse column widths to 0 if they're still at header width (no data found)
-    let header_ahead_behind = "Cmts".width();
-    let header_upstream = "Remote".width();
-    let header_states = "State".width();
-
-    let final_ahead_behind = if max_ahead_behind == header_ahead_behind {
-        0 // No data found
+    // Calculate ahead/behind column width (format: "↑n ↓n")
+    let ahead_behind_total = if max_ahead_digits > 0 || max_behind_digits > 0 {
+        let data_width = 1 + max_ahead_digits + 1 + 1 + max_behind_digits;
+        data_width.max("Commits".width())
     } else {
-        max_ahead_behind
+        0
     };
 
-    let final_upstream = if max_upstream == header_upstream {
-        0 // No data found
+    // Calculate upstream column width (format: "↑n ↓n" or "remote ↑n ↓n")
+    let upstream_total = if max_upstream_ahead_digits > 0 || max_upstream_behind_digits > 0 {
+        let data_width = 1 + max_upstream_ahead_digits + 1 + 1 + max_upstream_behind_digits;
+        data_width.max("Remote".width())
     } else {
-        max_upstream
+        0
     };
 
-    let final_states = if max_states == header_states {
-        0 // No data found
+    let final_states = if max_states > 0 {
+        max_states.max("State".width())
     } else {
-        max_states
+        0
     };
 
     ColumnWidths {
         branch: max_branch,
         time: max_time,
         message: max_message,
-        ahead_behind: final_ahead_behind,
+        ahead_behind: DiffWidths {
+            total: ahead_behind_total,
+            added_digits: max_ahead_digits,
+            deleted_digits: max_behind_digits,
+        },
         working_diff: DiffWidths {
             total: working_diff_total,
             added_digits: max_wt_added_digits,
@@ -192,7 +200,11 @@ pub fn calculate_column_widths(items: &[ListItem]) -> ColumnWidths {
             added_digits: max_br_added_digits,
             deleted_digits: max_br_deleted_digits,
         },
-        upstream: final_upstream,
+        upstream: DiffWidths {
+            total: upstream_total,
+            added_digits: max_upstream_ahead_digits,
+            deleted_digits: max_upstream_behind_digits,
+        },
         states: final_states,
         commit: 8, // Fixed width for short commit hash
         path: 0,   // Path width calculated later in responsive layout
@@ -230,14 +242,15 @@ pub fn calculate_responsive_layout(items: &[ListItem]) -> LayoutConfig {
     // 1. branch - identity (what is this?)
     // 2. working_diff - uncommitted changes (CRITICAL: do I need to commit?)
     // 3. ahead_behind - commits difference (CRITICAL: am I ahead/behind?)
-    // 4. states - special states like [rebasing] (rare but urgent when present)
-    // 5. path - location (where is this?)
-    // 6. branch_diff - line diff in commits (work volume understanding)
+    // 4. branch_diff - line diff in commits (work volume in those commits)
+    // 5. states - special states like [rebasing] (rare but urgent when present)
+    // 6. path - location (where is this?)
     // 7. upstream - tracking configuration (sync context)
     // 8. time - recency (nice-to-have context)
     // 9. commit - hash (reference info, rarely needed)
     // 10. message - description (nice-to-have, space-hungry)
     //
+    // Note: ahead_behind and branch_diff are adjacent (both describe commits vs main)
     // Each column is shown if it has any data (ideal_width > 0) and fits in remaining space.
     // All columns participate in priority allocation - nothing is "essential".
 
@@ -246,10 +259,10 @@ pub fn calculate_responsive_layout(items: &[ListItem]) -> LayoutConfig {
         branch: 0,
         time: 0,
         message: 0,
-        ahead_behind: 0,
+        ahead_behind: DiffWidths::zero(),
         working_diff: DiffWidths::zero(),
         branch_diff: DiffWidths::zero(),
-        upstream: 0,
+        upstream: DiffWidths::zero(),
         states: 0,
         commit: 0,
         path: 0,
@@ -270,15 +283,17 @@ pub fn calculate_responsive_layout(items: &[ListItem]) -> LayoutConfig {
     }
 
     // Ahead/behind column (critical sync status)
-    widths.ahead_behind = try_allocate(&mut remaining, ideal_widths.ahead_behind, spacing, false);
+    let allocated_width = try_allocate(
+        &mut remaining,
+        ideal_widths.ahead_behind.total,
+        spacing,
+        false,
+    );
+    if allocated_width > 0 {
+        widths.ahead_behind = ideal_widths.ahead_behind;
+    }
 
-    // States column (rare but urgent when present)
-    widths.states = try_allocate(&mut remaining, ideal_widths.states, spacing, false);
-
-    // Path column (location - important for navigation)
-    widths.path = try_allocate(&mut remaining, max_path_width, spacing, false);
-
-    // Branch diff column (work volume)
+    // Branch diff column (work volume in those commits)
     let allocated_width = try_allocate(
         &mut remaining,
         ideal_widths.branch_diff.total,
@@ -289,8 +304,17 @@ pub fn calculate_responsive_layout(items: &[ListItem]) -> LayoutConfig {
         widths.branch_diff = ideal_widths.branch_diff;
     }
 
+    // States column (rare but urgent when present)
+    widths.states = try_allocate(&mut remaining, ideal_widths.states, spacing, false);
+
+    // Path column (location - important for navigation)
+    widths.path = try_allocate(&mut remaining, max_path_width, spacing, false);
+
     // Upstream column (sync configuration)
-    widths.upstream = try_allocate(&mut remaining, ideal_widths.upstream, spacing, false);
+    let allocated_width = try_allocate(&mut remaining, ideal_widths.upstream.total, spacing, false);
+    if allocated_width > 0 {
+        widths.upstream = ideal_widths.upstream;
+    }
 
     // Time column (contextual information)
     widths.time = try_allocate(&mut remaining, ideal_widths.time, spacing, false);
@@ -369,20 +393,33 @@ mod tests {
 
         let widths = calculate_column_widths(&[super::ListItem::Worktree(info1)]);
 
-        // "↑3 ↓2" has visual width 5 (not 9 bytes)
-        assert_eq!(widths.ahead_behind, 5, "↑3 ↓2 should have width 5");
+        // "↑3 ↓2" has format "↑3 ↓2" = 1+1+1+1+1 = 5, but header "Commits" is 7
+        assert_eq!(
+            widths.ahead_behind.total, 7,
+            "Ahead/behind column should fit header 'Commits' (width 7)"
+        );
+        assert_eq!(widths.ahead_behind.added_digits, 1, "3 has 1 digit");
+        assert_eq!(widths.ahead_behind.deleted_digits, 1, "2 has 1 digit");
 
         // "+100 -50" has width 8
         assert_eq!(widths.working_diff.total, 8, "+100 -50 should have width 8");
         assert_eq!(widths.working_diff.added_digits, 3, "100 has 3 digits");
         assert_eq!(widths.working_diff.deleted_digits, 2, "50 has 2 digits");
 
-        // "+200 -30" has width 8
-        assert_eq!(widths.branch_diff.total, 8, "+200 -30 should have width 8");
+        // "+200 -30" has width 8, but header "Branch +/-" is 10, so column width is 10
+        assert_eq!(
+            widths.branch_diff.total, 10,
+            "Branch diff column should fit header 'Branch +/-' (width 10)"
+        );
         assert_eq!(widths.branch_diff.added_digits, 3, "200 has 3 digits");
         assert_eq!(widths.branch_diff.deleted_digits, 2, "30 has 2 digits");
 
-        // "origin ↑4 ↓0" has visual width 12 (not more due to Unicode arrows)
-        assert_eq!(widths.upstream, 12, "origin ↑4 ↓0 should have width 12");
+        // Single remote: "↑4 ↓0" has format "↑4 ↓0" = 1+1+1+1+1 = 5, but header "Remote" is 6
+        assert_eq!(
+            widths.upstream.total, 6,
+            "Upstream column should fit header 'Remote' (width 6) when single remote"
+        );
+        assert_eq!(widths.upstream.added_digits, 1, "4 has 1 digit");
+        assert_eq!(widths.upstream.deleted_digits, 1, "0 has 1 digit");
     }
 }

@@ -55,10 +55,10 @@ impl ColumnPositions {
         if let Some(pos) = header.find("Age") {
             positions.age = Some(pos);
         }
-        if let Some(pos) = header.find("Cmts") {
+        if let Some(pos) = header.find("Commits") {
             positions.cmts = Some(pos);
         }
-        if let Some(pos) = header.find("Cmt +/-") {
+        if let Some(pos) = header.find("Branch +/-") {
             positions.cmt_diff = Some(pos);
         }
         if let Some(pos) = header.find("WT +/-") {
@@ -198,8 +198,8 @@ fn verify_table_alignment(output: &str) -> Result<(), String> {
         let positions = [
             ("Branch", Some(0usize)), // Branch always starts at 0
             ("Age", header_positions.age),
-            ("Cmts", header_positions.cmts),
-            ("Cmt +/-", header_positions.cmt_diff),
+            ("Commits", header_positions.cmts),
+            ("Branch +/-", header_positions.cmt_diff),
             ("WT +/-", header_positions.wt_diff),
             ("Remote", header_positions.remote),
             ("Commit", header_positions.commit),

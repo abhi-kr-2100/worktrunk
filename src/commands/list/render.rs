@@ -5,6 +5,57 @@ use worktrunk::styling::{ADDITION, CURRENT, DELETION, StyledLine};
 use super::layout::{DiffWidths, LayoutConfig};
 use super::model::{ListItem, WorktreeInfo};
 
+/// Format arrow-based counts (e.g., "↑6 ↓1") with alignment
+/// Down arrows always appear at the same column position by reserving space for ahead part
+fn format_arrow_column(
+    ahead: usize,
+    behind: usize,
+    widths: &DiffWidths,
+    green: Style,
+    red: Style,
+) -> StyledLine {
+    let mut segment = StyledLine::new();
+
+    if ahead > 0 || behind > 0 {
+        // Always reserve full width for ahead part (↑ + max_digits)
+        if ahead > 0 {
+            let ahead_str = format!("↑{}", ahead);
+            segment.push_styled(&ahead_str, green);
+            // Pad ahead part to fixed width
+            let ahead_padding = widths.added_digits.saturating_sub(ahead.to_string().len());
+            if ahead_padding > 0 {
+                segment.push_raw(" ".repeat(ahead_padding));
+            }
+        } else {
+            // Reserve full space when ahead is zero
+            segment.push_raw(" ".repeat(1 + widths.added_digits));
+        }
+
+        // Always add separator space
+        segment.push_raw(" ");
+
+        // Always reserve full width for behind part (↓ + max_digits)
+        if behind > 0 {
+            let behind_str = format!("↓{}", behind);
+            segment.push_styled(&behind_str, red);
+            // Pad behind part to fixed width
+            let behind_padding = widths
+                .deleted_digits
+                .saturating_sub(behind.to_string().len());
+            if behind_padding > 0 {
+                segment.push_raw(" ".repeat(behind_padding));
+            }
+        } else {
+            // Reserve full space when behind is zero
+            segment.push_raw(" ".repeat(1 + widths.deleted_digits));
+        }
+    } else {
+        segment.push_raw(" ".repeat(widths.total));
+    }
+
+    segment
+}
+
 /// Format diff values as styled segments (right-aligned with attached signs)
 fn format_diff_column(
     added: usize,
@@ -16,28 +67,43 @@ fn format_diff_column(
     let mut diff_segment = StyledLine::new();
 
     if added > 0 || deleted > 0 {
-        let added_part = format!(
-            "{:>width$}",
-            format!("+{}", added),
-            width = 1 + widths.added_digits
-        );
-        let deleted_part = format!(
-            "{:>width$}",
-            format!("-{}", deleted),
-            width = 1 + widths.deleted_digits
-        );
-
-        // Calculate the content width
+        // Always maintain full column width for alignment
+        // Format: [padding] [+nnn] [ ] [-nnn]
         let content_width = (1 + widths.added_digits) + 1 + (1 + widths.deleted_digits);
-        // Add left padding to align to total width
         let left_padding = widths.total.saturating_sub(content_width);
 
         if left_padding > 0 {
             diff_segment.push_raw(" ".repeat(left_padding));
         }
-        diff_segment.push_styled(added_part, green);
+
+        // Added part: show value or spaces
+        if added > 0 {
+            let added_part = format!(
+                "{:>width$}",
+                format!("+{}", added),
+                width = 1 + widths.added_digits
+            );
+            diff_segment.push_styled(added_part, green);
+        } else {
+            // Blank space to maintain alignment
+            diff_segment.push_raw(" ".repeat(1 + widths.added_digits));
+        }
+
+        // Space between added and deleted
         diff_segment.push_raw(" ");
-        diff_segment.push_styled(deleted_part, red);
+
+        // Deleted part: show value or spaces
+        if deleted > 0 {
+            let deleted_part = format!(
+                "{:>width$}",
+                format!("-{}", deleted),
+                width = 1 + widths.deleted_digits
+            );
+            diff_segment.push_styled(deleted_part, red);
+        } else {
+            // Blank space to maintain alignment
+            diff_segment.push_raw(" ".repeat(1 + widths.deleted_digits));
+        }
     } else {
         diff_segment.push_raw(" ".repeat(widths.total));
     }
@@ -96,11 +162,11 @@ pub fn format_header_line(layout: &LayoutConfig) {
 
     push_optional_header(&mut line, "Branch", widths.branch, dim);
     push_optional_header(&mut line, "WT +/-", widths.working_diff.total, dim);
-    push_optional_header(&mut line, "Cmts", widths.ahead_behind, dim);
+    push_optional_header(&mut line, "Commits", widths.ahead_behind.total, dim);
+    push_optional_header(&mut line, "Branch +/-", widths.branch_diff.total, dim);
     push_optional_header(&mut line, "State", widths.states, dim);
     push_optional_header(&mut line, "Path", widths.path, dim);
-    push_optional_header(&mut line, "Cmt +/-", widths.branch_diff.total, dim);
-    push_optional_header(&mut line, "Remote", widths.upstream, dim);
+    push_optional_header(&mut line, "Remote", widths.upstream.total, dim);
     push_optional_header(&mut line, "Age", widths.time, dim);
     push_optional_header(&mut line, "Commit", widths.commit, dim);
     push_optional_header(&mut line, "Message", widths.message, dim);
@@ -130,6 +196,17 @@ fn push_optional_header(line: &mut StyledLine, label: &str, width: usize, dim: S
     }
 }
 
+/// Check if a branch is potentially removable (nothing ahead, no uncommitted changes)
+fn is_potentially_removable(item: &ListItem) -> bool {
+    let counts = item.counts();
+    let wt_diff = item
+        .worktree_info()
+        .map(|info| info.working_tree_diff)
+        .unwrap_or((0, 0));
+
+    !item.is_primary() && counts.ahead == 0 && wt_diff == (0, 0)
+}
+
 /// Render a list item (worktree or branch) as a formatted line
 pub fn format_list_item_line(
     item: &ListItem,
@@ -146,6 +223,9 @@ pub fn format_list_item_line(
     let worktree_info = item.worktree_info();
     let short_head = &head[..8.min(head.len())];
 
+    // Check if branch is potentially removable
+    let removable = is_potentially_removable(item);
+
     // Determine styling (worktree-specific)
     let text_style = worktree_info.and_then(|info| {
         let is_current = current_worktree_path
@@ -157,6 +237,13 @@ pub fn format_list_item_line(
             _ => None,
         }
     });
+
+    // Override styling if removable (dim the row)
+    let text_style = if removable {
+        Some(Style::new().dimmed())
+    } else {
+        text_style
+    };
 
     // Start building the line
     let mut line = StyledLine::new();
@@ -170,9 +257,10 @@ pub fn format_list_item_line(
         first_column = false;
     };
 
-    // Branch name
+    // Branch name (dimmed if removable)
     if widths.branch > 0 {
         push_gap_if_needed(&mut line);
+
         let branch_text = format!("{:width$}", item.branch_name(), width = widths.branch);
         if let Some(style) = text_style {
             line.push_styled(branch_text, style);
@@ -192,25 +280,33 @@ pub fn format_list_item_line(
         }
     }
 
-    // Ahead/behind (commits difference)
-    if widths.ahead_behind > 0 {
+    // Ahead/behind (commits difference) - green ahead, dim red behind
+    if widths.ahead_behind.total > 0 {
+        push_gap_if_needed(&mut line);
+        if !item.is_primary() && (counts.ahead > 0 || counts.behind > 0) {
+            let dim_deletion = DELETION.dimmed();
+            append_line(
+                &mut line,
+                format_arrow_column(
+                    counts.ahead,
+                    counts.behind,
+                    &widths.ahead_behind,
+                    ADDITION,
+                    dim_deletion,
+                ),
+            );
+        } else {
+            push_blank(&mut line, widths.ahead_behind.total);
+        }
+    }
+
+    // Branch diff (line diff in commits)
+    if widths.branch_diff.total > 0 {
         push_gap_if_needed(&mut line);
         if !item.is_primary() {
-            if counts.ahead > 0 || counts.behind > 0 {
-                let ahead_behind_text = format!(
-                    "{:width$}",
-                    format!("↑{} ↓{}", counts.ahead, counts.behind),
-                    width = widths.ahead_behind
-                );
-                line.push_styled(
-                    ahead_behind_text,
-                    Style::new().fg_color(Some(Color::Ansi(AnsiColor::Yellow))),
-                );
-            } else {
-                push_blank(&mut line, widths.ahead_behind);
-            }
+            push_diff(&mut line, branch_diff.0, branch_diff.1, &widths.branch_diff);
         } else {
-            push_blank(&mut line, widths.ahead_behind);
+            push_blank(&mut line, widths.branch_diff.total);
         }
     }
 
@@ -246,30 +342,24 @@ pub fn format_list_item_line(
         }
     }
 
-    // Branch diff (line diff in commits)
-    if widths.branch_diff.total > 0 {
-        push_gap_if_needed(&mut line);
-        if !item.is_primary() {
-            push_diff(&mut line, branch_diff.0, branch_diff.1, &widths.branch_diff);
-        } else {
-            push_blank(&mut line, widths.branch_diff.total);
-        }
-    }
-
     // Upstream tracking
-    if widths.upstream > 0 {
+    if widths.upstream.total > 0 {
         push_gap_if_needed(&mut line);
-        if let Some((remote_name, upstream_ahead, upstream_behind)) = upstream.active() {
-            let mut upstream_segment = StyledLine::new();
-            upstream_segment.push_styled(remote_name, Style::new().dimmed());
-            upstream_segment.push_raw(" ");
-            upstream_segment.push_styled(format!("↑{}", upstream_ahead), ADDITION);
-            upstream_segment.push_raw(" ");
-            upstream_segment.push_styled(format!("↓{}", upstream_behind), DELETION);
-            upstream_segment.pad_to(widths.upstream);
-            append_line(&mut line, upstream_segment);
+        if let Some((_remote_name, upstream_ahead, upstream_behind)) = upstream.active() {
+            let dim_deletion = DELETION.dimmed();
+            // TODO: Handle show_remote_names when implemented
+            append_line(
+                &mut line,
+                format_arrow_column(
+                    upstream_ahead,
+                    upstream_behind,
+                    &widths.upstream,
+                    ADDITION,
+                    dim_deletion,
+                ),
+            );
         } else {
-            push_blank(&mut line, widths.upstream);
+            push_blank(&mut line, widths.upstream.total);
         }
     }
 
