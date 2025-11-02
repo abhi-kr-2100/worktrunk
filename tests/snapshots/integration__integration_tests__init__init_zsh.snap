@@ -340,8 +340,7 @@ _arguments "${_arguments_options[@]}" : \
 (merge)
 _arguments "${_arguments_options[@]}" : \
 '--no-squash[Disable squashing commits (by default, commits are squashed into one before merging)]' \
-'-k[Keep worktree after merging (don'\''t remove)]' \
-'--keep[Keep worktree after merging (don'\''t remove)]' \
+'--no-remove[Keep worktree after merging (don'\''t remove)]' \
 '--no-verify[Skip all project hooks (pre-merge-command)]' \
 '-f[Skip approval prompts for commands]' \
 '--force[Skip approval prompts for commands]' \

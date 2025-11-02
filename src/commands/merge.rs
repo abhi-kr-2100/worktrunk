@@ -49,7 +49,7 @@ fn show_untracked_warning(repo: &Repository) -> Result<(), GitError> {
 pub fn handle_merge(
     target: Option<&str>,
     squash_enabled: bool,
-    keep: bool,
+    no_remove: bool,
     no_verify: bool,
     force: bool,
     tracked_only: bool,
@@ -132,8 +132,8 @@ pub fn handle_merge(
     // Get primary worktree path before cleanup (while we can still run git commands)
     let primary_worktree_dir = repo.main_worktree_root()?;
 
-    // Finish worktree unless --keep was specified
-    if !keep {
+    // Finish worktree unless --no-remove was specified
+    if !no_remove {
         // STEP 1: Check for uncommitted changes before attempting cleanup
         // This prevents showing "Cleaning up worktree..." before failing
         repo.ensure_clean_working_tree()?;

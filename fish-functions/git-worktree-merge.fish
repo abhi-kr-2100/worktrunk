@@ -1,5 +1,5 @@
 function git-worktree-merge -d "Finish worktree and merge branch into target branch (default: main)"
-    argparse -n git-worktree-merge s/squash k/keep -- $argv
+    argparse -n git-worktree-merge s/squash k/no-remove -- $argv
     or return 1
 
     # Get current branch
@@ -79,8 +79,8 @@ function git-worktree-merge -d "Finish worktree and merge branch into target bra
         return 1
     end
 
-    # Finish worktree unless --keep was specified
-    if not set -q _flag_keep
+    # Finish worktree unless --no-remove was specified
+    if not set -q _flag_no_remove
         # Always finish the current worktree first (handles cleanup)
         if not git-worktree-finish
             echo (set_color red)"❌ Failed to finish worktree"(set_color normal) >&2

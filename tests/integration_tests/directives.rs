@@ -109,9 +109,9 @@ fn test_remove_without_internal() {
     });
 }
 
-/// Test merge command with internal flag and --keep
+/// Test merge command with internal flag and --no-remove
 #[test]
-fn test_merge_internal_keep() {
+fn test_merge_internal_no_remove() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
     repo.setup_remote("main");
@@ -155,7 +155,7 @@ fn test_merge_internal_keep() {
         cmd.arg("--internal")
             .arg("merge")
             .arg("main")
-            .arg("--keep")
+            .arg("--no-remove")
             .current_dir(&feature_wt);
 
         // Note: Using file snapshot instead of inline because multiline inline snapshots

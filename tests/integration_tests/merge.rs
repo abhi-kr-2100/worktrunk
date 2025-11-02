@@ -70,7 +70,7 @@ fn test_merge_fast_forward() {
 }
 
 #[test]
-fn test_merge_with_keep_flag() {
+fn test_merge_with_no_remove_flag() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");
     repo.setup_remote("main");
@@ -103,11 +103,11 @@ fn test_merge_with_keep_flag() {
         .output()
         .expect("Failed to commit");
 
-    // Merge with --keep flag (should not finish worktree)
+    // Merge with --no-remove flag (should not finish worktree)
     snapshot_merge(
-        "merge_with_keep",
+        "merge_with_no_remove",
         &repo,
-        &["main", "--keep"],
+        &["main", "--no-remove"],
         Some(&feature_wt),
     );
 }

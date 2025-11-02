@@ -239,7 +239,7 @@ The merge operation follows a strict order designed for fail-fast execution:
 
 7. Clean up worktree
    Removes current worktree and switches primary worktree to target branch if needed.
-   Skip removal with --keep.
+   Skip removal with --no-remove.
 
 EXAMPLES
 
@@ -250,7 +250,7 @@ Merge without squashing:
   wt merge --no-squash
 
 Keep worktree after merging:
-  wt merge --keep
+  wt merge --no-remove
 
 Skip pre-merge commands:
   wt merge --no-verify")]
@@ -263,8 +263,8 @@ Skip pre-merge commands:
         squash_enabled: bool,
 
         /// Keep worktree after merging (don't remove)
-        #[arg(short, long)]
-        keep: bool,
+        #[arg(long = "no-remove")]
+        no_remove: bool,
 
         /// Skip all project hooks (pre-merge-command)
         #[arg(long)]
@@ -527,14 +527,14 @@ fn main() {
         Commands::Merge {
             target,
             squash_enabled,
-            keep,
+            no_remove,
             no_verify,
             force,
             tracked_only,
         } => handle_merge(
             target.as_deref(),
             squash_enabled,
-            keep,
+            no_remove,
             no_verify,
             force,
             tracked_only,

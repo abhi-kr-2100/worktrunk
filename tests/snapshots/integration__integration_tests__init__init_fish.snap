@@ -284,7 +284,7 @@ complete -c wt -n "__fish_wt_using_subcommand switch" -s h -l help -d 'Print hel
 complete -c wt -n "__fish_wt_using_subcommand remove" -s v -l verbose -d 'Enable verbose output (show git commands and debug info)'
 complete -c wt -n "__fish_wt_using_subcommand remove" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_using_subcommand merge" -l no-squash -d 'Disable squashing commits (by default, commits are squashed into one before merging)'
-complete -c wt -n "__fish_wt_using_subcommand merge" -s k -l keep -d 'Keep worktree after merging (don\'t remove)'
+complete -c wt -n "__fish_wt_using_subcommand merge" -l no-remove -d 'Keep worktree after merging (don\'t remove)'
 complete -c wt -n "__fish_wt_using_subcommand merge" -l no-verify -d 'Skip all project hooks (pre-merge-command)'
 complete -c wt -n "__fish_wt_using_subcommand merge" -s f -l force -d 'Skip approval prompts for commands'
 complete -c wt -n "__fish_wt_using_subcommand merge" -l tracked-only -d 'Only stage tracked files (git add -u) instead of all files (git add -A)'
