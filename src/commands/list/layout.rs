@@ -1,12 +1,12 @@
 //! Column layout and priority allocation for the list command.
 //!
-//! # TODO: Priority System Design & Future Improvements
+//! # Priority System Design
 //!
-//! ## Current Approach: Priority with Modifiers
+//! ## Priority Scoring Model
 //!
 //! The allocation system uses a **priority scoring model**:
 //! ```text
-//! final_priority = base_priority + modifiers
+//! final_priority = base_priority + empty_penalty
 //! ```
 //!
 //! **Base priorities** (1-11) are determined by **user need hierarchy** - what questions users need
@@ -17,11 +17,10 @@
 //! - 4-10: Context (work volume, states, path, time, CI, etc.)
 //! - 11: Message (nice-to-have, space-hungry)
 //!
-//! **Modifiers** adjust priority based on column attributes:
-//! - **Empty penalty**: +10 if column has no data (only header)
-//!   - Empty working_diff: 2 + 10 = priority 12
-//!   - Empty ahead/behind: 3 + 10 = priority 13
-//!   - etc.
+//! **Empty penalty**: +10 if column has no data (only header)
+//! - Empty working_diff: 2 + 10 = priority 12
+//! - Empty ahead/behind: 3 + 10 = priority 13
+//! - etc.
 //!
 //! This creates two effective priority tiers:
 //! - **Tier 1 (priorities 1-11)**: Columns with actual data
@@ -44,78 +43,65 @@
 //! - Narrow terminals: Data columns + message (hide empty columns)
 //! - Wide terminals: Data columns + message + empty columns (visual consistency)
 //!
-//! ## Current Implementation
+//! ## Special Cases
 //!
-//! The code implements this as two explicit phases:
+//! Three columns have non-standard behavior that extends beyond the basic two-tier model:
+//!
+//! 1. **BranchDiff** - Visibility gate (`show_full` flag)
+//!    - Hidden by default as too noisy for typical usage
+//!    - Only allocated when `show_full=true` (match guard skips if false)
+//!
+//! 2. **CiStatus** - Visibility gate (`fetch_ci` flag)
+//!    - Only shown when `fetch_ci=true` (when CI data was requested)
+//!    - Bypasses the tier system entirely when `fetch_ci=false`
+//!    - Within the visibility gate, follows normal two-tier priority (priority 9 with data, 19 when empty)
+//!
+//! 3. **Message** - Flexible sizing with post-allocation expansion
+//!    - Allocated at priority 11 with flexible width (min 20, preferred 50)
+//!    - After all columns allocated (including empty ones), expands up to max 100 using leftover space
+//!    - Two-step process ensures critical columns get space before message grows
+//!
+//! ## Implementation
+//!
+//! The code implements this using a data-driven priority system:
+//!
 //! ```rust
-//! // Phase 1: Base priorities 1-11 (columns with data)
-//! if data_flags.working_diff { allocate(priority=2) }
+//! // Build column descriptors with base priorities and data flags
+//! let columns = [
+//!     ColumnDescriptor { column_type: Branch, base_priority: 1, has_data: true },
+//!     ColumnDescriptor { column_type: WorkingDiff, base_priority: 2, has_data: data_flags.working_diff },
+//!     // ... all 11 columns
+//! ];
 //!
-//! // Message base allocation (priority 11)
-//! allocate_message_base();
+//! // Sort by final priority (base_priority + empty_penalty)
+//! columns.sort_by_key(|col| col.priority());
 //!
-//! // Phase 2: Base priorities + empty penalty (12-21)
-//! if !data_flags.working_diff { allocate(priority=2+10=12) }
+//! // Allocate columns in priority order
+//! for col in columns {
+//!     match col.column_type {
+//!         Branch => allocate_branch(),
+//!         WorkingDiff => allocate_diff(),
+//!         BranchDiff if show_full => allocate_diff(),  // Visibility gate
+//!         CiStatus if fetch_ci => allocate(),           // Visibility gate
+//!         // ... all columns
+//!     }
+//! }
 //!
-//! // Message expansion (uses leftover space)
+//! // Message post-allocation expansion (uses truly leftover space)
 //! expand_message_to_max();
 //! ```
 //!
-//! **Pros**:
-//! - Simple, explicit, easy to understand
-//! - Low abstraction overhead
-//! - Easy to modify individual column logic
+//! **Benefits**:
+//! - Priority calculation is explicit and centralized (`ColumnDescriptor::priority()`)
+//! - Single unified allocation loop (no Phase 1/Phase 2 duplication)
+//! - Easy to understand: build descriptors → sort by priority → allocate
+//! - Extensible: can add new modifiers (terminal width bonus, user config) without restructuring
 //!
-//! **Cons**:
-//! - Priority calculation is implicit (scattered across code)
-//! - Adding new modifiers requires code changes
-//! - Some duplication (Phase 2 repeats allocation logic)
+//! ## Helper Functions
 //!
-//! ## Future: Generalized Priority System?
-//!
-//! **Could we make this more explicit?**
-//! ```rust
-//! struct ColumnPriority {
-//!     base: u8,               // User need ranking (1-11)
-//!     empty_penalty: u8,      // +10 if no data
-//!     // Future modifiers:
-//!     // width_bonus: i8,     // -1 if terminal_width > 150
-//!     // user_priority: i8,   // User-configured adjustments
-//! }
-//!
-//! fn calculate_priority(column: Column, context: &Context) -> u8 {
-//!     let base = column.base_priority();
-//!     let empty = if column.has_data(context) { 0 } else { 10 };
-//!     base + empty
-//! }
-//!
-//! // Sort by priority, then allocate in order
-//! columns.sort_by_key(|c| calculate_priority(c, &context));
-//! for column in columns { allocate(column); }
-//! ```
-//!
-//! **Pros**:
-//! - Priority calculation is explicit and centralized
-//! - Easy to add new modifiers (terminal width, user config, etc.)
-//! - Single allocation loop (no Phase 1/Phase 2 duplication)
-//!
-//! **Cons**:
-//! - More abstraction (struct, enum, sorting)
-//! - Harder to understand at a glance
-//! - Message variable sizing still needs special handling (min/preferred/max)
-//! - Premature generalization? (YAGNI - we don't have other modifiers yet)
-//!
-//! ## Decision: Keep Current Implementation For Now
-//!
-//! The explicit two-phase approach is **clear and sufficient** for current needs. The priority
-//! system is conceptually sound - we just need better documentation.
-//!
-//! **Refactor when**:
-//! - We add a second modifier (terminal width bonus, user config, etc.)
-//! - The duplication becomes painful (more than ~6 empty columns)
-//! - Priority ordering becomes hard to reason about
-//!
-//! Until then: **Simple > Generic**.
+//! - `calculate_diff_width()`: Computes width for diff-style columns ("+added -deleted")
+//! - `fit_header()`: Ensures column width ≥ header width to prevent overflow
+//! - `try_allocate()`: Attempts to allocate space, returns 0 if insufficient
 
 use crate::display::{find_common_prefix, get_terminal_width};
 use std::path::{Path, PathBuf};
@@ -149,6 +135,27 @@ pub const HEADER_MESSAGE: &str = "Message";
 fn fit_header(header: &str, data_width: usize) -> usize {
     use unicode_width::UnicodeWidthStr;
     data_width.max(header.width())
+}
+
+/// Calculates width for a diff-style column (format: "+added -deleted" or "↑ahead ↓behind").
+///
+/// Returns DiffWidths with:
+/// - total: width including header minimum ("+{added} -{deleted}")
+/// - added_digits/deleted_digits: number of digits for each part
+fn calculate_diff_width(header: &str, added_digits: usize, deleted_digits: usize) -> DiffWidths {
+    let has_data = added_digits > 0 || deleted_digits > 0;
+    let data_width = if has_data {
+        1 + added_digits + 1 + 1 + deleted_digits // "+added -deleted"
+    } else {
+        0
+    };
+    let total = fit_header(header, data_width);
+
+    DiffWidths {
+        total,
+        added_digits,
+        deleted_digits,
+    }
 }
 
 /// Helper: Try to allocate space for a column. Returns the allocated width if successful.
@@ -221,6 +228,41 @@ pub struct ColumnDataFlags {
     pub upstream: bool,
     pub states: bool,
     pub ci_status: bool,
+}
+
+/// Column types for allocation
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ColumnType {
+    Branch,
+    WorkingDiff,
+    AheadBehind,
+    BranchDiff,
+    States,
+    Path,
+    Upstream,
+    Time,
+    CiStatus,
+    Commit,
+    Message,
+}
+
+/// Describes a column for priority-based allocation
+struct ColumnDescriptor {
+    column_type: ColumnType,
+    base_priority: u8,
+    has_data: bool,
+}
+
+impl ColumnDescriptor {
+    /// Calculate final priority: base_priority + empty_penalty
+    fn priority(&self) -> u8 {
+        const EMPTY_PENALTY: u8 = 10;
+        if self.has_data {
+            self.base_priority
+        } else {
+            self.base_priority + EMPTY_PENALTY
+        }
+    }
 }
 
 /// Absolute column positions for guaranteed alignment
@@ -323,43 +365,26 @@ pub fn calculate_column_widths(
         }
     }
 
-    // Calculate diff widths: "+{added} -{deleted}"
-    // Format: "+" + digits + " " + "-" + digits
-    let has_working_diff_data = max_wt_added_digits > 0 || max_wt_deleted_digits > 0;
-    let working_diff_data_width = if has_working_diff_data {
-        1 + max_wt_added_digits + 1 + 1 + max_wt_deleted_digits
-    } else {
-        0
-    };
-    let working_diff_total = fit_header(HEADER_WORKING_DIFF, working_diff_data_width);
+    // Calculate diff widths using helper (format: "+left -right")
+    let working_diff = calculate_diff_width(
+        HEADER_WORKING_DIFF,
+        max_wt_added_digits,
+        max_wt_deleted_digits,
+    );
+    let branch_diff = calculate_diff_width(
+        HEADER_BRANCH_DIFF,
+        max_br_added_digits,
+        max_br_deleted_digits,
+    );
+    let ahead_behind =
+        calculate_diff_width(HEADER_AHEAD_BEHIND, max_ahead_digits, max_behind_digits);
 
-    let has_branch_diff_data = max_br_added_digits > 0 || max_br_deleted_digits > 0;
-    let branch_diff_data_width = if has_branch_diff_data {
-        1 + max_br_added_digits + 1 + 1 + max_br_deleted_digits
-    } else {
-        0
-    };
-    let branch_diff_total = fit_header(HEADER_BRANCH_DIFF, branch_diff_data_width);
-
-    // Calculate ahead/behind column width (format: "↑n ↓n")
-    let has_ahead_behind_data = max_ahead_digits > 0 || max_behind_digits > 0;
-    let ahead_behind_data_width = if has_ahead_behind_data {
-        1 + max_ahead_digits + 1 + 1 + max_behind_digits
-    } else {
-        0
-    };
-    let ahead_behind_total = fit_header(HEADER_AHEAD_BEHIND, ahead_behind_data_width);
-
-    // Calculate upstream column width (format: "↑n ↓n" or "remote ↑n ↓n")
-    let has_upstream_data = max_upstream_ahead_digits > 0 || max_upstream_behind_digits > 0;
-    let upstream_data_width = if has_upstream_data {
-        // Format: "↑" + digits + " " + "↓" + digits
-        // TODO: Add remote name when show_remote_names is implemented
-        1 + max_upstream_ahead_digits + 1 + 1 + max_upstream_behind_digits
-    } else {
-        0
-    };
-    let upstream_total = fit_header(HEADER_UPSTREAM, upstream_data_width);
+    // Upstream (format: "↑n ↓n", TODO: add remote name when show_remote_names is implemented)
+    let upstream = calculate_diff_width(
+        HEADER_UPSTREAM,
+        max_upstream_ahead_digits,
+        max_upstream_behind_digits,
+    );
 
     let has_states_data = max_states > 0;
     let final_states = fit_header(HEADER_STATE, max_states);
@@ -374,36 +399,20 @@ pub fn calculate_column_widths(
         time: fit_header(HEADER_AGE, max_time),
         ci_status: fit_header(HEADER_CI, ci_status_width),
         message: fit_header(HEADER_MESSAGE, max_message),
-        ahead_behind: DiffWidths {
-            total: ahead_behind_total,
-            added_digits: max_ahead_digits,
-            deleted_digits: max_behind_digits,
-        },
-        working_diff: DiffWidths {
-            total: working_diff_total,
-            added_digits: max_wt_added_digits,
-            deleted_digits: max_wt_deleted_digits,
-        },
-        branch_diff: DiffWidths {
-            total: branch_diff_total,
-            added_digits: max_br_added_digits,
-            deleted_digits: max_br_deleted_digits,
-        },
-        upstream: DiffWidths {
-            total: upstream_total,
-            added_digits: max_upstream_ahead_digits,
-            deleted_digits: max_upstream_behind_digits,
-        },
+        ahead_behind,
+        working_diff,
+        branch_diff,
+        upstream,
         states: final_states,
-        commit: COMMIT_HASH_WIDTH,
+        commit: fit_header(HEADER_COMMIT, COMMIT_HASH_WIDTH),
         path: 0, // Path width calculated later in responsive layout
     };
 
     let data_flags = ColumnDataFlags {
-        working_diff: has_working_diff_data,
-        ahead_behind: has_ahead_behind_data,
-        branch_diff: has_branch_diff_data,
-        upstream: has_upstream_data,
+        working_diff: working_diff.added_digits > 0 || working_diff.deleted_digits > 0,
+        ahead_behind: ahead_behind.added_digits > 0 || ahead_behind.deleted_digits > 0,
+        branch_diff: branch_diff.added_digits > 0 || branch_diff.deleted_digits > 0,
+        upstream: upstream.added_digits > 0 || upstream.deleted_digits > 0,
         states: has_states_data,
         ci_status: has_ci_status,
     };
@@ -443,13 +452,11 @@ pub fn calculate_responsive_layout(
     let spacing = 2;
     let commit_width = fit_header(HEADER_COMMIT, COMMIT_HASH_WIDTH);
 
-    // Two-phase priority allocation:
-    // Phase 1: Allocate columns with actual data (in priority order)
-    // Message: Always allocated before empty columns
-    // Phase 2: Allocate empty columns (only if space remains after message)
+    // Priority-based allocation using scoring model: final_priority = base_priority + modifiers
+    // Base priorities (1-11) defined by user need hierarchy
+    // Empty penalty (+10) pushes empty columns to priorities 12-21
     //
     // Priority order (from high to low):
-    // === Phase 1: Columns with data ===
     // 1. branch - identity (what is this?)
     // 2. working_diff - uncommitted changes (CRITICAL: do I need to commit?)
     // 3. ahead_behind - commits difference (CRITICAL: am I ahead/behind?)
@@ -461,15 +468,6 @@ pub fn calculate_responsive_layout(
     // 9. ci_status - CI/PR status (contextual when available)
     // 10. commit - hash (reference info, rarely needed)
     // 11. message - description (nice-to-have, space-hungry)
-    // === Phase 2: Empty columns (only if space remains) ===
-    // 12. working_diff (if empty)
-    // 13. ahead_behind (if empty)
-    // 14. branch_diff (if empty)
-    // 15. states (if empty)
-    // 16. upstream (if empty)
-    // 17. ci_status (if empty)
-    //
-    // Note: ahead_behind and branch_diff are adjacent (both describe commits vs main)
 
     let mut remaining = terminal_width;
     let mut widths = ColumnWidths {
@@ -486,157 +484,159 @@ pub fn calculate_responsive_layout(
         path: 0,
     };
 
-    // === PHASE 1: Allocate columns with data ===
+    // Build column allocation list with priorities
+    let mut columns = [
+        ColumnDescriptor {
+            column_type: ColumnType::Branch,
+            base_priority: 1,
+            has_data: true,
+        },
+        ColumnDescriptor {
+            column_type: ColumnType::WorkingDiff,
+            base_priority: 2,
+            has_data: data_flags.working_diff,
+        },
+        ColumnDescriptor {
+            column_type: ColumnType::AheadBehind,
+            base_priority: 3,
+            has_data: data_flags.ahead_behind,
+        },
+        ColumnDescriptor {
+            column_type: ColumnType::BranchDiff,
+            base_priority: 4,
+            has_data: data_flags.branch_diff,
+        },
+        ColumnDescriptor {
+            column_type: ColumnType::States,
+            base_priority: 5,
+            has_data: data_flags.states,
+        },
+        ColumnDescriptor {
+            column_type: ColumnType::Path,
+            base_priority: 6,
+            has_data: true,
+        },
+        ColumnDescriptor {
+            column_type: ColumnType::Upstream,
+            base_priority: 7,
+            has_data: data_flags.upstream,
+        },
+        ColumnDescriptor {
+            column_type: ColumnType::Time,
+            base_priority: 8,
+            has_data: true,
+        },
+        ColumnDescriptor {
+            column_type: ColumnType::CiStatus,
+            base_priority: 9,
+            has_data: data_flags.ci_status,
+        },
+        ColumnDescriptor {
+            column_type: ColumnType::Commit,
+            base_priority: 10,
+            has_data: true,
+        },
+        ColumnDescriptor {
+            column_type: ColumnType::Message,
+            base_priority: 11,
+            has_data: true,
+        },
+    ];
 
-    // Branch column (highest priority - identity, always has data)
-    widths.branch = try_allocate(&mut remaining, ideal_widths.branch, spacing, true);
+    // Sort by final priority (includes empty penalty)
+    columns.sort_by_key(|col| col.priority());
 
-    // Working diff column (critical - uncommitted changes)
-    if data_flags.working_diff {
-        let allocated_width = try_allocate(
-            &mut remaining,
-            ideal_widths.working_diff.total,
-            spacing,
-            false,
-        );
-        if allocated_width > 0 {
-            widths.working_diff = ideal_widths.working_diff;
-        }
-    }
-
-    // Ahead/behind column (critical sync status)
-    if data_flags.ahead_behind {
-        let allocated_width = try_allocate(
-            &mut remaining,
-            ideal_widths.ahead_behind.total,
-            spacing,
-            false,
-        );
-        if allocated_width > 0 {
-            widths.ahead_behind = ideal_widths.ahead_behind;
-        }
-    }
-
-    // Branch diff column (work volume in those commits)
-    // Hidden by default - considered too noisy for typical usage.
-    // May reconsider showing by default in future based on user feedback.
-    if show_full && data_flags.branch_diff {
-        let allocated_width = try_allocate(
-            &mut remaining,
-            ideal_widths.branch_diff.total,
-            spacing,
-            false,
-        );
-        if allocated_width > 0 {
-            widths.branch_diff = ideal_widths.branch_diff;
-        }
-    }
-
-    // States column (rare but urgent when present, now includes conflicts)
-    if data_flags.states {
-        widths.states = try_allocate(&mut remaining, ideal_widths.states, spacing, false);
-    }
-
-    // Path column (location - important for navigation, always has data)
-    widths.path = try_allocate(&mut remaining, max_path_width, spacing, false);
-
-    // Upstream column (sync configuration)
-    if data_flags.upstream {
-        let allocated_width =
-            try_allocate(&mut remaining, ideal_widths.upstream.total, spacing, false);
-        if allocated_width > 0 {
-            widths.upstream = ideal_widths.upstream;
-        }
-    }
-
-    // Time column (contextual information, always has data)
-    widths.time = try_allocate(&mut remaining, ideal_widths.time, spacing, false);
-
-    // CI status column (high priority when present, fixed width)
-    if data_flags.ci_status {
-        widths.ci_status = try_allocate(&mut remaining, ideal_widths.ci_status, spacing, false);
-    }
-
-    // Commit column (reference hash - rarely needed, always has data)
-    widths.commit = try_allocate(&mut remaining, commit_width, spacing, false);
-
-    // Message column (flexible width: min 20, preferred 50, max 100)
-    // Allocated BEFORE empty columns - message has higher priority than empty columns
+    // Message width constants (used in allocation and expansion)
     const MIN_MESSAGE: usize = 20;
     const PREFERRED_MESSAGE: usize = 50;
     const MAX_MESSAGE: usize = 100;
 
-    let message_width = if remaining >= PREFERRED_MESSAGE + spacing {
-        PREFERRED_MESSAGE
-    } else if remaining >= MIN_MESSAGE + spacing {
-        remaining.saturating_sub(spacing).min(ideal_widths.message)
-    } else {
-        0
-    };
+    // Allocate columns in priority order
+    for (idx, col) in columns.iter().enumerate() {
+        let is_first = idx == 0;
 
-    if message_width > 0 {
-        remaining = remaining.saturating_sub(message_width + spacing);
-        widths.message = message_width.min(ideal_widths.message);
-    }
+        match col.column_type {
+            ColumnType::Branch => {
+                widths.branch =
+                    try_allocate(&mut remaining, ideal_widths.branch, spacing, is_first);
+            }
+            ColumnType::WorkingDiff => {
+                let allocated = try_allocate(
+                    &mut remaining,
+                    ideal_widths.working_diff.total,
+                    spacing,
+                    is_first,
+                );
+                if allocated > 0 {
+                    widths.working_diff = ideal_widths.working_diff;
+                }
+            }
+            ColumnType::AheadBehind => {
+                let allocated = try_allocate(
+                    &mut remaining,
+                    ideal_widths.ahead_behind.total,
+                    spacing,
+                    is_first,
+                );
+                if allocated > 0 {
+                    widths.ahead_behind = ideal_widths.ahead_behind;
+                }
+            }
+            ColumnType::BranchDiff if show_full => {
+                let allocated = try_allocate(
+                    &mut remaining,
+                    ideal_widths.branch_diff.total,
+                    spacing,
+                    is_first,
+                );
+                if allocated > 0 {
+                    widths.branch_diff = ideal_widths.branch_diff;
+                }
+            }
+            ColumnType::States => {
+                widths.states =
+                    try_allocate(&mut remaining, ideal_widths.states, spacing, is_first);
+            }
+            ColumnType::Path => {
+                widths.path = try_allocate(&mut remaining, max_path_width, spacing, is_first);
+            }
+            ColumnType::Upstream => {
+                let allocated = try_allocate(
+                    &mut remaining,
+                    ideal_widths.upstream.total,
+                    spacing,
+                    is_first,
+                );
+                if allocated > 0 {
+                    widths.upstream = ideal_widths.upstream;
+                }
+            }
+            ColumnType::Time => {
+                widths.time = try_allocate(&mut remaining, ideal_widths.time, spacing, is_first);
+            }
+            ColumnType::CiStatus if fetch_ci => {
+                widths.ci_status =
+                    try_allocate(&mut remaining, ideal_widths.ci_status, spacing, is_first);
+            }
+            ColumnType::Commit => {
+                widths.commit = try_allocate(&mut remaining, commit_width, spacing, is_first);
+            }
+            ColumnType::Message => {
+                let message_width = if remaining >= PREFERRED_MESSAGE + spacing {
+                    PREFERRED_MESSAGE
+                } else if remaining >= MIN_MESSAGE + spacing {
+                    remaining.saturating_sub(spacing).min(ideal_widths.message)
+                } else {
+                    0
+                };
 
-    // === PHASE 2: Allocate empty columns (if space remains after message) ===
-
-    // Working diff column (if no data)
-    if !data_flags.working_diff {
-        let allocated_width = try_allocate(
-            &mut remaining,
-            ideal_widths.working_diff.total,
-            spacing,
-            false,
-        );
-        if allocated_width > 0 {
-            widths.working_diff = ideal_widths.working_diff;
+                if message_width > 0 {
+                    remaining = remaining.saturating_sub(message_width + spacing);
+                    widths.message = message_width.min(ideal_widths.message);
+                }
+            }
+            _ => {} // Skip columns that don't meet visibility conditions (show_full, fetch_ci)
         }
-    }
-
-    // Ahead/behind column (if no data)
-    if !data_flags.ahead_behind {
-        let allocated_width = try_allocate(
-            &mut remaining,
-            ideal_widths.ahead_behind.total,
-            spacing,
-            false,
-        );
-        if allocated_width > 0 {
-            widths.ahead_behind = ideal_widths.ahead_behind;
-        }
-    }
-
-    // Branch diff column (if no data)
-    if show_full && !data_flags.branch_diff {
-        let allocated_width = try_allocate(
-            &mut remaining,
-            ideal_widths.branch_diff.total,
-            spacing,
-            false,
-        );
-        if allocated_width > 0 {
-            widths.branch_diff = ideal_widths.branch_diff;
-        }
-    }
-
-    // States column (if no data)
-    if !data_flags.states {
-        widths.states = try_allocate(&mut remaining, ideal_widths.states, spacing, false);
-    }
-
-    // Upstream column (if no data)
-    if !data_flags.upstream {
-        let allocated_width =
-            try_allocate(&mut remaining, ideal_widths.upstream.total, spacing, false);
-        if allocated_width > 0 {
-            widths.upstream = ideal_widths.upstream;
-        }
-    }
-
-    // CI status column (if no data, but only if we attempted to fetch CI)
-    if fetch_ci && !data_flags.ci_status {
-        widths.ci_status = try_allocate(&mut remaining, ideal_widths.ci_status, spacing, false);
     }
 
     // Expand message with any leftover space (up to MAX_MESSAGE total)
