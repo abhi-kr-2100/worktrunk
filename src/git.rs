@@ -939,11 +939,14 @@ impl Repository {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
+            // Normalize carriage returns to newlines for consistent output
+            // Git uses \r for progress updates; in non-TTY contexts this causes snapshot instability
+            let stderr = stderr.replace('\r', "\n");
             // Log errors with ! prefix
             for line in stderr.trim().lines() {
                 log::debug!("  ! {}", line);
             }
-            return Err(GitError::CommandFailed(stderr.into_owned()));
+            return Err(GitError::CommandFailed(stderr));
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
