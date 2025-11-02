@@ -565,7 +565,7 @@ pub fn handle_push(
     let repo = Repository::current();
 
     // Get target branch (default to default branch if not provided)
-    let target_branch = target.map_or_else(|| repo.default_branch(), |b| Ok(b.to_string()))?;
+    let target_branch = repo.resolve_target_branch(target)?;
 
     // Check if it's a fast-forward
     if !repo.is_ancestor(&target_branch, "HEAD")? {

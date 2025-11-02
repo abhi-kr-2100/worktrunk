@@ -60,7 +60,7 @@ pub fn handle_merge(
     let current_branch = repo.current_branch()?.ok_or(GitError::DetachedHead)?;
 
     // Get target branch (default to default branch if not provided)
-    let target_branch = target.map_or_else(|| repo.default_branch(), |b| Ok(b.to_string()))?;
+    let target_branch = repo.resolve_target_branch(target)?;
 
     // Check if already on target branch
     if current_branch == target_branch {

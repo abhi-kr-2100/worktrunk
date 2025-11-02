@@ -69,3 +69,36 @@ pub use global::{
 
 // Re-export output handlers
 pub use handlers::{execute_command_in_worktree, handle_remove_output, handle_switch_output};
+
+use std::path::Path;
+
+/// Format a switch success message with mode-specific location phrase
+///
+/// The message format differs between interactive and directive modes:
+/// - Interactive: "Created new worktree for {branch} at {path}"
+/// - Directive: "Created new worktree for {branch}, changed directory to {path}"
+pub(crate) fn format_switch_success_message(
+    branch: &str,
+    path: &Path,
+    created_branch: bool,
+    use_past_tense: bool,
+) -> String {
+    use worktrunk::styling::{GREEN, SUCCESS_EMOJI};
+    let green_bold = GREEN.bold();
+
+    let action = if created_branch {
+        "Created new worktree for"
+    } else {
+        "Switched to worktree for"
+    };
+    let location = if use_past_tense {
+        ", changed directory to"
+    } else {
+        " at"
+    };
+
+    format!(
+        "{SUCCESS_EMOJI} {GREEN}{action} {green_bold}{branch}{green_bold:#}{GREEN}{location} {green_bold}{}{green_bold:#}",
+        path.display()
+    )
+}

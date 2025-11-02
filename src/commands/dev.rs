@@ -171,7 +171,7 @@ pub fn handle_dev_squash(
         .ok_or_else(|| GitError::CommandFailed("Not on a branch (detached HEAD)".to_string()))?;
 
     // Get target branch (default to default branch if not provided)
-    let target_branch = target.map_or_else(|| repo.default_branch(), |b| Ok(b.to_string()))?;
+    let target_branch = repo.resolve_target_branch(target)?;
 
     // Run pre-squash hook unless --no-hooks was specified
     if !no_hooks && let Ok(Some(project_config)) = ProjectConfig::load(&repo.worktree_root()?) {
@@ -310,7 +310,7 @@ pub fn handle_dev_rebase(target: Option<&str>) -> Result<(), GitError> {
     let repo = Repository::current();
 
     // Get target branch (default to default branch if not provided)
-    let target_branch = target.map_or_else(|| repo.default_branch(), |b| Ok(b.to_string()))?;
+    let target_branch = repo.resolve_target_branch(target)?;
 
     // Rebase onto target
     crate::output::progress(format!(

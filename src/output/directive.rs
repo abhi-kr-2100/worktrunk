@@ -88,20 +88,7 @@ impl DirectiveOutput {
     /// In directive mode, the shell wrapper will actually change directories,
     /// so we can say "changed directory to {path}"
     pub fn format_switch_success(&self, branch: &str, path: &Path, created_branch: bool) -> String {
-        use worktrunk::styling::{GREEN, SUCCESS_EMOJI};
-        let green_bold = GREEN.bold();
-
-        if created_branch {
-            format!(
-                "{SUCCESS_EMOJI} {GREEN}Created new worktree for {green_bold}{branch}{green_bold:#}{GREEN}, changed directory to {green_bold}{}{green_bold:#}",
-                path.display()
-            )
-        } else {
-            format!(
-                "{SUCCESS_EMOJI} {GREEN}Switched to worktree for {green_bold}{branch}{green_bold:#}{GREEN}, changed directory to {green_bold}{}{green_bold:#}",
-                path.display()
-            )
-        }
+        super::format_switch_success_message(branch, path, created_branch, true)
     }
 }
 

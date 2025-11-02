@@ -443,6 +443,14 @@ impl Repository {
         self.infer_default_branch_locally()
     }
 
+    /// Resolve a target branch from an optional override
+    ///
+    /// If target is Some, returns it as a String. Otherwise, queries the default branch.
+    /// This is a common pattern used throughout commands that accept an optional --target flag.
+    pub fn resolve_target_branch(&self, target: Option<&str>) -> Result<String, GitError> {
+        target.map_or_else(|| self.default_branch(), |b| Ok(b.to_string()))
+    }
+
     /// Infer the default branch locally (without remote).
     ///
     /// Uses local heuristics when no remote is available:
