@@ -1,11 +1,11 @@
 // Benchmarks for `wt list` command
 //
-// This suite includes both synthetic and real-world repository benchmarks:
+// This suite measures raw performance and scaling characteristics:
 //
 // 1. Synthetic benchmarks (fast, deterministic):
-//    - bench_list_by_worktree_count: Varies worktree count (1-8)
-//    - bench_list_by_repo_profile: Tests minimal/typical/large repo sizes
-//    - bench_sequential_vs_parallel: Compares sequential vs parallel implementations
+//    - bench_list_by_worktree_count: Measures scaling with worktree count (1-8)
+//    - bench_list_by_repo_profile: Measures scaling with repo size (minimal/typical/large)
+//    - bench_sequential_vs_parallel: Light comparison of sequential vs parallel (3 data points)
 //
 // 2. Real repository benchmarks (slower, more realistic):
 //    - bench_list_real_repo: Uses rust-lang/rust repo (cloned to target/bench-repos/)
