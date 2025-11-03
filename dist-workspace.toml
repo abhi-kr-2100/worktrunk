@@ -13,3 +13,5 @@ installers = []
 targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
 # Whether to install an updater program
 install-updater = false
+# Allow custom CI modifications
+allow-dirty = ["ci"]
