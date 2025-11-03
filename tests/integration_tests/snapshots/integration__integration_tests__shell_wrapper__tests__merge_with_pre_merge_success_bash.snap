@@ -17,7 +17,7 @@ expression: output.normalized().as_ref()
 
 ✓ All 47 tests passed in 2.3s
 
-🔄 [36mMerging 1 commit to [1m[36mmain[0m[36m @ [2m[36md067f01[0m[0m (no squashing needed, no rebasing needed)
+🔄 [36mMerging 1 commit to [1m[36mmain[0m @ [2m[36md067f01[0m[0m (no commit/squash/rebase needed)
 
 * [33md067f01[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature[m[33m)[m Add feature
 

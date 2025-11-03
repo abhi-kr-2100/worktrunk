@@ -561,6 +561,7 @@ pub fn handle_push(
     target: Option<&str>,
     allow_merge_commits: bool,
     verb: &str,
+    committed: bool,
     squashed: bool,
     rebased: bool,
 ) -> Result<(), GitError> {
@@ -645,24 +646,26 @@ pub fn handle_push(
             "Pushing"
         };
 
-        // Build operation context based on what happened
-        let mut operations = Vec::new();
-
-        // Only mention operations that DIDN'T happen - if they did happen,
-        // the user already saw progress/success messages for them
-        if !squashed {
-            operations.push("no squashing needed".to_string());
-        }
-
-        if !rebased {
-            operations.push("no rebasing needed".to_string());
-        }
-
-        let operations_text = operations.join(", ");
         let cyan_dim = CYAN.dimmed();
 
+        // Build parenthetical showing which operations didn't happen
+        let mut skipped_ops = Vec::new();
+        if !committed && !squashed {
+            // Neither commit nor squash happened - combine them
+            skipped_ops.push("commit/squash");
+        }
+        if !rebased {
+            skipped_ops.push("rebase");
+        }
+
+        let operations_note = if skipped_ops.is_empty() {
+            String::new()
+        } else {
+            format!(" (no {} needed)", skipped_ops.join("/"))
+        };
+
         crate::output::progress(format!(
-            "🔄 {CYAN}{verb_ing} {commit_count} {commit_text} to {CYAN_BOLD}{target_branch}{CYAN_BOLD:#}{CYAN} @ {cyan_dim}{head_sha}{cyan_dim:#}{CYAN:#} ({operations_text})\n"
+            "🔄 {CYAN}{verb_ing} {commit_count} {commit_text} to {CYAN_BOLD}{target_branch}{CYAN_BOLD:#} @ {cyan_dim}{head_sha}{cyan_dim:#}{CYAN:#}{operations_note}\n"
         ))?;
 
         // Show the commit graph with color

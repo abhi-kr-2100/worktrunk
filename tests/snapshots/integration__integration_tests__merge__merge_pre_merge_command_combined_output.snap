@@ -13,7 +13,7 @@ STDERR-FROM-FIRST
 
 [0mSTDOUT-FROM-SECOND
 STDERR-FROM-SECOND
-🔄 [36mMerging 1 commit to [1m[36mmain[0m[36m @ [2m[SHA][0m (no squashing needed, no rebasing needed)
+🔄 [36mMerging 1 commit to [1m[36mmain[0m @ [2m[SHA][0m (no commit/squash/rebase needed)
 
 * [SHA][33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature[m[33m)[m Add feature file
 

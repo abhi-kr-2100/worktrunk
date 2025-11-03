@@ -146,11 +146,11 @@ pub fn handle_dev_commit(force: bool, no_verify: bool) -> Result<(), GitError> {
     repo.run_command(&["add", "-A"])
         .git_context("Failed to stage changes")?;
 
-    commit_staged_changes(&config.commit_generation)
+    commit_staged_changes(&config.commit_generation, false)
 }
 
 /// Handle `wt dev squash` command
-/// Returns true if squashing occurred, false if no squashing was needed
+/// Returns true if a commit or squash operation occurred, false if nothing needed to be done
 pub fn handle_dev_squash(
     target: Option<&str>,
     force: bool,
@@ -201,13 +201,12 @@ pub fn handle_dev_squash(
 
     if commit_count == 0 && has_staged {
         // Just staged changes, no commits - commit them directly (no squashing needed)
-        commit_staged_changes(&config.commit_generation)?;
-        return Ok(false);
+        commit_staged_changes(&config.commit_generation, true)?;
+        return Ok(true);
     }
 
     if commit_count == 1 && !has_staged {
         // Single commit, no staged changes - nothing to do
-        // Don't show hint here - the merge message will indicate "no squashing needed"
         return Ok(false);
     }
 
@@ -306,7 +305,14 @@ pub fn handle_dev_squash(
 
 /// Handle `wt dev push` command
 pub fn handle_dev_push(target: Option<&str>, allow_merge_commits: bool) -> Result<(), GitError> {
-    super::worktree::handle_push(target, allow_merge_commits, "Pushed to", false, false)
+    super::worktree::handle_push(
+        target,
+        allow_merge_commits,
+        "Pushed to",
+        false,
+        false,
+        false,
+    )
 }
 
 /// Handle `wt dev rebase` command

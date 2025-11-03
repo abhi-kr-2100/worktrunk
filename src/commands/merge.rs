@@ -91,8 +91,8 @@ pub fn handle_merge(
     // Load config for LLM integration
     let config = WorktrunkConfig::load().git_context("Failed to load config")?;
 
-    // Handle uncommitted changes (skip if --no-commit)
-    if !no_commit && repo.is_dirty()? {
+    // Handle uncommitted changes (skip if --no-commit) - track whether commit occurred
+    let committed = if !no_commit && repo.is_dirty()? {
         if squash_enabled {
             // Warn about untracked files before staging
             if !tracked_only {
@@ -106,6 +106,7 @@ pub fn handle_merge(
                 repo.run_command(&["add", "-A"])
                     .git_context("Failed to stage changes")?;
             }
+            false // Staged but didn't commit (will squash later)
         } else {
             // Commit immediately when not squashing
             handle_commit_changes(
@@ -116,8 +117,11 @@ pub fn handle_merge(
                 force,
                 tracked_only,
             )?;
+            true // Committed directly
         }
-    }
+    } else {
+        false // No dirty changes or --no-commit
+    };
 
     // Squash commits if enabled - track whether squashing occurred
     let squashed = if squash_enabled {
@@ -149,8 +153,15 @@ pub fn handle_merge(
         )?;
     }
 
-    // Fast-forward push to target branch with squash/rebase info for consolidated message
-    handle_push(Some(&target_branch), false, "Merged to", squashed, rebased)?;
+    // Fast-forward push to target branch with commit/squash/rebase info for consolidated message
+    handle_push(
+        Some(&target_branch),
+        false,
+        "Merged to",
+        committed,
+        squashed,
+        rebased,
+    )?;
 
     // Get primary worktree path before cleanup (while we can still run git commands)
     let primary_worktree_dir = repo.main_worktree_root()?;
@@ -272,6 +283,7 @@ pub fn show_llm_config_hint_if_needed(
 /// Commit already-staged changes with LLM-generated or fallback message
 pub fn commit_staged_changes(
     commit_generation_config: &worktrunk::config::CommitGenerationConfig,
+    show_no_squash_note: bool,
 ) -> Result<(), GitError> {
     let repo = Repository::current();
 
@@ -289,9 +301,19 @@ pub fn commit_staged_changes(
         "Committing with default message..."
     };
 
-    let full_progress_msg = match stats_parts.is_empty() {
-        true => format!("🔄 {CYAN}{action}{CYAN:#}"),
-        false => format!("🔄 {CYAN}{action}{CYAN:#} ({})", stats_parts.join(", ")),
+    // Build the progress message with optional squash status
+    let mut parts = vec![];
+    if !stats_parts.is_empty() {
+        parts.extend(stats_parts);
+    }
+    if show_no_squash_note {
+        parts.push("no squashing needed".to_string());
+    }
+
+    let full_progress_msg = if parts.is_empty() {
+        format!("🔄 {CYAN}{action}{CYAN:#}")
+    } else {
+        format!("🔄 {CYAN}{action}{CYAN:#} ({})", parts.join(", "))
     };
 
     crate::output::progress(full_progress_msg)?;
@@ -361,7 +383,8 @@ fn handle_commit_changes(
             .git_context("Failed to stage changes")?;
     }
 
-    commit_staged_changes(commit_generation_config)
+    // Show "no squashing needed" since we're committing directly (not in squash mode)
+    commit_staged_changes(commit_generation_config, true)
 }
 
 fn handle_squash(target_branch: &str, no_verify: bool, force: bool) -> Result<bool, GitError> {

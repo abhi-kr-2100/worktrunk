@@ -885,9 +885,9 @@ mod tests {
             working_tree_diff: (0, 0), // Hidden: no dirty changes
             working_tree_diff_with_main: (0, 0),
             branch_diff: BranchDiffTotals { diff: (0, 0) }, // Hidden: no diff
-            is_primary: true,          // Hidden: no ahead/behind for primary
-            upstream: UpstreamStatus::default(), // Hidden: no upstream
-            worktree_state: None,      // Hidden: no state
+            is_primary: true,                               // Hidden: no ahead/behind for primary
+            upstream: UpstreamStatus::default(),            // Hidden: no upstream
+            worktree_state: None,                           // Hidden: no state
             pr_status: None,
             has_conflicts: false,
             display: DisplayFields::default(),
