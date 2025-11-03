@@ -273,6 +273,22 @@ impl TestRepo {
         canonical_path
     }
 
+    /// Creates a worktree for the main branch (required for merge operations)
+    ///
+    /// This is a convenience method that creates a worktree for the main branch
+    /// in the standard location expected by merge tests. Returns the path to the
+    /// created worktree.
+    pub fn add_main_worktree(&self) -> PathBuf {
+        let main_wt = self.root_path().parent().unwrap().join("test-repo.main-wt");
+        let mut cmd = Command::new("git");
+        self.configure_git_cmd(&mut cmd);
+        cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
+            .current_dir(self.root_path())
+            .output()
+            .expect("Failed to add worktree");
+        main_wt
+    }
+
     /// Detach HEAD in the repository
     pub fn detach_head(&self) {
         // Get current commit SHA

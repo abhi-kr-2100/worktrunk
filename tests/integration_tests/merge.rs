@@ -2089,3 +2089,41 @@ fn test_merge_no_commit_no_squash_no_remove_redundant() {
         ");
     });
 }
+
+#[test]
+fn test_merge_no_commits() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create a worktree for main
+    repo.add_main_worktree();
+
+    // Create a feature worktree with NO commits (just branched from main)
+    let feature_wt = repo.add_worktree("no-commits", "no-commits");
+
+    // Merge without any commits - should skip both squashing and rebasing
+    snapshot_merge("merge_no_commits", &repo, &["main"], Some(&feature_wt));
+}
+
+#[test]
+fn test_merge_no_commits_with_changes() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create a worktree for main
+    repo.add_main_worktree();
+
+    // Create a feature worktree with NO commits but WITH uncommitted changes
+    let feature_wt = repo.add_worktree("no-commits-dirty", "no-commits-dirty");
+    fs::write(feature_wt.join("newfile.txt"), "new content").expect("Failed to write file");
+
+    // Merge - should commit the changes, skip squashing (only 1 commit), and skip rebasing (at merge base)
+    snapshot_merge(
+        "merge_no_commits_with_changes",
+        &repo,
+        &["main"],
+        Some(&feature_wt),
+    );
+}
