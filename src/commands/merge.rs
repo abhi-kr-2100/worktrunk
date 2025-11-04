@@ -271,6 +271,10 @@ pub fn handle_merge(
         let worktree_root = repo.worktree_root()?;
         repo.remove_worktree(&worktree_root)
             .git_context("Failed to remove worktree")?;
+        // Use -d (safe delete) instead of -D to protect against race conditions:
+        // If someone commits to the branch between our push and this deletion,
+        // -d will refuse to delete, preventing data loss.
+        // See test: test_merge_race_condition_commit_after_push
         primary_repo
             .run_command(&["branch", "-d", &current_branch])
             .git_context(&format!("Failed to delete branch '{}'", current_branch))?;
