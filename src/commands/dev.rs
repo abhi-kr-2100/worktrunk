@@ -380,3 +380,49 @@ pub fn handle_dev_rebase(target: Option<&str>) -> Result<bool, GitError> {
 
     Ok(true)
 }
+
+/// Handle `wt dev ask-approval` command - test the approval prompt UI
+pub fn handle_dev_ask_approval(force: bool) -> Result<(), GitError> {
+    use super::command_approval::approve_command_batch;
+    use worktrunk::config::{Command, WorktrunkConfig};
+
+    // Create some test commands to show in the approval prompt
+    let test_commands = vec![
+        Command::with_expansion(
+            Some("insta".to_string()),
+            "NEXTEST_STATUS_LEVEL=fail cargo insta test".to_string(),
+            "NEXTEST_STATUS_LEVEL=fail cargo insta test --test-runner nextest".to_string(),
+        ),
+        Command::with_expansion(
+            Some("doc".to_string()),
+            "RUSTDOCFLAGS='-Dwarnings' cargo doc --no-deps".to_string(),
+            "RUSTDOCFLAGS='-Dwarnings' cargo doc --no-deps".to_string(),
+        ),
+        Command::with_expansion(
+            None,
+            "cargo install --path .".to_string(),
+            "cargo install --path .".to_string(),
+        ),
+    ];
+
+    let repo = Repository::current();
+    let project_id = repo.project_identifier()?;
+    let config = WorktrunkConfig::load().git_context("Failed to load config")?;
+
+    // Call the approval prompt
+    let approved = approve_command_batch(&test_commands, &project_id, &config, force, "test")?;
+
+    // Show result
+    if approved {
+        use worktrunk::styling::{GREEN, SUCCESS_EMOJI};
+        crate::output::success(format!(
+            "{SUCCESS_EMOJI} {GREEN}Commands approved!{GREEN:#}"
+        ))?;
+    } else {
+        use worktrunk::styling::INFO_EMOJI;
+        let dim = worktrunk::styling::AnstyleStyle::new().dimmed();
+        crate::output::success(format!("{INFO_EMOJI} {dim}Commands declined{dim:#}"))?;
+    }
+
+    Ok(())
+}

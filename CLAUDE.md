@@ -121,15 +121,16 @@ println!("Config: {bold}{}{bold:#}", path);  // Should have INFO_EMOJI
 
 - **stdout**: All worktrunk output (messages, directives, errors, warnings, progress)
 - **stderr**: All child process output (git, npm, user commands)
+- **Exception**: Interactive prompts use stderr to bypass shell wrapper's NUL-delimited parsing
 
 **Why:** Simple reasoning (one decision point), better for piping (`wt list | jq`), child output never interferes with directives. Trade-off: violates Unix convention of errors→stderr, but our "errors" are structured program output, not crashes.
 
 ```rust
-// ALL our output goes to stdout (including errors and interactive prompts)
+// ALL our output goes to stdout (including errors)
 println!("{ERROR_EMOJI} {ERROR}Branch already exists{ERROR:#}");
 
-// Interactive prompts are worktrunk output → stdout
-print!("{HINT_EMOJI} Allow and remember? [y/N] ");
+// Interactive prompts go to stderr to bypass shell wrapper buffering
+eprint!("{HINT_EMOJI} Allow and remember? [y/N] ");
 
 // Redirect child processes to stderr
 let wrapped = format!("{{ {}; }} 1>&2", command);
@@ -137,16 +138,17 @@ Command::new("sh").arg("-c").arg(&wrapped).status()?;
 ```
 
 **Interactive prompts and stdin:**
-- Prompts are worktrunk output → always use stdout
-- **CRITICAL**: Flush stdout before blocking on stdin to prevent interleaving:
+- Prompts use stderr to bypass shell wrapper's NUL-delimited stdout parsing
+- **CRITICAL**: Flush stderr before blocking on stdin to prevent interleaving:
   ```rust
-  print!("💡 Allow and remember? [y/N] ");
-  stdout().flush()?;  // Ensures prompt is visible before blocking
+  eprint!("💡 Allow and remember? [y/N] ");
+  stderr().flush()?;  // Ensures prompt is visible before blocking
 
   let mut response = String::new();
   io::stdin().read_line(&mut response)?;
   ```
-- Without flushing, buffered stdout can appear after the prompt is shown
+- Without flushing, buffered stderr can appear after the prompt is shown
+- **Why stderr?** The shell wrapper (`templates/bash.sh`) uses `read -d ''` to parse NUL-delimited directives from stdout. Non-NUL-terminated output (like prompts) would get buffered in the shell's read buffer. Stderr bypasses this parsing and appears immediately.
 
 ### Temporal Locality: Output Should Be Close to Operations
 

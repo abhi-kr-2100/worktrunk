@@ -16,7 +16,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpO74VSQ/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpT0vvwA/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -293,6 +293,16 @@ _arguments "${_arguments_options[@]}" : \
 '::target -- Target branch to rebase onto (defaults to default branch):_default' \
 && ret=0
 ;;
+(ask-approval)
+_arguments "${_arguments_options[@]}" : \
+'-f[Skip command approval prompts]' \
+'--force[Skip command approval prompts]' \
+'-v[Enable verbose output (show git commands and debug info)]' \
+'--verbose[Enable verbose output (show git commands and debug info)]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+;;
         esac
     ;;
 esac
@@ -445,8 +455,14 @@ _wt__dev_commands() {
 'squash:Squash commits with LLM-generated message' \
 'push:Push changes to target branch' \
 'rebase:Rebase current branch onto target branch' \
+'ask-approval:Test approval prompt UI (for development/debugging)' \
     )
     _describe -t commands 'wt dev commands' commands "$@"
+}
+(( $+functions[_wt__dev__ask-approval_commands] )) ||
+_wt__dev__ask-approval_commands() {
+    local commands; commands=()
+    _describe -t commands 'wt dev ask-approval commands' commands "$@"
 }
 (( $+functions[_wt__dev__commit_commands] )) ||
 _wt__dev__commit_commands() {

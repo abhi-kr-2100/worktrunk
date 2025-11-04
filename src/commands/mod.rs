@@ -16,7 +16,8 @@ pub use config::{
 };
 pub use configure_shell::{ConfigAction, handle_configure_shell};
 pub use dev::{
-    handle_dev_commit, handle_dev_push, handle_dev_rebase, handle_dev_run_hook, handle_dev_squash,
+    handle_dev_ask_approval, handle_dev_commit, handle_dev_push, handle_dev_rebase,
+    handle_dev_run_hook, handle_dev_squash,
 };
 pub use init::handle_init;
 pub use list::handle_list;

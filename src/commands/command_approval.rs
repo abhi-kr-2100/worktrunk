@@ -5,8 +5,8 @@
 use worktrunk::config::{Command, WorktrunkConfig};
 use worktrunk::git::{GitError, GitResultExt};
 use worktrunk::styling::{
-    AnstyleStyle, HINT, HINT_EMOJI, INFO_EMOJI, PROGRESS_EMOJI, WARNING, WARNING_EMOJI,
-    format_bash_with_gutter, print, println, stdout,
+    AnstyleStyle, HINT, HINT_EMOJI, INFO_EMOJI, PROGRESS_EMOJI, WARNING, WARNING_EMOJI, eprint,
+    eprintln, format_bash_with_gutter, println, stderr,
 };
 
 /// Batch approval helper used when multiple commands are queued for execution.
@@ -86,15 +86,15 @@ fn prompt_for_batch_approval(
     let count = commands.len();
     let plural = if count == 1 { "" } else { "s" };
 
-    println!();
-    println!(
+    eprintln!();
+    eprintln!(
         "{WARNING_EMOJI} {WARNING}Permission required to execute {warning_bold}{count}{warning_bold:#} command{plural}{WARNING:#}",
     );
-    println!();
-    println!(
+    eprintln!();
+    eprintln!(
         "{INFO_EMOJI} {bold}{project_name}{bold:#} ({dim}{project_id}{dim:#}) wants to execute:"
     );
-    println!();
+    eprintln!();
 
     for cmd in commands {
         // Format as: {context} {bold}{name}{bold:#}:
@@ -103,21 +103,21 @@ fn prompt_for_batch_approval(
             Some(name) => format!("{PROGRESS_EMOJI} {context} {bold}{name}{bold:#}:"),
             None => format!("{PROGRESS_EMOJI} {context}:"),
         };
-        println!("{label}");
-        print!("{}", format_bash_with_gutter(&cmd.expanded, ""));
-        println!();
+        eprintln!("{label}");
+        eprint!("{}", format_bash_with_gutter(&cmd.expanded, ""));
+        eprintln!();
     }
 
-    // Flush stdout before showing prompt to ensure all output is visible
-    stdout().flush()?;
+    // Flush stderr before showing prompt to ensure all output is visible
+    stderr().flush()?;
 
-    print!("{HINT_EMOJI} Allow and remember? {bold}[y/N]{bold:#} ");
-    stdout().flush()?;
+    eprint!("{HINT_EMOJI} Allow and remember? {bold}[y/N]{bold:#} ");
+    stderr().flush()?;
 
     let mut response = String::new();
     io::stdin().read_line(&mut response)?;
 
-    println!();
+    eprintln!();
 
     Ok(response.trim().eq_ignore_ascii_case("y"))
 }

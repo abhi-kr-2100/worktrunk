@@ -16,7 +16,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpwoMAjs/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpPGWZC8/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -244,13 +244,14 @@ zsh\t''"
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -s f -l force -d 'Skip confirmation prompt'
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -s v -l verbose -d 'Enable verbose output (show git commands and debug info)'
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from shell" -s h -l help -d 'Print help'
-complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase" -s v -l verbose -d 'Enable verbose output (show git commands and debug info)'
-complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase" -s h -l help -d 'Print help'
-complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase" -f -a "run-hook" -d 'Run a project hook for testing'
-complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase" -f -a "commit" -d 'Commit changes with LLM-generated message'
-complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase" -f -a "squash" -d 'Squash commits with LLM-generated message'
-complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase" -f -a "push" -d 'Push changes to target branch'
-complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase" -f -a "rebase" -d 'Rebase current branch onto target branch'
+complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approval" -s v -l verbose -d 'Enable verbose output (show git commands and debug info)'
+complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approval" -s h -l help -d 'Print help'
+complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approval" -f -a "run-hook" -d 'Run a project hook for testing'
+complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approval" -f -a "commit" -d 'Commit changes with LLM-generated message'
+complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approval" -f -a "squash" -d 'Squash commits with LLM-generated message'
+complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approval" -f -a "push" -d 'Push changes to target branch'
+complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approval" -f -a "rebase" -d 'Rebase current branch onto target branch'
+complete -c wt -n "__fish_wt_using_subcommand dev; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approval" -f -a "ask-approval" -d 'Test approval prompt UI (for development/debugging)'
 complete -c wt -n "__fish_wt_using_subcommand dev; and __fish_seen_subcommand_from run-hook" -s f -l force -d 'Skip command approval prompts'
 complete -c wt -n "__fish_wt_using_subcommand dev; and __fish_seen_subcommand_from run-hook" -s v -l verbose -d 'Enable verbose output (show git commands and debug info)'
 complete -c wt -n "__fish_wt_using_subcommand dev; and __fish_seen_subcommand_from run-hook" -s h -l help -d 'Print help'
@@ -267,6 +268,9 @@ complete -c wt -n "__fish_wt_using_subcommand dev; and __fish_seen_subcommand_fr
 complete -c wt -n "__fish_wt_using_subcommand dev; and __fish_seen_subcommand_from push" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_using_subcommand dev; and __fish_seen_subcommand_from rebase" -s v -l verbose -d 'Enable verbose output (show git commands and debug info)'
 complete -c wt -n "__fish_wt_using_subcommand dev; and __fish_seen_subcommand_from rebase" -s h -l help -d 'Print help'
+complete -c wt -n "__fish_wt_using_subcommand dev; and __fish_seen_subcommand_from ask-approval" -s f -l force -d 'Skip command approval prompts'
+complete -c wt -n "__fish_wt_using_subcommand dev; and __fish_seen_subcommand_from ask-approval" -s v -l verbose -d 'Enable verbose output (show git commands and debug info)'
+complete -c wt -n "__fish_wt_using_subcommand dev; and __fish_seen_subcommand_from ask-approval" -s h -l help -d 'Print help'
 complete -c wt -n "__fish_wt_using_subcommand list" -l format -d 'Output format' -r -f -a "table\t'Human-readable table format'
 json\t'Machine-readable JSON with display fields (includes styled unicode for rendering)'"
 complete -c wt -n "__fish_wt_using_subcommand list" -l branches -d 'Include branches without worktrees'
