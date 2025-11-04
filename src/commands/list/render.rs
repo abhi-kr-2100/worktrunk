@@ -356,17 +356,21 @@ pub fn format_list_item_line(
                 }
             }
             (ColumnKind::Status, _) => {
-                if let Some(info) = worktree_info {
-                    let status_text = if is_last {
-                        info.status_symbols.clone()
-                    } else {
-                        format!("{:width$}", info.status_symbols, width = column.width)
-                    };
-                    // Status column never inherits row color
-                    line.push_raw(status_text);
-                } else if !is_last {
-                    push_blank(&mut line, column.width);
-                }
+                // Determine status content: actual symbols or middle dot indicator for branch-only entries
+                let status_content = if let Some(info) = worktree_info {
+                    info.status_symbols.clone()
+                } else {
+                    "·".to_string()
+                };
+
+                let status_text = if is_last {
+                    status_content
+                } else {
+                    format!("{:width$}", status_content, width = column.width)
+                };
+
+                // Status column never inherits row color
+                line.push_raw(status_text);
             }
             (ColumnKind::WorkingDiff, ColumnFormat::Diff { digits, variant }) => {
                 if let Some(info) = worktree_info {

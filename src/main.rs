@@ -184,6 +184,7 @@ COLUMNS:
   Message: Last commit message (truncated)
 
 STATUS SYMBOLS:
+  ·  Branch without worktree (no working directory to check)
   =  Merge conflicts (unmerged paths in working tree)
   ↑  Ahead of main branch
   ↓  Behind main branch

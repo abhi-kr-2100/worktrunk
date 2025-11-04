@@ -318,7 +318,7 @@ impl BranchInfo {
 struct GitStatusInfo {
     /// Whether the working tree has any changes (staged or unstaged)
     is_dirty: bool,
-    /// Status symbols: = (conflicts), ↑ (ahead of main), ↓ (behind main), ⇡ (ahead of remote), ⇣ (behind remote), ? (untracked), ! (modified), + (staged), » (renamed), ✘ (deleted)
+    /// Status symbols: · (branch only, no worktree), = (conflicts), ↑ (ahead of main), ↓ (behind main), ⇡ (ahead of remote), ⇣ (behind remote), ? (untracked), ! (modified), + (staged), » (renamed), ✘ (deleted)
     symbols: String,
 }
 
