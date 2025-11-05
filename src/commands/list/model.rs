@@ -440,35 +440,112 @@ impl serde::Serialize for UpstreamDivergence {
     }
 }
 
+/// Branch state relative to main/primary branch
+///
+/// Represents whether the branch matches main or has no commits.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum BranchState {
+    /// Normal branch state (neither matches main nor empty)
+    #[default]
+    None,
+    /// Working tree identical to main branch
+    MatchesMain,
+    /// No commits ahead and clean working tree (not matching main)
+    NoCommits,
+}
+
+impl std::fmt::Display for BranchState {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::None => Ok(()),
+            Self::MatchesMain => write!(f, "≡"),
+            Self::NoCommits => write!(f, "∅"),
+        }
+    }
+}
+
+impl serde::Serialize for BranchState {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+/// Git operation in progress
+///
+/// Represents active rebase or merge operations.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum GitOperation {
+    /// No git operation in progress
+    #[default]
+    None,
+    /// Rebase in progress
+    Rebase,
+    /// Merge in progress
+    Merge,
+}
+
+impl std::fmt::Display for GitOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::None => Ok(()),
+            Self::Rebase => write!(f, "↻"),
+            Self::Merge => write!(f, "⋈"),
+        }
+    }
+}
+
+impl serde::Serialize for GitOperation {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
 /// Structured status symbols for aligned rendering
 ///
 /// Symbols are categorized to enable vertical alignment in table output:
-/// - Position 0: Prefix symbols (=, ≡, ∅, ↻, ⋈, ◇, ⊠, ⚠)
-/// - Position 1: Main branch divergence (↑, ↓, or ↕)
-/// - Position 2: Remote/upstream divergence (⇡, ⇣, or ⇅)
+/// - Position 0a: Conflicts (=)
+/// - Position 0b: Branch state (≡, ∅)
+/// - Position 0c: Git operation (↻, ⋈)
+/// - Position 0d: Worktree attributes (◇, ⊠, ⚠)
+/// - Position 1: Main branch divergence (↑, ↓, ↕)
+/// - Position 2: Remote/upstream divergence (⇡, ⇣, ⇅)
 /// - Position 3+: Working tree symbols (?, !, +, », ✘)
 ///
 /// ## Mutual Exclusivity
 ///
-/// Symbols within each position may or may not be mutually exclusive:
-///
 /// **Mutually exclusive (enforced by type system):**
-/// - ↑ vs ↓ vs ↕: Main divergence states (MainDivergence enum)
-/// - ⇡ vs ⇣ vs ⇅: Upstream divergence states (UpstreamDivergence enum)
-///
-/// **Mutually exclusive (not yet type-enforced):**
-/// - ≡ vs ∅: Can't both match main AND have no commits
-/// - ↻ vs ⋈: Only one git operation at a time
+/// - ≡ vs ∅: Branch state (BranchState enum)
+/// - ↻ vs ⋈: Git operation (GitOperation enum)
+/// - ↑ vs ↓ vs ↕: Main divergence (MainDivergence enum)
+/// - ⇡ vs ⇣ vs ⇅: Upstream divergence (UpstreamDivergence enum)
 ///
 /// **NOT mutually exclusive (can co-occur):**
-/// - = with ↻/⋈: Can have conflicts during rebase/merge
+/// - = can occur with any other symbol
 /// - ◇, ⊠, ⚠: Worktree can be bare+locked, bare+prunable, etc.
 /// - All working tree symbols (?!+»✘): Can have multiple types of changes
 #[derive(Debug, Clone, Default, serde::Serialize)]
 pub struct StatusSymbols {
-    /// Blocking and state symbols: =, ≡, ∅, ↻, ⋈, ◇, ⊠, ⚠
-    /// Position 0 - NOT mutually exclusive (can combine like "=↻")
-    prefix: String,
+    /// Merge conflicts indicator
+    /// Position 0a - Boolean flag (= or empty)
+    has_conflicts: bool,
+
+    /// Branch state relative to main
+    /// Position 0b - MUTUALLY EXCLUSIVE (enforced by enum)
+    branch_state: BranchState,
+
+    /// Git operation in progress
+    /// Position 0c - MUTUALLY EXCLUSIVE (enforced by enum)
+    git_operation: GitOperation,
+
+    /// Worktree attributes: ◇, ⊠, ⚠
+    /// Position 0d - NOT mutually exclusive (can combine like "◇⊠")
+    worktree_attrs: String,
 
     /// Main branch divergence state
     /// Position 1 - MUTUALLY EXCLUSIVE (enforced by enum)
@@ -487,30 +564,74 @@ impl StatusSymbols {
     /// Render symbols with full alignment
     ///
     /// Aligns all symbol types at fixed positions:
-    /// - Position 0: State symbols (=, ≡, ∅, etc.) OR space
-    /// - Position 1: Main divergence (↑, ↓, or ↕) OR space
-    /// - Position 2: Upstream divergence (⇡, ⇣, or ⇅) OR space
-    /// - Position 3+: Working tree symbols (!, +, », ?, ✘)
+    /// - Position 0a: Conflicts (= or space)
+    /// - Position 0b: Branch state (≡, ∅, or space)
+    /// - Position 0c: Git operation (↻, ⋈, or space)
+    /// - Position 0d: Worktree attributes (◇⊠⚠ or space)
+    /// - Position 1: Main divergence (↑, ↓, ↕, or space)
+    /// - Position 2: Upstream divergence (⇡, ⇣, ⇅, or space)
+    /// - Position 3+: Working tree symbols (?, !, +, », ✘)
     ///
     /// This ensures vertical scannability - each symbol type appears at the same
     /// column position across all rows.
     pub fn render(&self) -> String {
-        let mut result = String::with_capacity(10);
+        let mut result = String::with_capacity(12);
 
-        let has_any_content = !self.prefix.is_empty()
+        if self.is_empty() {
+            return result;
+        }
+
+        // Check if we have any symbols after each position (for conditional spacing)
+        let has_post_0a = self.branch_state != BranchState::None
+            || self.git_operation != GitOperation::None
+            || !self.worktree_attrs.is_empty()
             || self.main_divergence != MainDivergence::None
             || self.upstream_divergence != UpstreamDivergence::None
             || !self.working_tree.is_empty();
 
-        if !has_any_content {
-            return result;
+        let has_post_0b = self.git_operation != GitOperation::None
+            || !self.worktree_attrs.is_empty()
+            || self.main_divergence != MainDivergence::None
+            || self.upstream_divergence != UpstreamDivergence::None
+            || !self.working_tree.is_empty();
+
+        let has_post_0c = !self.worktree_attrs.is_empty()
+            || self.main_divergence != MainDivergence::None
+            || self.upstream_divergence != UpstreamDivergence::None
+            || !self.working_tree.is_empty();
+
+        let has_post_0d = self.main_divergence != MainDivergence::None
+            || self.upstream_divergence != UpstreamDivergence::None
+            || !self.working_tree.is_empty();
+
+        // Position 0a: Conflicts
+        if self.has_conflicts {
+            result.push('=');
+        } else if has_post_0a {
+            result.push(' ');
         }
 
-        // Position 0: Prefix (state symbols)
-        if self.prefix.is_empty() {
+        // Position 0b: Branch state (≡ or ∅)
+        let branch_state_str = self.branch_state.to_string();
+        if !branch_state_str.is_empty() {
+            result.push_str(&branch_state_str);
+        } else if has_post_0b {
             result.push(' ');
-        } else {
-            result.push_str(&self.prefix);
+        }
+
+        // Position 0c: Git operation (↻ or ⋈)
+        let git_op_str = self.git_operation.to_string();
+        if !git_op_str.is_empty() {
+            result.push_str(&git_op_str);
+        } else if has_post_0c {
+            result.push(' ');
+        }
+
+        // Position 0d: Worktree attributes (◇⊠⚠)
+        if !self.worktree_attrs.is_empty() {
+            result.push_str(&self.worktree_attrs);
+        } else if has_post_0d {
+            result.push(' ');
         }
 
         // Position 1: Main divergence (↑, ↓, or ↕)
@@ -544,7 +665,10 @@ impl StatusSymbols {
 
     /// Check if symbols are empty
     pub fn is_empty(&self) -> bool {
-        self.prefix.is_empty()
+        !self.has_conflicts
+            && self.branch_state == BranchState::None
+            && self.git_operation == GitOperation::None
+            && self.worktree_attrs.is_empty()
             && self.main_divergence == MainDivergence::None
             && self.upstream_divergence == UpstreamDivergence::None
             && self.working_tree.is_empty()
@@ -627,46 +751,42 @@ fn parse_git_status(
         }
     }
 
-    // Build structured symbols for aligned rendering
-    let mut symbols = StatusSymbols::default();
-
-    // Conflicts go in prefix (blocking indicator)
-    if has_conflicts {
-        symbols.prefix.push('=');
-    }
-
-    // Main branch divergence - use enum for type safety
-    symbols.main_divergence = match (main_ahead > 0, main_behind > 0) {
-        (true, true) => MainDivergence::Diverged, // Both ahead and behind
-        (true, false) => MainDivergence::Ahead,   // Ahead only
-        (false, true) => MainDivergence::Behind,  // Behind only
-        (false, false) => MainDivergence::None,   // Up to date
-    };
-
-    // Upstream/remote divergence - use enum for type safety
-    symbols.upstream_divergence = match (upstream_ahead > 0, upstream_behind > 0) {
-        (true, true) => UpstreamDivergence::Diverged, // Both ahead and behind
-        (true, false) => UpstreamDivergence::Ahead,   // Ahead only
-        (false, true) => UpstreamDivergence::Behind,  // Behind only
-        (false, false) => UpstreamDivergence::None,   // Up to date
-    };
-
-    // Working tree changes (position 3+)
+    // Build working tree string
+    let mut working_tree = String::new();
     if has_untracked {
-        symbols.working_tree.push('?');
+        working_tree.push('?');
     }
     if has_modified {
-        symbols.working_tree.push('!');
+        working_tree.push('!');
     }
     if has_staged {
-        symbols.working_tree.push('+');
+        working_tree.push('+');
     }
     if has_renamed {
-        symbols.working_tree.push('»');
+        working_tree.push('»');
     }
     if has_deleted {
-        symbols.working_tree.push('✘');
+        working_tree.push('✘');
     }
+
+    // Build structured symbols for aligned rendering
+    let symbols = StatusSymbols {
+        has_conflicts,
+        main_divergence: match (main_ahead > 0, main_behind > 0) {
+            (true, true) => MainDivergence::Diverged, // Both ahead and behind
+            (true, false) => MainDivergence::Ahead,   // Ahead only
+            (false, true) => MainDivergence::Behind,  // Behind only
+            (false, false) => MainDivergence::None,   // Up to date
+        },
+        upstream_divergence: match (upstream_ahead > 0, upstream_behind > 0) {
+            (true, true) => UpstreamDivergence::Diverged, // Both ahead and behind
+            (true, false) => UpstreamDivergence::Ahead,   // Ahead only
+            (false, true) => UpstreamDivergence::Behind,  // Behind only
+            (false, false) => UpstreamDivergence::None,   // Up to date
+        },
+        working_tree,
+        ..Default::default()
+    };
 
     Ok(GitStatusInfo { is_dirty, symbols })
 }
@@ -760,52 +880,45 @@ impl WorktreeInfo {
             false
         };
 
-        // Build complete status symbols by adding state symbols to prefix
+        // Build complete status symbols with type-safe enums
         // Order: = ≡∅ ↻⋈ ◇⊠⚠ | ↑↓ | ⇡⇣ | ?!+»✘
-        //        ^prefix^      ^main^ ^up^ ^working_tree^
+        //        ^0a 0b 0c 0d^  ^1^  ^2^  ^3+^
         let mut symbols = status_info.symbols;
 
         // Add merge conflicts indicator if this branch has conflicts with base
-        // (different from git status conflicts which are already in symbols.prefix)
-        if has_conflicts && !symbols.prefix.contains('=') {
-            symbols.prefix.insert(0, '=');
+        // (different from git status conflicts which are already in has_conflicts)
+        if has_conflicts {
+            symbols.has_conflicts = true;
         }
 
-        // Build state symbols to add to prefix
-        let mut state_symbols = String::new();
-
-        // ≡ matches main (working tree identical to main)
-        // ∅ no commits (no commits ahead AND clean working tree, AND not matches main)
+        // Branch state: ≡ matches main, ∅ no commits (mutually exclusive)
         if !is_primary {
             if working_tree_diff_with_main == Some((0, 0)) {
-                state_symbols.push('≡');
+                symbols.branch_state = BranchState::MatchesMain;
             } else if counts.ahead == 0 && working_tree_diff == (0, 0) {
-                state_symbols.push('∅');
+                symbols.branch_state = BranchState::NoCommits;
             }
         }
 
-        // ↻ rebase, ⋈ merge (git operations in progress)
+        // Git operation: ↻ rebase, ⋈ merge (mutually exclusive)
         if let Some(state) = &worktree_state {
             if state.contains("rebase") {
-                state_symbols.push('↻');
+                symbols.git_operation = GitOperation::Rebase;
             } else if state.contains("merge") {
-                state_symbols.push('⋈');
+                symbols.git_operation = GitOperation::Merge;
             }
         }
 
-        // ◇ bare, ⊠ locked, ⚠ prunable (worktree attributes)
+        // Worktree attributes: ◇ bare, ⊠ locked, ⚠ prunable (can combine)
         if wt.bare {
-            state_symbols.push('◇');
+            symbols.worktree_attrs.push('◇');
         }
         if wt.locked.is_some() {
-            state_symbols.push('⊠');
+            symbols.worktree_attrs.push('⊠');
         }
         if wt.prunable.is_some() {
-            state_symbols.push('⚠');
+            symbols.worktree_attrs.push('⚠');
         }
-
-        // Append state symbols to prefix (after any existing conflict marker)
-        symbols.prefix.push_str(&state_symbols);
 
         // Read user-defined status from git config (worktree-specific or branch-keyed)
         let user_status = read_user_status(&wt_repo, wt.branch.as_deref());
