@@ -58,7 +58,7 @@ pub enum GitError {
 
 impl std::fmt::Display for GitError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use crate::styling::{ERROR, ERROR_EMOJI, HINT, HINT_EMOJI};
+        use crate::styling::{ERROR, ERROR_BOLD, ERROR_EMOJI, HINT, HINT_EMOJI};
 
         match self {
             // Plain message that will be displayed by main.rs
@@ -91,19 +91,16 @@ impl std::fmt::Display for GitError {
                 command_name,
                 error,
                 exit_code: _,
-            } => {
-                let error_bold = ERROR.bold();
-                match command_name {
-                    Some(name) => write!(
-                        f,
-                        "{ERROR_EMOJI} {ERROR}{hook_type} command failed: {error_bold}{name}{error_bold:#}{ERROR:#}\n\n{error}\n\n{HINT_EMOJI} {HINT}Use --no-hooks to skip {hook_type} commands{HINT:#}"
-                    ),
-                    None => write!(
-                        f,
-                        "{ERROR_EMOJI} {ERROR}{hook_type} command failed{ERROR:#}\n\n{error}\n\n{HINT_EMOJI} {HINT}Use --no-hooks to skip {hook_type} commands{HINT:#}"
-                    ),
-                }
-            }
+            } => match command_name {
+                Some(name) => write!(
+                    f,
+                    "{ERROR_EMOJI} {ERROR}{hook_type} command failed: {ERROR_BOLD}{name}{ERROR_BOLD:#}{ERROR:#}\n\n{error}\n\n{HINT_EMOJI} {HINT}Use --no-hooks to skip {hook_type} commands{HINT:#}"
+                ),
+                None => write!(
+                    f,
+                    "{ERROR_EMOJI} {ERROR}{hook_type} command failed{ERROR:#}\n\n{error}\n\n{HINT_EMOJI} {HINT}Use --no-hooks to skip {hook_type} commands{HINT:#}"
+                ),
+            },
 
             // Uncommitted changes
             GitError::UncommittedChanges => {
@@ -115,28 +112,25 @@ impl std::fmt::Display for GitError {
 
             // Branch already exists
             GitError::BranchAlreadyExists { branch } => {
-                let error_bold = ERROR.bold();
                 write!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Branch {error_bold}{branch}{error_bold:#}{ERROR} already exists{ERROR:#}\n\n{HINT_EMOJI} {HINT}Remove --create flag to switch to it{HINT:#}"
+                    "{ERROR_EMOJI} {ERROR}Branch {ERROR_BOLD}{branch}{ERROR_BOLD:#}{ERROR} already exists{ERROR:#}\n\n{HINT_EMOJI} {HINT}Remove --create flag to switch to it{HINT:#}"
                 )
             }
 
             // Worktree missing
             GitError::WorktreeMissing { branch } => {
-                let error_bold = ERROR.bold();
                 write!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Worktree directory missing for {error_bold}{branch}{error_bold:#}{ERROR:#}\n\n{HINT_EMOJI} {HINT}Run 'git worktree prune' to clean up{HINT:#}"
+                    "{ERROR_EMOJI} {ERROR}Worktree directory missing for {ERROR_BOLD}{branch}{ERROR_BOLD:#}{ERROR:#}\n\n{HINT_EMOJI} {HINT}Run 'git worktree prune' to clean up{HINT:#}"
                 )
             }
 
             // No worktree found
             GitError::NoWorktreeFound { branch } => {
-                let error_bold = ERROR.bold();
                 write!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}No worktree found for branch {error_bold}{branch}{error_bold:#}{ERROR:#}"
+                    "{ERROR_EMOJI} {ERROR}No worktree found for branch {ERROR_BOLD}{branch}{ERROR_BOLD:#}{ERROR:#}"
                 )
             }
 
@@ -168,11 +162,9 @@ impl std::fmt::Display for GitError {
                 commits_formatted,
                 files_formatted,
             } => {
-                let error_bold = ERROR.bold();
-
                 writeln!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Can't push to local {error_bold}{target_branch}{error_bold:#} branch: it has newer commits{ERROR:#}"
+                    "{ERROR_EMOJI} {ERROR}Can't push to local {ERROR_BOLD}{target_branch}{ERROR_BOLD:#} branch: it has newer commits{ERROR:#}"
                 )?;
 
                 // Show the formatted commit log
@@ -224,11 +216,10 @@ impl std::fmt::Display for GitError {
                 git_output,
             } => {
                 use crate::styling::format_with_gutter;
-                let error_bold = ERROR.bold();
 
                 write!(
                     f,
-                    "{ERROR_EMOJI} {ERROR}Rebase onto {error_bold}{target_branch}{error_bold:#}{ERROR} incomplete{ERROR:#}"
+                    "{ERROR_EMOJI} {ERROR}Rebase onto {ERROR_BOLD}{target_branch}{ERROR_BOLD:#}{ERROR} incomplete{ERROR:#}"
                 )?;
 
                 if !git_output.is_empty() {

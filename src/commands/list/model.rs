@@ -1,7 +1,7 @@
 use rayon::prelude::*;
 use std::path::PathBuf;
 use worktrunk::git::{GitError, Repository};
-use worktrunk::styling::{HINT, HINT_EMOJI, WARNING, WARNING_EMOJI, println};
+use worktrunk::styling::{HINT, HINT_EMOJI, WARNING, WARNING_BOLD, WARNING_EMOJI, println};
 
 use super::ci_status::PrStatus;
 
@@ -601,9 +601,8 @@ pub fn gather_list_data(
             match result {
                 Ok(branch_info) => items.push(ListItem::Branch(branch_info)),
                 Err(e) => {
-                    let warning_bold = WARNING.bold();
                     println!(
-                        "{WARNING_EMOJI} {WARNING}Failed to enrich branch {warning_bold}{branch}{warning_bold:#}: {e}{WARNING:#}"
+                        "{WARNING_EMOJI} {WARNING}Failed to enrich branch {WARNING_BOLD}{branch}{WARNING_BOLD:#}: {e}{WARNING:#}"
                     );
                     println!(
                         "{HINT_EMOJI} {HINT}This branch will be shown with limited information{HINT:#}"

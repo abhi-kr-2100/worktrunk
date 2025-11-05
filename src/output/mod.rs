@@ -86,8 +86,7 @@ pub(crate) fn format_switch_success_message(
     base_branch: Option<&str>,
     use_past_tense: bool,
 ) -> String {
-    use worktrunk::styling::GREEN;
-    let green_bold = GREEN.bold();
+    use worktrunk::styling::{GREEN, GREEN_BOLD};
 
     let action = if created_branch {
         "Created new worktree for"
@@ -99,11 +98,11 @@ pub(crate) fn format_switch_success_message(
     // Re-establish GREEN after each green_bold reset to prevent color leak
     match base_branch {
         Some(base) => format!(
-            "{GREEN}{action} {green_bold}{branch}{green_bold:#}{GREEN} from {green_bold}{base}{green_bold:#}{GREEN}{location} {green_bold}{}{green_bold:#}{GREEN:#}",
+            "{GREEN}{action} {GREEN_BOLD}{branch}{GREEN_BOLD:#}{GREEN} from {GREEN_BOLD}{base}{GREEN_BOLD:#}{GREEN}{location} {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN:#}",
             path.display()
         ),
         None => format!(
-            "{GREEN}{action} {green_bold}{branch}{green_bold:#}{GREEN}{location} {green_bold}{}{green_bold:#}{GREEN:#}",
+            "{GREEN}{action} {GREEN_BOLD}{branch}{GREEN_BOLD:#}{GREEN}{location} {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN:#}",
             path.display()
         ),
     }

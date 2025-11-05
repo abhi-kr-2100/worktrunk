@@ -24,12 +24,11 @@ fn format_switch_message(result: &SwitchResult, branch: &str) -> String {
 
 /// Format message for remove operation (includes emoji and color for consistency)
 fn format_remove_message(result: &RemoveResult, branch: Option<&str>) -> String {
-    use worktrunk::styling::GREEN;
-    let green_bold = GREEN.bold();
+    use worktrunk::styling::{GREEN, GREEN_BOLD};
 
     match result {
         RemoveResult::AlreadyOnDefault(branch) => {
-            format!("{GREEN}Already on default branch {green_bold}{branch}{green_bold:#}{GREEN:#}")
+            format!("{GREEN}Already on default branch {GREEN_BOLD}{branch}{GREEN_BOLD:#}{GREEN:#}")
         }
         RemoveResult::RemovedWorktree {
             primary_path,
@@ -51,23 +50,23 @@ fn format_remove_message(result: &RemoveResult, branch: Option<&str>) -> String 
                 if let Some(b) = branch_display {
                     // Re-establish GREEN after each green_bold reset to prevent color leak
                     format!(
-                        "{GREEN}{action} for {green_bold}{b}{green_bold:#}{GREEN}, returned to primary at {green_bold}{}{green_bold:#}{GREEN:#}",
+                        "{GREEN}{action} for {GREEN_BOLD}{b}{GREEN_BOLD:#}{GREEN}, returned to primary at {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN:#}",
                         primary_path.display()
                     )
                 } else {
                     format!(
-                        "{GREEN}{action}, returned to primary at {green_bold}{}{green_bold:#}{GREEN:#}",
+                        "{GREEN}{action}, returned to primary at {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN:#}",
                         primary_path.display()
                     )
                 }
             } else if let Some(b) = branch_display {
-                format!("{GREEN}{action} for {green_bold}{b}{green_bold:#}{GREEN:#}")
+                format!("{GREEN}{action} for {GREEN_BOLD}{b}{GREEN_BOLD:#}{GREEN:#}")
             } else {
                 format!("{GREEN}{action}{GREEN:#}")
             }
         }
         RemoveResult::SwitchedToDefault(branch) => {
-            format!("{GREEN}Switched to default branch {green_bold}{branch}{green_bold:#}{GREEN:#}")
+            format!("{GREEN}Switched to default branch {GREEN_BOLD}{branch}{GREEN_BOLD:#}{GREEN:#}")
         }
     }
 }
@@ -150,12 +149,11 @@ pub fn handle_remove_output(result: &RemoveResult, branch: Option<&str>) -> Resu
             if let Err(e) = result {
                 // If branch deletion fails, show a warning but don't error
                 // This matches the user's request: "print a nice message, don't raise some big error"
-                use worktrunk::styling::{WARNING, WARNING_EMOJI};
-                let warning_bold = WARNING.bold();
+                use worktrunk::styling::{WARNING, WARNING_BOLD, WARNING_EMOJI};
                 // Normalize error message to single line to prevent formatting issues
                 let error_msg = e.to_string().replace('\n', " ").trim().to_string();
                 super::progress(format!(
-                    "{WARNING_EMOJI} {WARNING}Could not delete branch {warning_bold}{branch_name}{warning_bold:#}: {error_msg}{WARNING:#}"
+                    "{WARNING_EMOJI} {WARNING}Could not delete branch {WARNING_BOLD}{branch_name}{WARNING_BOLD:#}: {error_msg}{WARNING:#}"
                 ))?;
             }
         }

@@ -2,7 +2,9 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use worktrunk::shell::Shell;
-use worktrunk::styling::{INFO_EMOJI, PROGRESS_EMOJI, SUCCESS_EMOJI, format_bash_with_gutter};
+use worktrunk::styling::{
+    CYAN_BOLD, INFO_EMOJI, PROGRESS_EMOJI, SUCCESS_EMOJI, format_bash_with_gutter,
+};
 
 pub struct ConfigureResult {
     pub shell: Shell,
@@ -328,15 +330,12 @@ fn configure_fish_file(
 }
 
 fn prompt_for_confirmation(results: &[ConfigureResult]) -> Result<bool, String> {
-    use anstyle::{AnsiColor, Color, Style};
+    use anstyle::Style;
     use worktrunk::styling::{HINT_EMOJI, eprint, eprintln};
-
-    let cyan = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
-    let cyan_bold = cyan.bold();
 
     // Interactive prompts go to stderr so they appear even when stdout is redirected
     eprintln!();
-    eprintln!("{HINT_EMOJI} {cyan_bold}Configuration changes:{cyan_bold:#}");
+    eprintln!("{HINT_EMOJI} {CYAN_BOLD}Configuration changes:{CYAN_BOLD:#}");
     eprintln!();
 
     for result in results {

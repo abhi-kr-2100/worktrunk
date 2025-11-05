@@ -66,7 +66,7 @@ fn expand_commands(
     );
     base_extras.insert(
         "repo_root".to_string(),
-        repo_root.to_str().unwrap_or("").to_string(),
+        repo_root.to_string_lossy().to_string(),
     );
     for &(key, value) in extra_vars {
         base_extras.insert(key.to_string(), value.to_string());

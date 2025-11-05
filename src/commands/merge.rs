@@ -2,8 +2,8 @@ use worktrunk::HookType;
 use worktrunk::config::{Command, CommandPhase, ProjectConfig, WorktrunkConfig};
 use worktrunk::git::{GitError, GitResultExt, Repository};
 use worktrunk::styling::{
-    AnstyleStyle, CYAN, CYAN_BOLD, ERROR, ERROR_EMOJI, HINT, HINT_EMOJI, WARNING,
-    format_bash_with_gutter, format_with_gutter,
+    AnstyleStyle, CYAN, CYAN_BOLD, ERROR, ERROR_EMOJI, GREEN_BOLD, HINT, HINT_EMOJI, WARNING,
+    WARNING_BOLD, format_bash_with_gutter, format_with_gutter,
 };
 
 use super::command_approval::approve_command_batch;
@@ -137,9 +137,8 @@ pub fn handle_merge(
     // Check if already on target branch
     if current_branch == target_branch {
         use worktrunk::styling::GREEN;
-        let green_bold = GREEN.bold();
         crate::output::success(format!(
-            "{GREEN}Already on {green_bold}{target_branch}{green_bold:#}{GREEN}, nothing to merge{GREEN:#}"
+            "{GREEN}Already on {GREEN_BOLD}{target_branch}{GREEN_BOLD:#}{GREEN}, nothing to merge{GREEN:#}"
         ))?;
         return Ok(());
     }
@@ -247,9 +246,8 @@ pub fn handle_merge(
 
         // Show success message now that user has been cd'd to primary
         use worktrunk::styling::GREEN;
-        let green_bold = GREEN.bold();
         crate::output::success(format!(
-            "{GREEN}Returned to primary at {green_bold}{}{green_bold:#}{GREEN:#}",
+            "{GREEN}Returned to primary at {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN:#}",
             primary_worktree_dir.display()
         ))?;
 
@@ -301,12 +299,11 @@ pub fn handle_merge(
 /// Format the merge summary message (no emoji - output system adds it)
 fn format_merge_summary(primary_path: Option<&std::path::Path>) -> String {
     use worktrunk::styling::GREEN;
-    let green_bold = GREEN.bold();
 
     // Show where we ended up
     if let Some(path) = primary_path {
         format!(
-            "{GREEN}Returned to primary at {green_bold}{}{green_bold:#}{GREEN:#}",
+            "{GREEN}Returned to primary at {GREEN_BOLD}{}{GREEN_BOLD:#}{GREEN:#}",
             path.display()
         )
     } else {
@@ -577,10 +574,9 @@ pub fn execute_post_merge_commands(
         crate::output::gutter(format_bash_with_gutter(&prepared.expanded, ""))?;
 
         if let Err(e) = execute_command_in_worktree(main_worktree_path, &prepared.expanded) {
-            let warning_bold = WARNING.bold();
             let message = match &prepared.name {
                 Some(name) => format!(
-                    "{WARNING}Command {warning_bold}{name}{warning_bold:#} failed: {e}{WARNING:#}"
+                    "{WARNING}Command {WARNING_BOLD}{name}{WARNING_BOLD:#} failed: {e}{WARNING:#}"
                 ),
                 None => format!("{WARNING}Command failed: {e}{WARNING:#}"),
             };

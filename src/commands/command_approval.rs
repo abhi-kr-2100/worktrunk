@@ -5,8 +5,8 @@
 use worktrunk::config::{Command, WorktrunkConfig};
 use worktrunk::git::{GitError, GitResultExt};
 use worktrunk::styling::{
-    AnstyleStyle, HINT, HINT_EMOJI, INFO_EMOJI, PROGRESS_EMOJI, WARNING, WARNING_EMOJI, eprint,
-    eprintln, format_bash_with_gutter, println, stderr,
+    AnstyleStyle, HINT, HINT_EMOJI, INFO_EMOJI, PROGRESS_EMOJI, WARNING, WARNING_BOLD,
+    WARNING_EMOJI, eprint, eprintln, format_bash_with_gutter, println, stderr,
 };
 
 /// Batch approval helper used when multiple commands are queued for execution.
@@ -97,13 +97,12 @@ fn prompt_for_batch_approval(commands: &[&Command], project_id: &str) -> std::io
 
     let project_name = project_id.split('/').next_back().unwrap_or(project_id);
     let bold = AnstyleStyle::new().bold();
-    let warning_bold = WARNING.bold();
     let count = commands.len();
     let plural = if count == 1 { "" } else { "s" };
 
     eprintln!();
     eprintln!(
-        "{WARNING_EMOJI} {WARNING}{warning_bold}{project_name}{warning_bold:#} wants to execute {warning_bold}{count}{warning_bold:#} command{plural}:{WARNING:#}"
+        "{WARNING_EMOJI} {WARNING}{WARNING_BOLD}{project_name}{WARNING_BOLD:#} wants to execute {WARNING_BOLD}{count}{WARNING_BOLD:#} command{plural}:{WARNING:#}"
     );
     eprintln!();
 

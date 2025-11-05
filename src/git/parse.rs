@@ -36,15 +36,13 @@ pub(crate) fn parse_worktree_list(output: &str) -> Result<Vec<Worktree>, GitErro
                     prunable: None,
                 });
             }
-            "HEAD" => {
-                if let Some(ref mut wt) = current {
+            key => match (key, current.as_mut()) {
+                ("HEAD", Some(wt)) => {
                     wt.head = value
                         .ok_or_else(|| GitError::ParseError("HEAD line missing SHA".to_string()))?
                         .to_string();
                 }
-            }
-            "branch" => {
-                if let Some(ref mut wt) = current {
+                ("branch", Some(wt)) => {
                     // Strip refs/heads/ prefix if present
                     let branch_ref = value.ok_or_else(|| {
                         GitError::ParseError("branch line missing ref".to_string())
@@ -55,30 +53,22 @@ pub(crate) fn parse_worktree_list(output: &str) -> Result<Vec<Worktree>, GitErro
                         .to_string();
                     wt.branch = Some(branch);
                 }
-            }
-            "bare" => {
-                if let Some(ref mut wt) = current {
+                ("bare", Some(wt)) => {
                     wt.bare = true;
                 }
-            }
-            "detached" => {
-                if let Some(ref mut wt) = current {
+                ("detached", Some(wt)) => {
                     wt.detached = true;
                 }
-            }
-            "locked" => {
-                if let Some(ref mut wt) = current {
+                ("locked", Some(wt)) => {
                     wt.locked = Some(value.unwrap_or_default().to_string());
                 }
-            }
-            "prunable" => {
-                if let Some(ref mut wt) = current {
+                ("prunable", Some(wt)) => {
                     wt.prunable = Some(value.unwrap_or_default().to_string());
                 }
-            }
-            _ => {
-                // Ignore unknown attributes for forward compatibility
-            }
+                _ => {
+                    // Ignore unknown attributes or attributes before first worktree
+                }
+            },
         }
     }
 

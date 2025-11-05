@@ -100,6 +100,29 @@ impl TestRepo {
         cmd.env("SOURCE_DATE_EPOCH", "1761609600");
     }
 
+    /// Create a configured git command with args and current_dir set
+    ///
+    /// This is a convenience wrapper around configure_git_cmd that reduces boilerplate.
+    /// Returns a Command ready to execute with .output(), .status(), etc.
+    ///
+    /// # Example
+    /// ```ignore
+    /// // Before:
+    /// let mut cmd = Command::new("git");
+    /// self.configure_git_cmd(&mut cmd);
+    /// cmd.args(["add", "."]).current_dir(&self.root).output()?;
+    ///
+    /// // After:
+    /// self.git_command(&["add", "."]).output()?;
+    /// ```
+    pub fn git_command(&self, args: &[&str]) -> Command {
+        let mut cmd = Command::new("git");
+        self.configure_git_cmd(&mut cmd);
+        cmd.args(args);
+        cmd.current_dir(&self.root);
+        cmd
+    }
+
     /// Clean environment for worktrunk CLI commands
     ///
     /// Removes potentially interfering environment variables and sets
@@ -199,17 +222,11 @@ impl TestRepo {
         let file_path = self.root.join("file.txt");
         std::fs::write(&file_path, message).expect("Failed to write file");
 
-        let mut cmd = Command::new("git");
-        self.configure_git_cmd(&mut cmd);
-        cmd.args(["add", "."])
-            .current_dir(&self.root)
+        self.git_command(&["add", "."])
             .output()
             .expect("Failed to git add");
 
-        let mut cmd = Command::new("git");
-        self.configure_git_cmd(&mut cmd);
-        cmd.args(["commit", "-m", message])
-            .current_dir(&self.root)
+        self.git_command(&["commit", "-m", message])
             .output()
             .expect("Failed to git commit");
     }
@@ -225,17 +242,11 @@ impl TestRepo {
         let file_path = self.root.join(format!("file-{}.txt", timestamp));
         std::fs::write(&file_path, "content").expect("Failed to write file");
 
-        let mut cmd = Command::new("git");
-        self.configure_git_cmd(&mut cmd);
-        cmd.args(["add", "."])
-            .current_dir(&self.root)
+        self.git_command(&["add", "."])
             .output()
             .expect("Failed to git add");
 
-        let mut cmd = Command::new("git");
-        self.configure_git_cmd(&mut cmd);
-        cmd.args(["commit", "-m", message])
-            .current_dir(&self.root)
+        self.git_command(&["commit", "-m", message])
             .output()
             .expect("Failed to git commit");
     }

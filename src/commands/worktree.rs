@@ -103,7 +103,9 @@
 use std::path::PathBuf;
 use worktrunk::config::{CommandPhase, ProjectConfig, WorktrunkConfig};
 use worktrunk::git::{GitError, GitResultExt, Repository};
-use worktrunk::styling::{CYAN, CYAN_BOLD, GREEN, GREEN_BOLD, WARNING, format_bash_with_gutter};
+use worktrunk::styling::{
+    CYAN, CYAN_BOLD, GREEN, GREEN_BOLD, WARNING, WARNING_BOLD, format_bash_with_gutter,
+};
 
 use super::command_executor::{CommandContext, prepare_project_commands};
 use crate::commands::process::spawn_detached;
@@ -283,9 +285,8 @@ pub fn handle_remove(
     };
 
     // Show progress with resolved name
-    let cyan_bold = CYAN.bold();
     let progress_msg = if let Some(ref b) = resolved_name {
-        format!("{CYAN}Removing worktree for {cyan_bold}{b}{cyan_bold:#}...{CYAN:#}")
+        format!("{CYAN}Removing worktree for {CYAN_BOLD}{b}{CYAN_BOLD:#}...{CYAN:#}")
     } else {
         format!("{CYAN}Removing worktree...{CYAN:#}")
     };
@@ -488,10 +489,9 @@ pub fn execute_post_create_commands(
         crate::output::gutter(format_bash_with_gutter(&prepared.expanded, ""))?;
 
         if let Err(e) = execute_command_in_worktree(worktree_path, &prepared.expanded) {
-            let warning_bold = WARNING.bold();
             let message = match &prepared.name {
                 Some(name) => format!(
-                    "{WARNING}Command {warning_bold}{name}{warning_bold:#} failed: {e}{WARNING:#}"
+                    "{WARNING}Command {WARNING_BOLD}{name}{WARNING_BOLD:#} failed: {e}{WARNING:#}"
                 ),
                 None => format!("{WARNING}Command failed: {e}{WARNING:#}"),
             };

@@ -2,7 +2,8 @@ use etcetera::base_strategy::{BaseStrategy, choose_base_strategy};
 use std::path::PathBuf;
 use worktrunk::git::{GitError, GitResultExt, Repository};
 use worktrunk::styling::{
-    AnstyleStyle, GREEN, HINT, HINT_EMOJI, INFO_EMOJI, SUCCESS_EMOJI, format_toml, print, println,
+    AnstyleStyle, GREEN, GREEN_BOLD, HINT, HINT_EMOJI, INFO_EMOJI, SUCCESS_EMOJI, format_toml,
+    print, println,
 };
 
 /// Example configuration file content
@@ -175,8 +176,7 @@ pub fn handle_config_refresh_cache() -> Result<(), GitError> {
     let branch = repo.refresh_default_branch()?;
 
     // Display success message
-    let green_bold = GREEN.bold();
-    println!("{SUCCESS_EMOJI} {GREEN}Cache refreshed: {green_bold}{branch}{green_bold:#}{GREEN:#}");
+    println!("{SUCCESS_EMOJI} {GREEN}Cache refreshed: {GREEN_BOLD}{branch}{GREEN_BOLD:#}{GREEN:#}");
 
     Ok(())
 }

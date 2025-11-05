@@ -2,7 +2,8 @@ use worktrunk::HookType;
 use worktrunk::config::{ProjectConfig, WorktrunkConfig};
 use worktrunk::git::{GitError, GitResultExt, Repository};
 use worktrunk::styling::{
-    AnstyleStyle, CYAN, CYAN_BOLD, HINT, HINT_EMOJI, eprintln, format_with_gutter,
+    AnstyleStyle, CYAN, CYAN_BOLD, GREEN_BOLD, HINT, HINT_BOLD, HINT_EMOJI, eprintln,
+    format_with_gutter,
 };
 
 use super::merge::{
@@ -92,10 +93,9 @@ fn load_project_config(repo: &Repository) -> Result<ProjectConfig, GitError> {
             // No project config found - show helpful error
             use worktrunk::styling::ERROR;
             use worktrunk::styling::ERROR_EMOJI;
-            let hint_bold = HINT.bold();
             eprintln!("{ERROR_EMOJI} {ERROR}No project configuration found{ERROR:#}",);
             eprintln!(
-                "{HINT_EMOJI} {HINT}Create a config file at: {hint_bold}{}{hint_bold:#}{HINT:#}",
+                "{HINT_EMOJI} {HINT}Create a config file at: {HINT_BOLD}{}{HINT_BOLD:#}{HINT:#}",
                 config_path.display()
             );
             Err(GitError::CommandFailed(
@@ -379,9 +379,8 @@ pub fn handle_dev_rebase(target: Option<&str>) -> Result<bool, GitError> {
 
     // Success
     use worktrunk::styling::GREEN;
-    let green_bold = GREEN.bold();
     crate::output::success(format!(
-        "{GREEN}Rebased onto {green_bold}{target_branch}{green_bold:#}{GREEN:#}"
+        "{GREEN}Rebased onto {GREEN_BOLD}{target_branch}{GREEN_BOLD:#}{GREEN:#}"
     ))?;
 
     Ok(true)

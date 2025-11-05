@@ -82,8 +82,10 @@ pub fn expand_command_template(
     target_branch: Option<&str>,
 ) -> String {
     let mut extra = std::collections::HashMap::new();
-    extra.insert("worktree", worktree_path.to_str().unwrap_or(""));
-    extra.insert("repo_root", repo_root.to_str().unwrap_or(""));
+    let worktree_str = worktree_path.to_string_lossy();
+    let repo_root_str = repo_root.to_string_lossy();
+    extra.insert("worktree", worktree_str.as_ref());
+    extra.insert("repo_root", repo_root_str.as_ref());
     if let Some(target) = target_branch {
         extra.insert("target", target);
     }

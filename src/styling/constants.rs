@@ -11,11 +11,24 @@ use anstyle::{AnsiColor, Color, Style};
 /// Error style (red) - use as `{ERROR}text{ERROR:#}`
 pub const ERROR: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Red)));
 
+/// Error bold style (red + bold) - use as `{ERROR_BOLD}text{ERROR_BOLD:#}`
+pub const ERROR_BOLD: Style = Style::new()
+    .fg_color(Some(Color::Ansi(AnsiColor::Red)))
+    .bold();
+
 /// Warning style (yellow) - use as `{WARNING}text{WARNING:#}`
 pub const WARNING: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Yellow)));
 
+/// Warning bold style (yellow + bold) - use as `{WARNING_BOLD}text{WARNING_BOLD:#}`
+pub const WARNING_BOLD: Style = Style::new()
+    .fg_color(Some(Color::Ansi(AnsiColor::Yellow)))
+    .bold();
+
 /// Hint style (dimmed) - use as `{HINT}text{HINT:#}`
 pub const HINT: Style = Style::new().dimmed();
+
+/// Hint bold style (dimmed + bold) - use as `{HINT_BOLD}text{HINT_BOLD:#}`
+pub const HINT_BOLD: Style = Style::new().dimmed().bold();
 
 /// Current worktree style (magenta + bold)
 pub const CURRENT: Style = Style::new()
