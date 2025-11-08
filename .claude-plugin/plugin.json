@@ -1,0 +1,8 @@
+{
+  "name": "worktrunk-config",
+  "description": "Configuration guidance for Worktrunk - helps set up LLM integration and project automation hooks",
+  "version": "1.0.0",
+  "author": {
+    "name": "Worktrunk"
+  }
+}

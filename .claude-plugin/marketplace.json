@@ -1,0 +1,22 @@
+{
+  "name": "worktrunk-skills",
+  "owner": {
+    "name": "Worktrunk",
+    "email": "support@worktrunk.com"
+  },
+  "metadata": {
+    "description": "Configuration guidance skills for Worktrunk git worktree workflow tool",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "worktrunk-config",
+      "description": "Configuration guidance for Worktrunk - helps set up LLM integration and project automation hooks",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/worktrunk-config"
+      ]
+    }
+  ]
+}
