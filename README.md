@@ -439,6 +439,17 @@ Add to `~/.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
+            "command": "git branch --show-current 2>/dev/null | xargs -I {} git config worktrunk.status.{} 💬"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
             "command": "git branch --show-current 2>/dev/null | xargs -I {} git config --unset worktrunk.status.{} 2>/dev/null || true"
           }
         ]
@@ -449,16 +460,24 @@ Add to `~/.claude/settings.json`:
 ```
 
 Now when you use Claude:
-- Sets status to `🤖` for the current branch when you submit a prompt
-- Clears the status when the session stops
+- Sets status to `🤖` for the current branch when you submit a prompt (working)
+- Changes to `💬` when Claude returns a response (ready for your input)
+- Clears the status completely when the session ends
 
 **Status from other terminal:**
 
 ```bash
+# While Claude is working
 $ wt list
 Branch     Status      Working ±  Path
 main                              ./myapp/
 feature-x  ↑!🤖        +5 -2     ./myapp.feature-x/
+
+# After Claude responds (waiting for your input)
+$ wt list
+Branch     Status      Working ±  Path
+main                              ./myapp/
+feature-x  ↑!💬        +5 -2     ./myapp.feature-x/
 ```
 
 **How it works:**
