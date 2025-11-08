@@ -47,13 +47,7 @@ fn test_approval_single_command() {
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
-        r#"post-create-command = "echo 'Worktree path: {worktree}'""#,
-    )
-    .expect("Failed to write config");
+    repo.write_project_config(r#"post-create-command = "echo 'Worktree path: {worktree}'""#);
 
     repo.commit("Add config");
 
@@ -70,18 +64,14 @@ fn test_approval_multiple_commands() {
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"post-create-command = [
     "echo 'Branch: {branch}'",
     "echo 'Worktree: {worktree}'",
     "echo 'Repo: {main-worktree}'",
     "cd {worktree} && pwd"
 ]"#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add config");
 
@@ -98,32 +88,24 @@ fn test_approval_mixed_approved_unapproved() {
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"post-create-command = [
     "echo 'First command'",
     "echo 'Second command'",
     "echo 'Third command'"
 ]"#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add config");
 
     // Pre-approve the second command
     let project_id = repo.root_path().file_name().unwrap().to_str().unwrap();
-    fs::write(
-        repo.test_config_path(),
-        format!(
-            r#"[projects."{}"]
+    repo.write_test_config(&format!(
+        r#"[projects."{}"]
 approved-commands = ["echo 'Second command'"]
 "#,
-            project_id
-        ),
-    )
-    .expect("Failed to write test config");
+        project_id
+    ));
 
     snapshot_approval(
         "approval_mixed_approved_unapproved",
@@ -138,13 +120,7 @@ fn test_force_flag_does_not_save_approvals() {
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
-        r#"post-create-command = "echo 'test command' > output.txt""#,
-    )
-    .expect("Failed to write config");
+    repo.write_project_config(r#"post-create-command = "echo 'test command' > output.txt""#);
 
     repo.commit("Add config");
 
@@ -183,28 +159,18 @@ fn test_already_approved_commands_skip_prompt() {
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
-        r#"post-create-command = "echo 'approved' > output.txt""#,
-    )
-    .expect("Failed to write config");
+    repo.write_project_config(r#"post-create-command = "echo 'approved' > output.txt""#);
 
     repo.commit("Add config");
 
     // Pre-approve the command
     let project_id = repo.root_path().file_name().unwrap().to_str().unwrap();
-    fs::write(
-        repo.test_config_path(),
-        format!(
-            r#"[projects."{}"]
+    repo.write_test_config(&format!(
+        r#"[projects."{}"]
 approved-commands = ["echo 'approved' > output.txt"]
 "#,
-            project_id
-        ),
-    )
-    .expect("Failed to write test config");
+        project_id
+    ));
 
     // Should execute without prompting
     let settings = setup_snapshot_settings(&repo);
@@ -219,17 +185,13 @@ fn test_decline_approval_skips_only_unapproved() {
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"post-create-command = [
     "echo 'First command'",
     "echo 'Second command'",
     "echo 'Third command'"
 ]"#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add config");
 
@@ -259,17 +221,13 @@ fn test_approval_named_commands() {
     let repo = TestRepo::new();
     repo.commit("Initial commit");
 
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"[post-create-command]
 install = "echo 'Installing dependencies...'"
 build = "echo 'Building project...'"
 test = "echo 'Running tests...'"
 "#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add config");
 
@@ -294,13 +252,7 @@ fn test_permission_error_user_output() {
     repo.commit("Initial commit");
 
     // Set up project config with post-create command
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
-        r#"post-create-command = "echo 'test command'""#,
-    )
-    .expect("Failed to write config");
+    repo.write_project_config(r#"post-create-command = "echo 'test command'""#);
 
     repo.commit("Add config");
 

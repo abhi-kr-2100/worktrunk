@@ -197,6 +197,18 @@ impl TestRepo {
         &self.test_config_path
     }
 
+    /// Write project-specific config (`.config/wt.toml`) under the repo root.
+    pub fn write_project_config(&self, contents: &str) {
+        let config_dir = self.root_path().join(".config");
+        std::fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
+        std::fs::write(config_dir.join("wt.toml"), contents).expect("Failed to write wt.toml");
+    }
+
+    /// Overwrite the isolated WORKTRUNK_CONFIG_PATH used during tests.
+    pub fn write_test_config(&self, contents: &str) {
+        std::fs::write(&self.test_config_path, contents).expect("Failed to write test config");
+    }
+
     /// Get the path to a named worktree
     pub fn worktree_path(&self, name: &str) -> &Path {
         self.worktrees

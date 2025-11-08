@@ -47,26 +47,18 @@ fn test_post_create_single_command() {
     repo.commit("Initial commit");
 
     // Create project config with a single command (string format)
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
-        r#"post-create-command = "echo 'Setup complete'""#,
-    )
-    .expect("Failed to write config");
+    repo.write_project_config(r#"post-create-command = "echo 'Setup complete'""#);
 
     repo.commit("Add config");
 
     // Pre-approve the command by writing to the isolated test config
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
 approved-commands = ["echo 'Setup complete'"]
 "#,
-    )
-    .expect("Failed to write test config");
+    );
 
     // Command should execute without prompting
     snapshot_switch(
@@ -82,19 +74,12 @@ fn test_post_create_multiple_commands_array() {
     repo.commit("Initial commit");
 
     // Create project config with multiple commands (array format)
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
-        r#"post-create-command = ["echo 'First'", "echo 'Second'"]"#,
-    )
-    .expect("Failed to write config");
+    repo.write_project_config(r#"post-create-command = ["echo 'First'", "echo 'Second'"]"#);
 
     repo.commit("Add config with multiple commands");
 
     // Pre-approve both commands in temp HOME
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
@@ -103,8 +88,7 @@ approved-commands = [
     "echo 'Second'",
 ]
 "#,
-    )
-    .expect("Failed to write user config");
+    );
 
     // Both commands should execute sequentially
     snapshot_switch(
@@ -120,22 +104,17 @@ fn test_post_create_named_commands() {
     repo.commit("Initial commit");
 
     // Create project config with named commands (table format)
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"[post-create-command]
 install = "echo 'Installing deps'"
 setup = "echo 'Running setup'"
 "#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add config with named commands");
 
     // Pre-approve both commands in temp HOME
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
@@ -144,8 +123,7 @@ approved-commands = [
     "echo 'Running setup'",
 ]
 "#,
-    )
-    .expect("Failed to write user config");
+    );
 
     // Commands should execute sequentially
     snapshot_switch(
@@ -161,26 +139,18 @@ fn test_post_create_failing_command() {
     repo.commit("Initial commit");
 
     // Create project config with a command that will fail
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
-        r#"post-create-command = "exit 1""#,
-    )
-    .expect("Failed to write config");
+    repo.write_project_config(r#"post-create-command = "exit 1""#);
 
     repo.commit("Add config with failing command");
 
     // Pre-approve the command in temp HOME
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
 approved-commands = ["exit 1"]
 "#,
-    )
-    .expect("Failed to write user config");
+    );
 
     // Should show warning but continue (worktree should still be created)
     snapshot_switch(
@@ -196,25 +166,20 @@ fn test_post_create_template_expansion() {
     repo.commit("Initial commit");
 
     // Create project config with template variables
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"post-create-command = [
     "echo 'Repo: {main-worktree}' > info.txt",
     "echo 'Branch: {branch}' >> info.txt",
     "echo 'Worktree: {worktree}' >> info.txt",
     "echo 'Root: {repo_root}' >> info.txt"
 ]"#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add config with templates");
 
     // Pre-approve all commands in isolated test config
     let repo_name = "test-repo";
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
@@ -225,8 +190,7 @@ approved-commands = [
     "echo 'Root: {repo_root}' >> info.txt",
 ]
 "#,
-    )
-    .expect("Failed to write test config");
+    );
 
     // Commands should execute with expanded templates
     snapshot_switch(
@@ -273,26 +237,20 @@ fn test_post_start_single_background_command() {
     repo.commit("Initial commit");
 
     // Create project config with a background command
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"post-start-command = "sleep 1 && echo 'Background task done' > background.txt""#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add background command");
 
     // Pre-approve the command
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
 approved-commands = ["sleep 1 && echo 'Background task done' > background.txt"]
 "#,
-    )
-    .expect("Failed to write user config");
+    );
 
     // Command should spawn in background (wt exits immediately)
     snapshot_switch(
@@ -324,22 +282,17 @@ fn test_post_start_multiple_background_commands() {
     repo.commit("Initial commit");
 
     // Create project config with multiple background commands (table format)
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"[post-start-command]
 task1 = "echo 'Task 1 running' > task1.txt"
 task2 = "echo 'Task 2 running' > task2.txt"
 "#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add multiple background commands");
 
     // Pre-approve both commands
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
@@ -348,8 +301,7 @@ approved-commands = [
     "echo 'Task 2 running' > task2.txt",
 ]
 "#,
-    )
-    .expect("Failed to write user config");
+    );
 
     // Commands should spawn in parallel
     snapshot_switch(
@@ -373,23 +325,18 @@ fn test_both_post_create_and_post_start() {
     repo.commit("Initial commit");
 
     // Create project config with both command types
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"post-create-command = "echo 'Setup done' > setup.txt"
 
 [post-start-command]
 server = "sleep 0.5 && echo 'Server running' > server.txt"
 "#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add both command types");
 
     // Pre-approve all commands
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
@@ -398,8 +345,7 @@ approved-commands = [
     "sleep 0.5 && echo 'Server running' > server.txt",
 ]
 "#,
-    )
-    .expect("Failed to write user config");
+    );
 
     // Post-create should run first (blocking), then post-start (background)
     snapshot_switch("both_create_and_start", &repo, &["--create", "feature"]);
@@ -427,13 +373,7 @@ fn test_invalid_toml() {
     repo.commit("Initial commit");
 
     // Create invalid TOML
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
-        "post-create-command = [invalid syntax\n",
-    )
-    .expect("Failed to write config");
+    repo.write_project_config("post-create-command = [invalid syntax\n");
 
     repo.commit("Add invalid config");
 
@@ -451,26 +391,20 @@ fn test_post_start_log_file_captures_output() {
     repo.commit("Initial commit");
 
     // Create command that writes to both stdout and stderr
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"post-start-command = "echo 'stdout output' && echo 'stderr output' >&2""#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add command with stdout/stderr");
 
     // Pre-approve the command
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
 approved-commands = ["echo 'stdout output' && echo 'stderr output' >&2"]
 "#,
-    )
-    .expect("Failed to write user config");
+    );
 
     snapshot_switch(
         "post_start_log_captures_output",
@@ -517,26 +451,18 @@ fn test_post_start_invalid_command_handling() {
     repo.commit("Initial commit");
 
     // Create command with syntax error (missing quote)
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
-        r#"post-start-command = "echo 'unclosed quote""#,
-    )
-    .expect("Failed to write config");
+    repo.write_project_config(r#"post-start-command = "echo 'unclosed quote""#);
 
     repo.commit("Add invalid command");
 
     // Pre-approve the command
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
 approved-commands = ["echo 'unclosed quote"]
 "#,
-    )
-    .expect("Failed to write user config");
+    );
 
     // wt should still complete successfully even if background command has errors
     snapshot_switch(
@@ -559,23 +485,18 @@ fn test_post_start_multiple_commands_separate_logs() {
     repo.commit("Initial commit");
 
     // Create multiple background commands with distinct output
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"[post-start-command]
 task1 = "echo 'TASK1_OUTPUT'"
 task2 = "echo 'TASK2_OUTPUT'"
 task3 = "echo 'TASK3_OUTPUT'"
 "#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add three background commands");
 
     // Pre-approve all commands
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
@@ -585,8 +506,7 @@ approved-commands = [
     "echo 'TASK3_OUTPUT'",
 ]
 "#,
-    )
-    .expect("Failed to write user config");
+    );
 
     snapshot_switch("post_start_separate_logs", &repo, &["--create", "feature"]);
 
@@ -652,26 +572,18 @@ fn test_execute_flag_with_post_start_commands() {
     repo.commit("Initial commit");
 
     // Create post-start command
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
-        r#"post-start-command = "echo 'Background task' > background.txt""#,
-    )
-    .expect("Failed to write config");
+    repo.write_project_config(r#"post-start-command = "echo 'Background task' > background.txt""#);
 
     repo.commit("Add background command");
 
     // Pre-approve the command
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
 approved-commands = ["echo 'Background task' > background.txt"]
 "#,
-    )
-    .expect("Failed to write user config");
+    );
 
     // Use --execute flag along with post-start command
     snapshot_switch(
@@ -709,26 +621,20 @@ fn test_post_start_complex_shell_commands() {
     repo.commit("Initial commit");
 
     // Create command with pipes and redirects
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"post-start-command = "echo 'line1\nline2\nline3' | grep line2 > filtered.txt""#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add complex shell command");
 
     // Pre-approve the command
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
 approved-commands = ["echo 'line1\nline2\nline3' | grep line2 > filtered.txt"]
 "#,
-    )
-    .expect("Failed to write user config");
+    );
 
     snapshot_switch("post_start_complex_shell", &repo, &["--create", "feature"]);
 
@@ -753,18 +659,14 @@ fn test_post_start_multiline_commands_with_newlines() {
     repo.commit("Initial commit");
 
     // Create command with actual newlines (using TOML triple-quoted string)
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"post-start-command = """
 echo 'first line' > multiline.txt
 echo 'second line' >> multiline.txt
 echo 'third line' >> multiline.txt
 """
 "#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add multiline command with actual newlines");
 
@@ -773,19 +675,15 @@ echo 'third line' >> multiline.txt
 echo 'second line' >> multiline.txt
 echo 'third line' >> multiline.txt
 ";
-    fs::write(
-        repo.test_config_path(),
-        format!(
-            r#"worktree-path = "../{{main-worktree}}.{{branch}}"
+    repo.write_test_config(&format!(
+        r#"worktree-path = "../{{main-worktree}}.{{branch}}"
 
 [projects."test-repo"]
 approved-commands = ["""
 {}"""]
 "#,
-            multiline_cmd
-        ),
-    )
-    .expect("Failed to write user config");
+        multiline_cmd
+    ));
 
     snapshot_switch(
         "post_start_multiline_with_newlines",
@@ -818,10 +716,7 @@ fn test_post_create_multiline_with_control_structures() {
     repo.commit("Initial commit");
 
     // Test multiline command with if-else control structure
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"post-create-command = """
 if [ ! -f test.txt ]; then
   echo 'File does not exist' > result.txt
@@ -830,8 +725,7 @@ else
 fi
 """
 "#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add multiline control structure");
 
@@ -842,19 +736,15 @@ else
   echo 'File exists' > result.txt
 fi
 ";
-    fs::write(
-        repo.test_config_path(),
-        format!(
-            r#"worktree-path = "../{{main-worktree}}.{{branch}}"
+    repo.write_test_config(&format!(
+        r#"worktree-path = "../{{main-worktree}}.{{branch}}"
 
 [projects."test-repo"]
 approved-commands = ["""
 {}"""]
 "#,
-            multiline_cmd
-        ),
-    )
-    .expect("Failed to write user config");
+        multiline_cmd
+    ));
 
     snapshot_switch(
         "post_create_multiline_control_structure",
@@ -888,26 +778,20 @@ fn test_post_start_skipped_on_existing_worktree() {
     repo.commit("Initial commit");
 
     // Create project config with post-start command
-    let config_dir = repo.root_path().join(".config");
-    fs::create_dir_all(&config_dir).expect("Failed to create .config dir");
-    fs::write(
-        config_dir.join("wt.toml"),
+    repo.write_project_config(
         r#"post-start-command = "echo 'POST-START-RAN' > post_start_marker.txt""#,
-    )
-    .expect("Failed to write config");
+    );
 
     repo.commit("Add post-start config");
 
     // Pre-approve the command
-    fs::write(
-        repo.test_config_path(),
+    repo.write_test_config(
         r#"worktree-path = "../{main-worktree}.{branch}"
 
 [projects."test-repo"]
 approved-commands = ["echo 'POST-START-RAN' > post_start_marker.txt"]
 "#,
-    )
-    .expect("Failed to write test config");
+    );
 
     // First: Create worktree - post-start SHOULD run
     snapshot_switch(
