@@ -207,12 +207,13 @@ pub fn format_header_line(layout: &LayoutConfig) {
     for (i, column) in layout.columns.iter().enumerate() {
         line.pad_to(column.start);
         let is_last = i == layout.columns.len() - 1;
-        let header = if is_last {
-            column.header.to_string()
-        } else {
-            format!("{:width$}", column.header, width = column.width)
-        };
-        line.push_styled(header, style);
+        let header_start = line.width();
+
+        line.push_styled(column.header.to_string(), style);
+
+        if !is_last {
+            line.pad_to(header_start + column.width);
+        }
     }
 
     println!("{}", line.render());
@@ -296,29 +297,30 @@ pub fn format_list_item_line(
 
         match (column.kind, column.format) {
             (ColumnKind::Branch, _) => {
-                let branch_text = if is_last {
-                    item.branch_name().to_string()
-                } else {
-                    format!("{:width$}", item.branch_name(), width = column.width)
-                };
+                let branch_start = line.width();
+                let branch_text = item.branch_name().to_string();
+
                 if let Some(style) = text_style {
                     line.push_styled(branch_text, style);
                 } else {
                     line.push_raw(branch_text);
                 }
+
+                if !is_last {
+                    line.pad_to(branch_start + column.width);
+                }
             }
             (ColumnKind::Status, _) => {
                 // Combine git status symbols + user-defined status from worktrunk.status
                 let status_content = item.combined_status();
-
-                let status_text = if is_last {
-                    status_content
-                } else {
-                    format!("{:width$}", status_content, width = column.width)
-                };
+                let status_start = line.width();
 
                 // Status column never inherits row color
-                line.push_raw(status_text);
+                line.push_raw(status_content);
+
+                if !is_last {
+                    line.pad_to(status_start + column.width);
+                }
             }
             (ColumnKind::WorkingDiff, ColumnFormat::Diff { digits, variant }) => {
                 if let Some(info) = worktree_info {
@@ -382,15 +384,16 @@ pub fn format_list_item_line(
             (ColumnKind::Path, _) => {
                 if let Some(info) = worktree_info {
                     let path_str = shorten_path(&info.worktree.path, &layout.common_prefix);
-                    let path_text = if is_last {
-                        path_str
-                    } else {
-                        format!("{:width$}", path_str, width = column.width)
-                    };
+                    let path_start = line.width();
+
                     if let Some(style) = text_style {
-                        line.push_styled(path_text, style);
+                        line.push_styled(path_str, style);
                     } else {
-                        line.push_raw(path_text);
+                        line.push_raw(path_str);
+                    }
+
+                    if !is_last {
+                        line.pad_to(path_start + column.width);
                     }
                 } else if !is_last {
                     push_blank(&mut line, column.width);
@@ -417,16 +420,13 @@ pub fn format_list_item_line(
                 }
             }
             (ColumnKind::Time, _) => {
-                let time_str = if is_last {
-                    format_relative_time(commit.timestamp)
-                } else {
-                    format!(
-                        "{:width$}",
-                        format_relative_time(commit.timestamp),
-                        width = column.width
-                    )
-                };
+                let time_str = format_relative_time(commit.timestamp);
+                let time_start = line.width();
                 line.push_styled(time_str, Style::new().dimmed());
+
+                if !is_last {
+                    line.pad_to(time_start + column.width);
+                }
             }
             (ColumnKind::CiStatus, _) => {
                 if let Some(pr_status) = item.pr_status() {
@@ -440,12 +440,12 @@ pub fn format_list_item_line(
                 }
             }
             (ColumnKind::Commit, _) => {
-                let commit_text = if is_last {
-                    short_head.to_string()
-                } else {
-                    format!("{:width$}", short_head, width = column.width)
-                };
-                line.push_styled(commit_text, Style::new().dimmed());
+                let commit_start = line.width();
+                line.push_styled(short_head.to_string(), Style::new().dimmed());
+
+                if !is_last {
+                    line.pad_to(commit_start + column.width);
+                }
             }
             (ColumnKind::Message, _) => {
                 let msg = truncate_at_word_boundary(&commit.commit_message, layout.max_message_len);
@@ -837,5 +837,66 @@ mod tests {
             "↑0 ↓0  ",
             "Should render ↑0 ↓0 with padding"
         );
+    }
+
+    #[test]
+    fn test_status_column_padding_with_emoji() {
+        use unicode_width::UnicodeWidthStr;
+
+        // Test that status column with emoji is padded correctly using visual width
+        // This reproduces the issue where "↑🤖" was misaligned
+
+        // Case 1: Status with emoji (↑ is 1 column, 🤖 is 2 columns = 3 total)
+        let status_with_emoji = "↑🤖";
+        assert_eq!(
+            status_with_emoji.width(),
+            3,
+            "Status '↑🤖' should have visual width 3"
+        );
+
+        let mut line1 = StyledLine::new();
+        let status_start = line1.width(); // 0
+        line1.push_raw(status_with_emoji.to_string());
+        line1.pad_to(status_start + 6); // Pad to width 6 (typical Status column width)
+
+        assert_eq!(line1.width(), 6, "Status column with emoji should pad to 6");
+
+        // Case 2: Status with only ASCII symbols (↑ is 1 column = 1 total)
+        let status_ascii = "↑";
+        assert_eq!(
+            status_ascii.width(),
+            1,
+            "Status '↑' should have visual width 1"
+        );
+
+        let mut line2 = StyledLine::new();
+        let status_start2 = line2.width();
+        line2.push_raw(status_ascii.to_string());
+        line2.pad_to(status_start2 + 6);
+
+        assert_eq!(line2.width(), 6, "Status column with ASCII should pad to 6");
+
+        // Both should have the same visual width after padding
+        assert_eq!(
+            line1.width(),
+            line2.width(),
+            "Unicode and ASCII status should pad to same visual width"
+        );
+
+        // Case 3: Complex status with multiple emoji (git symbols + user status)
+        let complex_status = "↑⇡🤖📝";
+        // ↑ (1) + ⇡ (1) + 🤖 (2) + 📝 (2) = 6 visual columns
+        assert_eq!(
+            complex_status.width(),
+            6,
+            "Complex status should have visual width 6"
+        );
+
+        let mut line3 = StyledLine::new();
+        let status_start3 = line3.width();
+        line3.push_raw(complex_status.to_string());
+        line3.pad_to(status_start3 + 10); // Pad to width 10
+
+        assert_eq!(line3.width(), 10, "Complex status should pad to 10");
     }
 }
