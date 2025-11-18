@@ -108,7 +108,12 @@ mod tests {
         // Text with OSC 8 hyperlink should have visual width of just the text
         let url = "https://github.com/user/repo/pull/123";
         let text_content = "●";
-        let hyperlinked = format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text_content);
+        let hyperlinked = format!(
+            "{}{}{}",
+            osc8::Hyperlink::new(url),
+            text_content,
+            osc8::Hyperlink::END
+        );
 
         let styled_str = StyledString::raw(&hyperlinked);
         assert_eq!(
@@ -122,7 +127,9 @@ mod tests {
     #[test]
     fn test_width_strips_sgr_codes() {
         // Text with SGR color codes should have visual width of just the text
-        let colored = "\x1b[32m●\x1b[0m"; // Green ●
+        use anstyle::{AnsiColor, Color, Style};
+        let green = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Green)));
+        let colored = format!("{}●{}", green.render(), green.render_reset());
 
         let styled_str = StyledString::raw(colored);
         assert_eq!(
@@ -136,8 +143,16 @@ mod tests {
     #[test]
     fn test_width_with_combined_ansi_codes() {
         // Text with both color and hyperlink
+        use anstyle::{AnsiColor, Color, Style};
         let url = "https://example.com";
-        let combined = format!("\x1b[33m\x1b]8;;{}\x1b\\● passed\x1b]8;;\x1b\\\x1b[0m", url);
+        let yellow = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Yellow)));
+        let combined = format!(
+            "{}{}● passed{}{}",
+            yellow.render(),
+            osc8::Hyperlink::new(url),
+            osc8::Hyperlink::END,
+            yellow.render_reset()
+        );
 
         let styled_str = StyledString::raw(&combined);
         // "● passed" = 1 + 1 (space) + 6 = 8

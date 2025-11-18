@@ -39,6 +39,13 @@ repos:
         language: pygrep
         types: ["rust"]
         entry: "dbg!"
+      - id: no-manual-ansi
+        name: no-manual-ansi
+        description: Use anstyle/osc8/strip-ansi-escapes instead of manual ANSI codes
+        language: pygrep
+        types: ["rust"]
+        entry: '\\x1b\['
+        exclude: '^(tests/|.*_test\.rs$|src/styling/(line|mod)\.rs$|src/output/directive\.rs$)'
 
 ci:
   # Currently network access isn't supported in the CI product.

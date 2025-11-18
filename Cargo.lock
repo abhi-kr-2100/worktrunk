@@ -1249,6 +1249,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "osc8"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b2d2086a3a477709f0208181e65857a9c062064ab2b3bb9abaf64f17d148bf3"
+
+[[package]]
 name = "pathdiff"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2656,6 +2662,7 @@ dependencies = [
  "log",
  "minijinja",
  "nix 0.30.1",
+ "osc8",
  "portable-pty",
  "rayon",
  "regex",

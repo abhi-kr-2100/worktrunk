@@ -598,11 +598,10 @@ mod tests {
         let rendered = result.render();
 
         // Strip ANSI codes to check alignment
-        let ansi_escape = regex::Regex::new(r"\x1b\[[0-9;]*m").unwrap();
-        let clean = ansi_escape.replace_all(&rendered, "");
+        let clean = strip_ansi_escapes::strip_str(&rendered);
 
         // Should be " +1 -1" (with leading space for right-alignment)
-        assert_eq!(clean.as_ref(), " +1 -1", "Diff should be right-aligned");
+        assert_eq!(clean, " +1 -1", "Diff should be right-aligned");
     }
 
     #[test]
@@ -638,8 +637,7 @@ mod tests {
 
         // The rendered output should have correct spacing
         let rendered = line.render();
-        let ansi_escape = regex::Regex::new(r"\x1b\[[0-9;]*m").unwrap();
-        let clean = ansi_escape.replace_all(&rendered, "");
+        let clean = strip_ansi_escapes::strip_str(&rendered);
         assert_eq!(
             clean.width(),
             24,
@@ -823,9 +821,8 @@ mod tests {
         );
         assert_eq!(without.width(), total);
         let rendered_without = without.render();
-        let ansi_escape = regex::Regex::new(r"\x1b\[[0-9;]*m").unwrap();
-        let clean_without = ansi_escape.replace_all(&rendered_without, "");
-        assert_eq!(clean_without.as_ref(), "       ", "Should render as blank");
+        let clean_without = strip_ansi_escapes::strip_str(&rendered_without);
+        assert_eq!(clean_without, "       ", "Should render as blank");
 
         // With always_show_zeros=true, (0, 0) renders as "↑0 ↓0"
         let with = format_diff_like_column(
@@ -844,12 +841,8 @@ mod tests {
         );
         assert_eq!(with.width(), total);
         let rendered_with = with.render();
-        let clean_with = ansi_escape.replace_all(&rendered_with, "");
-        assert_eq!(
-            clean_with.as_ref(),
-            "↑0 ↓0  ",
-            "Should render ↑0 ↓0 with padding"
-        );
+        let clean_with = strip_ansi_escapes::strip_str(&rendered_with);
+        assert_eq!(clean_with, "↑0 ↓0  ", "Should render ↑0 ↓0 with padding");
     }
 
     #[test]

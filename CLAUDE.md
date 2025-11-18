@@ -311,6 +311,7 @@ eprintln!("{}", styled_text);
 
 ### Design Principles
 
+- **Use the ecosystem, not manual escape codes** - Use `anstyle` for colors, `osc8` for hyperlinks, `strip-ansi-escapes` for stripping. Never manually write ANSI codes (`\x1b[...`) in production code
 - **Inline over wrappers** - Use `{style}text{style:#}` pattern, not wrapper functions
 - **Composition over special cases** - Use `.bold()`, `.fg_color()`, not `format_X_with_Y()`
 - **Semantic constants** - Use `ERROR`, `WARNING`, not raw colors

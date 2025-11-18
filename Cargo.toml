@@ -63,6 +63,7 @@ tree-sitter = { version = "0.25", optional = true }
 tree-sitter-bash = { version = "0.25", optional = true }
 tree-sitter-highlight = { version = "0.25", optional = true }
 unicode-width = "0.2"
+osc8 = "0.1.0"
 
 [target.'cfg(unix)'.dependencies]
 skim = "0.20"

@@ -32,10 +32,14 @@ pub use line::{StyledLine, StyledString};
 
 /// Wrap text with an OSC 8 hyperlink
 ///
-/// OSC 8 format: \x1b]8;;URL\x1b\\TEXT\x1b]8;;\x1b\\
 /// See: <https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda>
 pub fn hyperlink(text: &str, url: &str) -> String {
-    format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text)
+    format!(
+        "{}{}{}",
+        osc8::Hyperlink::new(url),
+        text,
+        osc8::Hyperlink::END
+    )
 }
 
 // Re-export for tests
@@ -397,8 +401,13 @@ command = "npm install"
         let url = "https://github.com/user/repo/pull/123";
         let result = super::hyperlink(text, url);
 
-        // OSC 8 format: \x1b]8;;URL\x1b\\TEXT\x1b]8;;\x1b\\
-        let expected = format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", url, text);
+        // Should match osc8 library output
+        let expected = format!(
+            "{}{}{}",
+            osc8::Hyperlink::new(url),
+            text,
+            osc8::Hyperlink::END
+        );
         assert_eq!(result, expected);
 
         // Verify structure
