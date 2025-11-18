@@ -33,7 +33,36 @@ fn get_dev_detach_bin() -> std::path::PathBuf {
         }
     });
 
-    get_cargo_bin("dev-detach")
+    let bin_path = get_cargo_bin("dev-detach");
+
+    // Verify the binary actually exists and is executable
+    if !bin_path.exists() {
+        panic!(
+            "get_cargo_bin returned non-existent path: {}",
+            bin_path.display()
+        );
+    }
+
+    // Check if the binary is executable (Unix-specific)
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(metadata) = std::fs::metadata(&bin_path) {
+            let permissions = metadata.permissions();
+            if permissions.mode() & 0o111 == 0 {
+                panic!(
+                    "dev-detach binary is not executable: {} (mode: {:o})",
+                    bin_path.display(),
+                    permissions.mode()
+                );
+            }
+        }
+    }
+
+    // Log the path for debugging (only visible when tests fail)
+    eprintln!("Using dev-detach binary at: {}", bin_path.display());
+
+    bin_path
 }
 
 /// Map shell display names to actual binaries.
@@ -97,16 +126,83 @@ pub fn execute_shell_script(repo: &TestRepo, shell: &str, script: &str) -> Strin
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());
 
-    let output = cmd
-        .current_dir(repo.root_path())
-        .output()
-        .unwrap_or_else(|e| panic!("Failed to execute {} script: {}", shell, e));
+    // Execute with retry logic to handle race conditions where cargo temporarily
+    // replaces the dev-detach binary during parallel test execution
+    let output = match cmd.current_dir(repo.root_path()).output() {
+        Ok(output) => output,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            // Binary temporarily unavailable - wait and retry once
+            eprintln!("dev-detach spawn failed: {} - retrying after 100ms", e);
+            std::thread::sleep(std::time::Duration::from_millis(100));
+
+            // Rebuild the command for retry
+            let detach = get_dev_detach_bin();
+            let mut cmd = Command::new(detach);
+            repo.clean_cli_env(&mut cmd);
+            cmd.env_remove("BASH_ENV");
+            cmd.env_remove("ENV");
+            cmd.env_remove("ZDOTDIR");
+            cmd.env_remove("XONSHRC");
+            cmd.env_remove("XDG_CONFIG_HOME");
+            cmd.arg(get_shell_binary(shell));
+            match shell {
+                "bash" => {
+                    cmd.arg("--noprofile").arg("--norc");
+                }
+                "zsh" => {
+                    cmd.arg("--no-globalrcs").arg("-f");
+                }
+                "fish" => {
+                    cmd.arg("--no-config");
+                }
+                "powershell" | "pwsh" => {
+                    cmd.arg("-NoProfile");
+                }
+                "xonsh" => {
+                    cmd.arg("--no-rc");
+                }
+                "nushell" | "nu" => {
+                    cmd.arg("--no-config-file");
+                }
+                _ => {}
+            }
+            cmd.arg("-c").arg(script);
+            cmd.stdin(std::process::Stdio::null());
+            cmd.stdout(std::process::Stdio::piped());
+            cmd.stderr(std::process::Stdio::piped());
+
+            cmd.current_dir(repo.root_path())
+                .output()
+                .unwrap_or_else(|e2| {
+                    panic!("Failed to execute {} script after retry: {}", shell, e2)
+                })
+        }
+        Err(e) => {
+            panic!("Failed to execute {} script: {}", shell, e);
+        }
+    };
 
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    if !output.status.success() {
+    // Check for dev-detach-specific errors (setsid failures, execvp failures, etc.)
+    if stderr.contains("dev-detach:") {
         panic!(
-            "Shell script failed:\nstdout: {}\nstderr: {}",
+            "dev-detach binary error:\nstderr: {}\nstdout: {}",
+            stderr,
+            String::from_utf8_lossy(&output.stdout)
+        );
+    }
+
+    if !output.status.success() {
+        // Distinguish between normal exit and signal termination
+        let exit_info = match output.status.code() {
+            Some(code) => format!("exit code {}", code),
+            None => "killed by signal".to_string(),
+        };
+        panic!(
+            "Shell script failed ({}):\nCommand: dev-detach {} [shell-flags...] -c <script>\nstdout: {}\nstderr: {}",
+            exit_info,
+            shell,
             String::from_utf8_lossy(&output.stdout),
             stderr
         );
