@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use worktrunk::git::{GitError, GitResultExt};
+use worktrunk::git::{GitError, GitResultExt, Repository};
 
 /// Spawn a detached background process with output redirected to a log file
 ///
@@ -9,40 +9,34 @@ use worktrunk::git::{GitError, GitResultExt};
 /// - On Unix: uses double-fork with setsid to create a daemon
 /// - On Windows: uses CREATE_NEW_PROCESS_GROUP to detach from console
 ///
+/// Logs are centralized in the primary worktree's `.git/wt-logs/` directory.
+///
 /// # Arguments
+/// * `repo` - Repository instance for accessing git common directory
 /// * `worktree_path` - Working directory for the command
 /// * `command` - Shell command to execute
-/// * `name` - Name identifier for the process (used in log filename)
+/// * `branch` - Branch name for log organization
+/// * `name` - Operation identifier (e.g., "post-start-npm", "remove")
 ///
 /// # Returns
 /// Path to the log file where output is being written
 pub fn spawn_detached(
+    repo: &Repository,
     worktree_path: &Path,
     command: &str,
+    branch: &str,
     name: &str,
 ) -> Result<std::path::PathBuf, GitError> {
-    // Resolve the actual .git directory path
-    // In a worktree, .git is a file pointing to the real git directory
-    let git_path = worktree_path.join(".git");
-    let git_dir = if git_path.is_file() {
-        // Read the gitdir path from the file
-        let content = fs::read_to_string(&git_path).git_context("Failed to read .git file")?;
-        // Format is "gitdir: /path/to/git/dir"
-        let gitdir_path = content
-            .trim()
-            .strip_prefix("gitdir: ")
-            .ok_or_else(|| GitError::CommandFailed("Invalid .git file format".to_string()))?;
-        Path::new(gitdir_path).to_path_buf()
-    } else {
-        git_path
-    };
+    // Get the git common directory (shared across all worktrees)
+    let git_common_dir = repo.git_common_dir()?;
 
-    // Create log directory in the git directory
-    let log_dir = git_dir.join("wt-logs");
+    // Create log directory in the common git directory
+    let log_dir = git_common_dir.join("wt-logs");
     fs::create_dir_all(&log_dir).git_context("Failed to create log directory")?;
 
     // Generate log filename (no timestamp - overwrites on each run)
-    let log_path = log_dir.join(format!("post-start-{}.log", name));
+    // Format: {branch}-{name}.log (e.g., "feature-post-start-npm.log", "bugfix-remove.log")
+    let log_path = log_dir.join(format!("{}-{}.log", branch, name));
 
     // Create log file
     let log_file = fs::File::create(&log_path).git_context("Failed to create log file")?;

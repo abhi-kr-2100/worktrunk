@@ -1,5 +1,5 @@
 use crate::common::{
-    TestRepo,
+    TestRepo, resolve_git_common_dir,
     shell::{execute_shell_script, generate_init_code, path_export_syntax, wt_bin_dir},
 };
 use rstest::rstest;
@@ -82,19 +82,9 @@ approved-commands = ["sleep 0.05 && echo 'Background task done' > bg_marker.txt"
         .join("test-repo.bg-feature");
 
     // First check if log file was created (proves process was spawned)
-    let git_dir = worktree_path.join(".git");
-    let actual_git_dir = if git_dir.is_file() {
-        let content = fs::read_to_string(&git_dir).expect("Failed to read .git file");
-        let gitdir_path = content
-            .trim()
-            .strip_prefix("gitdir: ")
-            .expect("Invalid .git format");
-        std::path::PathBuf::from(gitdir_path)
-    } else {
-        git_dir
-    };
-
-    let log_dir = actual_git_dir.join("wt-logs");
+    // Logs are centralized in the common git directory
+    let git_common_dir = resolve_git_common_dir(&worktree_path);
+    let log_dir = git_common_dir.join("wt-logs");
     assert!(
         log_dir.exists(),
         "Log directory should exist at {}",

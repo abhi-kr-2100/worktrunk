@@ -1,4 +1,4 @@
-use crate::common::{TestRepo, make_snapshot_cmd, resolve_git_dir, setup_snapshot_settings};
+use crate::common::{TestRepo, make_snapshot_cmd, resolve_git_common_dir, setup_snapshot_settings};
 use insta::assert_snapshot;
 use insta_cmd::assert_cmd_snapshot;
 use std::fs;
@@ -260,10 +260,10 @@ approved-commands = ["sleep 0.1 && echo 'Background task done' > background.txt"
         &["--create", "feature"],
     );
 
-    // Verify log file was created
+    // Verify log file was created in the common git directory
     let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
-    let git_dir = resolve_git_dir(&worktree_path);
-    let log_dir = git_dir.join("wt-logs");
+    let git_common_dir = resolve_git_common_dir(&worktree_path);
+    let log_dir = git_common_dir.join("wt-logs");
     assert!(log_dir.exists(), "Log directory should be created");
 
     // Wait for the background command to complete
@@ -416,10 +416,10 @@ approved-commands = ["echo 'stdout output' && echo 'stderr output' >&2"]
     // Give background command time to complete
     thread::sleep(SLEEP_FAST_COMMAND);
 
-    // Find and read the log file
+    // Find and read the log file from the common git directory
     let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
-    let git_dir = resolve_git_dir(&worktree_path);
-    let log_dir = git_dir.join("wt-logs");
+    let git_common_dir = resolve_git_common_dir(&worktree_path);
+    let log_dir = git_common_dir.join("wt-logs");
     assert!(log_dir.exists(), "Log directory should exist");
 
     // Find the log file
@@ -514,10 +514,10 @@ approved-commands = [
     // Give background commands time to complete
     thread::sleep(SLEEP_FAST_COMMAND);
 
-    // Verify we have 3 separate log files
+    // Verify we have 3 separate log files in the common git directory
     let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
-    let git_dir = resolve_git_dir(&worktree_path);
-    let log_dir = git_dir.join("wt-logs");
+    let git_common_dir = resolve_git_common_dir(&worktree_path);
+    let log_dir = git_common_dir.join("wt-logs");
     let log_files: Vec<_> = fs::read_dir(&log_dir)
         .expect("Failed to read log dir")
         .filter_map(|e| e.ok())

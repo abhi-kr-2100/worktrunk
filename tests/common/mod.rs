@@ -708,35 +708,20 @@ pub fn make_snapshot_cmd(
     make_snapshot_cmd_with_global_flags(repo, subcommand, args, cwd, &[])
 }
 
-/// Resolve the actual git directory path from a worktree path
+/// Resolve the git common directory (shared across all worktrees)
 ///
-/// In worktrees, `.git` is a file containing `gitdir: /path/to/git/dir`,
-/// not a directory. This helper reads that file and returns the actual
-/// git directory path.
+/// This is where centralized logs and other shared data are stored.
+/// For linked worktrees, this returns the primary worktree's `.git/` directory.
+/// For the primary worktree, this returns the `.git/` directory.
 ///
 /// # Arguments
-/// * `worktree_path` - Path to the worktree root
+/// * `worktree_path` - Path to any worktree root
 ///
 /// # Returns
-/// The resolved git directory path
-pub fn resolve_git_dir(worktree_path: &Path) -> PathBuf {
-    let git_path = worktree_path.join(".git");
-
-    if git_path.is_file() {
-        // Read the gitdir path from the file
-        let content = std::fs::read_to_string(&git_path).expect("Failed to read .git file");
-
-        // Format is "gitdir: /path/to/git/dir"
-        let gitdir_path = content
-            .trim()
-            .strip_prefix("gitdir: ")
-            .expect("Invalid .git file format");
-
-        PathBuf::from(gitdir_path)
-    } else {
-        // Not a worktree, .git is already a directory
-        git_path
-    }
+/// The common git directory path
+pub fn resolve_git_common_dir(worktree_path: &Path) -> PathBuf {
+    let repo = worktrunk::git::Repository::at(worktree_path);
+    repo.git_common_dir().expect("Failed to get git common dir")
 }
 
 /// Validates ANSI escape sequences for the specific nested reset pattern that causes color leaks

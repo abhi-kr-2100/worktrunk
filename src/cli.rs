@@ -378,6 +378,7 @@ post-start (parallel, background):
   - Spawned after success message shown
   - Typically: dev servers, file watchers, editors
   - Run in background, failures logged but don't block
+  - Logs: .git/wt-logs/{branch}-post-start-{name}.log
   - Skip with --no-verify
 
 EXAMPLES:
@@ -490,7 +491,7 @@ Switch to default in primary:
         #[arg(long = "no-delete-branch")]
         no_delete_branch: bool,
 
-        /// Background removal for large repos
+        /// Run removal in background
         #[arg(long)]
         background: bool,
     },

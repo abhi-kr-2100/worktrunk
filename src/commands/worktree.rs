@@ -372,6 +372,7 @@ pub fn handle_switch(
 pub fn handle_remove(
     worktree_name: Option<&str>,
     no_delete_branch: bool,
+    background: bool,
 ) -> Result<RemoveResult, GitError> {
     let repo = Repository::current();
 
@@ -382,13 +383,15 @@ pub fn handle_remove(
         None
     };
 
-    // Show progress with resolved name
-    let progress_msg = if let Some(ref b) = resolved_name {
-        format!("{CYAN}Removing worktree for {CYAN_BOLD}{b}{CYAN_BOLD:#}...{CYAN:#}")
-    } else {
-        format!("{CYAN}Removing worktree...{CYAN:#}")
-    };
-    crate::output::progress(progress_msg)?;
+    // Show progress with resolved name (unless running in background - output handler will show command)
+    if !background {
+        let progress_msg = if let Some(ref b) = resolved_name {
+            format!("{CYAN}Removing worktree for {CYAN_BOLD}{b}{CYAN_BOLD:#}...{CYAN:#}")
+        } else {
+            format!("{CYAN}Removing worktree...{CYAN:#}")
+        };
+        crate::output::progress(progress_msg)?;
+    }
 
     // Two modes: remove current worktree vs. remove by name
     match resolved_name.as_deref() {

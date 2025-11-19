@@ -268,7 +268,7 @@ fn main() {
         } => {
             if worktrees.is_empty() {
                 // No worktrees specified, remove current worktree
-                handle_remove(None, no_delete_branch)
+                handle_remove(None, no_delete_branch, background)
                     .and_then(|result| handle_remove_output(&result, None, false, background))
             } else {
                 // When removing multiple worktrees, we need to handle the current worktree last
@@ -301,13 +301,18 @@ fn main() {
                     // Remove others first, then current last
                     // Progress messages shown by handle_remove_output for all cases
                     for worktree in others.iter() {
-                        let result = handle_remove(Some(worktree.as_str()), no_delete_branch)?;
+                        let result =
+                            handle_remove(Some(worktree.as_str()), no_delete_branch, background)?;
                         handle_remove_output(&result, Some(worktree.as_str()), false, background)?;
                     }
 
                     // Remove current worktree last (if it was in the list)
                     if let Some(current_name) = current {
-                        let result = handle_remove(Some(current_name.as_str()), no_delete_branch)?;
+                        let result = handle_remove(
+                            Some(current_name.as_str()),
+                            no_delete_branch,
+                            background,
+                        )?;
                         handle_remove_output(
                             &result,
                             Some(current_name.as_str()),

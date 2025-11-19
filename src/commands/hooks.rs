@@ -140,7 +140,14 @@ impl<'a> HookPipeline<'a> {
             crate::output::gutter(format_bash_with_gutter(&prepared.expanded, ""))?;
 
             let name = prepared.name.as_deref().unwrap_or("cmd");
-            if let Err(err) = spawn_detached(self.ctx.worktree_path, &prepared.expanded, name) {
+            let operation = format!("post-start-{}", name);
+            if let Err(err) = spawn_detached(
+                self.ctx.repo,
+                self.ctx.worktree_path,
+                &prepared.expanded,
+                self.ctx.branch,
+                &operation,
+            ) {
                 let err_msg = err.to_string();
                 let message = match &prepared.name {
                     Some(name) => {

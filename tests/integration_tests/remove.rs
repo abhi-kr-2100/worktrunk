@@ -241,3 +241,21 @@ fn test_remove_branch_not_fully_merged() {
         None,
     );
 }
+
+#[test]
+fn test_remove_background() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create a worktree
+    let _worktree_path = repo.add_worktree("feature-bg", "feature-bg");
+
+    // Remove it with --background flag from main repo
+    snapshot_remove(
+        "remove_background",
+        &repo,
+        &["--background", "feature-bg"],
+        None,
+    );
+}

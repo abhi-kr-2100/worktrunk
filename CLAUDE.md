@@ -379,6 +379,28 @@ for line in reader.lines() {
 let lines: Vec<_> = reader.lines().collect();
 ```
 
+## Background Operation Logs
+
+### Unified Logging Location
+
+All background operation logs are centralized in `.git/wt-logs/` (primary worktree's git directory):
+
+- **Post-start commands**: `{branch}-post-start-{command}.log`
+- **Background removal**: `{branch}-remove.log`
+
+Examples (where command names are from config):
+- `feature-post-start-npm.log`
+- `bugfix-remove.log`
+
+### Log Behavior
+
+- **Centralized**: All logs go to primary worktree's `.git/wt-logs/`, shared across all worktrees
+- **Overwrites**: Same operation on same branch overwrites previous log (prevents accumulation)
+- **Not tracked**: Logs are in `.git/` directory, which git doesn't track
+- **Manual cleanup**: Stale logs (from deleted branches) persist but are bounded by branch count
+
+Users can clean up old logs manually or use a git hook. No automatic cleanup is provided.
+
 ## Testing Guidelines
 
 ### Testing with --execute Commands

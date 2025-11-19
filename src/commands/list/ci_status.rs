@@ -59,21 +59,20 @@ impl PrStatus {
     /// upstream repositories for forks. This ensures PRs opened against upstream
     /// repos are properly detected.
     ///
-    /// # Requirements
-    /// The `repo_path` parameter must be a valid git repository (enforced by caller).
+    /// # Arguments
+    /// * `repo_path` - Repository root path from `Repository::worktree_root()`
     pub fn detect(branch: &str, local_head: &str, repo_path: &std::path::Path) -> Option<Self> {
-        // Get git repo root directory for setting working directory
-        // We always run gh commands from the repo directory to let gh auto-detect the correct repo
+        // We run gh/glab commands from the repo directory to let them auto-detect the correct repo
         // (including upstream repos for forks)
-        let repo_root = Self::get_repo_root(repo_path);
+        let repo_root = repo_path.to_str().expect("repo path is not valid UTF-8");
 
         // Try GitHub PR first
-        if let Some(status) = Self::detect_github(branch, local_head, &repo_root) {
+        if let Some(status) = Self::detect_github(branch, local_head, repo_root) {
             return Some(status);
         }
 
         // Try GitHub workflow runs (for branches without PRs)
-        if let Some(status) = Self::detect_github_workflow(branch, local_head, &repo_root) {
+        if let Some(status) = Self::detect_github_workflow(branch, local_head, repo_root) {
             return Some(status);
         }
 
@@ -84,30 +83,6 @@ impl PrStatus {
 
         // Fall back to GitLab pipeline (for branches without MRs)
         Self::detect_gitlab_pipeline(branch, local_head)
-    }
-
-    /// Get git repository root directory
-    ///
-    /// # Panics
-    /// Panics if repo_path is not a valid git repository. This should never happen
-    /// since repo_path comes from Repository::worktree_root() which validates it.
-    fn get_repo_root(repo_path: &std::path::Path) -> String {
-        let output = Command::new("git")
-            .args(["rev-parse", "--show-toplevel"])
-            .current_dir(repo_path)
-            .output()
-            .expect("failed to run git rev-parse");
-
-        assert!(
-            output.status.success(),
-            "git rev-parse failed - repo_path {:?} is not a valid git repository",
-            repo_path
-        );
-
-        String::from_utf8(output.stdout)
-            .unwrap_or_else(|e| panic!("git output is not valid UTF-8 from {:?}: {}", repo_path, e))
-            .trim()
-            .to_string()
     }
 
     fn detect_github(branch: &str, local_head: &str, repo_root: &str) -> Option<Self> {

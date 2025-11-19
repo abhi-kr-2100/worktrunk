@@ -4,7 +4,9 @@ use crate::commands::process::spawn_detached;
 use crate::commands::worktree::{RemoveResult, SwitchResult};
 use crate::output::global::format_switch_success;
 use worktrunk::git::GitError;
-use worktrunk::styling::{GREEN, GREEN_BOLD, WARNING, WARNING_BOLD, format_with_gutter};
+use worktrunk::styling::{
+    CYAN, CYAN_BOLD, GREEN, GREEN_BOLD, WARNING, WARNING_BOLD, format_with_gutter,
+};
 
 /// Format message for switch operation (mode-specific via output system)
 fn format_switch_message(result: &SwitchResult, branch: &str) -> (String, bool) {
@@ -205,31 +207,27 @@ pub fn handle_remove_output(
         super::flush()?; // Force flush to ensure shell processes the cd
     }
 
+    let repo = worktrunk::git::Repository::current();
+
     if background {
         // Background mode: spawn detached process
         let check_target = target_branch.as_deref().unwrap_or("HEAD");
         let remove_command =
             build_remove_command(worktree_path, branch_name, *no_delete_branch, check_target);
 
-        // Spawn the removal in background - runs from primary_path (where we cd'd to)
-        let log_path = spawn_detached(
-            primary_path,
-            &remove_command,
-            &format!("remove-{}", branch_name),
-        )?;
-
-        // Show info message indicating backgrounding (not "success" - work hasn't completed)
-        super::info(format!(
-            "Removal queued for {GREEN_BOLD}{branch_name}{GREEN_BOLD:#} (background)"
+        // Show simple progress message (log location documented in --help)
+        super::progress(format!(
+            "{CYAN}Removing {CYAN_BOLD}{branch_name}{CYAN_BOLD:#}{CYAN} in background{CYAN:#}"
         ))?;
-        super::info(format!("Log: {}", log_path.display()))?;
+
+        // Spawn the removal in background - runs from primary_path (where we cd'd to)
+        spawn_detached(&repo, primary_path, &remove_command, branch_name, "remove")?;
 
         super::flush()?;
         Ok(())
     } else {
         // Synchronous mode: remove immediately and report actual results
         // Track whether branch was actually deleted (will be computed based on deletion attempt)
-        let repo = worktrunk::git::Repository::current();
         if let Err(err) = repo.remove_worktree(worktree_path) {
             return Err(match err {
                 GitError::CommandFailed(msg) => GitError::WorktreeRemovalFailed {
