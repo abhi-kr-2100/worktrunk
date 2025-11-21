@@ -160,9 +160,9 @@ impl SummaryMetrics {
     }
 
     fn update(&mut self, item: &ListItem) {
-        if let Some(info) = item.worktree_data() {
+        if let Some(data) = item.worktree_data() {
             self.worktrees += 1;
-            if info
+            if data
                 .working_tree_diff
                 .as_ref()
                 .map(|d| !d.is_empty())

@@ -461,7 +461,7 @@ impl LayoutConfig {
 
 struct ListRowContext<'a> {
     item: &'a ListItem,
-    worktree_info: Option<&'a WorktreeData>,
+    worktree_data: Option<&'a WorktreeData>,
     counts: AheadBehind,
     branch_diff: LineDiff,
     upstream: UpstreamStatus,
@@ -473,20 +473,20 @@ struct ListRowContext<'a> {
 
 impl<'a> ListRowContext<'a> {
     fn new(item: &'a ListItem, current_worktree_path: Option<&std::path::PathBuf>) -> Self {
-        let worktree_info = item.worktree_data();
+        let worktree_data = item.worktree_data();
         let counts = item.counts();
         let commit = item.commit_details();
         let branch_diff = item.branch_diff().diff;
         let upstream = item.upstream();
         let head = item.head();
 
-        let is_current = worktree_info
-            .and_then(|info| current_worktree_path.map(|p| p == &info.path))
+        let is_current = worktree_data
+            .and_then(|data| current_worktree_path.map(|p| p == &data.path))
             .unwrap_or(false);
 
         let mut ctx = Self {
             item,
-            worktree_info,
+            worktree_data,
             counts,
             branch_diff,
             upstream,
@@ -508,11 +508,11 @@ impl<'a> ListRowContext<'a> {
         &self,
         current_worktree_path: Option<&std::path::PathBuf>,
     ) -> Option<Style> {
-        let base_style = self.worktree_info.and_then(|info| {
+        let base_style = self.worktree_data.and_then(|data| {
             let is_current = current_worktree_path
-                .map(|p| p == &info.path)
+                .map(|p| p == &data.path)
                 .unwrap_or(false);
-            match (is_current, info.is_main) {
+            match (is_current, data.is_main) {
                 (true, _) => Some(CURRENT),
                 (_, true) => Some(Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)))),
                 _ => None,
@@ -548,11 +548,11 @@ impl ColumnLayout {
         match self.kind {
             ColumnKind::Gutter => {
                 let mut cell = StyledLine::new();
-                let symbol = if let Some(info) = ctx.worktree_info {
+                let symbol = if let Some(data) = ctx.worktree_data {
                     // Worktree: priority is current > primary > regular
                     if ctx.is_current {
                         "@ " // Current worktree
-                    } else if info.is_main {
+                    } else if data.is_main {
                         "^ " // Primary worktree
                     } else {
                         "+ " // Regular worktree
@@ -579,7 +579,7 @@ impl ColumnLayout {
                 // Render status symbols (works for both worktrees and branches)
                 if let Some(ref status_symbols) = ctx.item.status_symbols {
                     cell.push_raw(status_symbols.render_with_mask(status_mask));
-                } else if ctx.worktree_info.is_some() {
+                } else if ctx.worktree_data.is_some() {
                     // Show spinner while status is being computed (worktrees only)
                     cell.push_styled("⋯", Style::new().dimmed());
                 }
@@ -594,8 +594,8 @@ impl ColumnLayout {
             }
             ColumnKind::WorkingDiff => {
                 let Some(diff) = ctx
-                    .worktree_info
-                    .and_then(|info| info.working_tree_diff.as_ref())
+                    .worktree_data
+                    .and_then(|data| data.working_tree_diff.as_ref())
                 else {
                     return StyledLine::new();
                 };
@@ -619,11 +619,11 @@ impl ColumnLayout {
                 self.render_diff_cell(ctx.branch_diff.added, ctx.branch_diff.deleted)
             }
             ColumnKind::Path => {
-                let Some(info) = ctx.worktree_info else {
+                let Some(data) = ctx.worktree_data else {
                     return StyledLine::new();
                 };
                 let mut cell = StyledLine::new();
-                let path_str = shorten_path(&info.path, common_prefix);
+                let path_str = shorten_path(&data.path, common_prefix);
                 if let Some(style) = ctx.text_style {
                     cell.push_styled(path_str, style);
                 } else {
@@ -641,7 +641,7 @@ impl ColumnLayout {
                 let mut cell = StyledLine::new();
 
                 // Show spinner if commit details haven't loaded yet
-                if ctx.worktree_info.is_some() && ctx.item.commit.is_none() {
+                if ctx.worktree_data.is_some() && ctx.item.commit.is_none() {
                     cell.push_styled("⋯", Style::new().dimmed());
                 } else {
                     let time_str = format_relative_time(ctx.commit.timestamp);
@@ -652,7 +652,7 @@ impl ColumnLayout {
             }
             ColumnKind::CiStatus => {
                 // Check display field first for pending indicators during progressive rendering
-                if ctx.worktree_info.is_some()
+                if ctx.worktree_data.is_some()
                     && let Some(ref ci_display) = ctx.item.display.ci_status_display
                 {
                     let mut cell = StyledLine::new();
@@ -691,7 +691,7 @@ impl ColumnLayout {
                 let mut cell = StyledLine::new();
 
                 // Show spinner if commit details haven't loaded yet
-                if ctx.worktree_info.is_some() && ctx.item.commit.is_none() {
+                if ctx.worktree_data.is_some() && ctx.item.commit.is_none() {
                     cell.push_styled("⋯", Style::new().dimmed());
                 } else {
                     let msg =

@@ -315,7 +315,7 @@ fn compute_item_status_symbols(
 ///
 /// This is the shared logic between progressive and buffered collection modes.
 /// The `on_update` callback is called after each update is processed with the
-/// item index and a reference to the updated info, allowing progressive mode
+/// item index and a reference to the updated item, allowing progressive mode
 /// to update progress bars while buffered mode does nothing.
 fn drain_cell_updates(
     rx: chan::Receiver<CellUpdate>,
@@ -699,16 +699,16 @@ pub fn collect(
     drain_cell_updates(
         rx,
         &mut all_items,
-        |item_idx, info, has_merge_tree_conflicts, user_status| {
+        |item_idx, item, has_merge_tree_conflicts, user_status| {
             // Compute/recompute status symbols as data arrives (both modes)
             // This is idempotent and updates status as new data (like upstream) arrives
-            let item_default_branch = if info.is_main() {
+            let item_default_branch = if item.is_main() {
                 None
             } else {
                 Some(default_branch.as_str())
             };
             compute_item_status_symbols(
-                info,
+                item,
                 item_default_branch,
                 has_merge_tree_conflicts,
                 user_status,
@@ -732,7 +732,7 @@ pub fn collect(
                 // Re-render the row with caching and clamping (now includes status if computed)
                 if let Some(pb) = progress_bars.get(item_idx) {
                     let rendered =
-                        layout.format_list_item_line(info, current_worktree_path.as_ref());
+                        layout.format_list_item_line(item, current_worktree_path.as_ref());
                     let clamped = clamp(&rendered);
 
                     // Compare using full line so changes beyond the clamp (e.g., CI) still refresh.
@@ -828,15 +828,15 @@ pub fn collect(
 
     // Compute display fields for all items (used by JSON output)
     // Table rendering uses raw data directly; these fields provide pre-formatted strings for JSON
-    for info in &mut all_items {
-        info.display = super::model::DisplayFields::from_common_fields(
-            &info.counts,
-            &info.branch_diff,
-            &info.upstream,
-            &info.pr_status,
+    for item in &mut all_items {
+        item.display = super::model::DisplayFields::from_common_fields(
+            &item.counts,
+            &item.branch_diff,
+            &item.upstream,
+            &item.pr_status,
         );
 
-        if let super::model::ItemKind::Worktree(ref mut wt_data) = info.kind
+        if let super::model::ItemKind::Worktree(ref mut wt_data) = item.kind
             && let Some(ref working_tree_diff) = wt_data.working_tree_diff
         {
             wt_data.working_diff_display = super::columns::ColumnKind::WorkingDiff
