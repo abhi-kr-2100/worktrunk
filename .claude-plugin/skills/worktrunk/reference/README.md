@@ -615,32 +615,20 @@ Order: `?!+»✘ ✖⚠≡∅ ↻⋈ ↑↓↕ ⇡⇣⇅ ⎇⌫⊠`
 
 **JSON OUTPUT:**
 
-Use `--format=json` for structured data. Each object contains two status maps:
+Use `--format=json` for structured data. Each object contains two status maps
+with the same fields in the same order as STATUS SYMBOLS above:
 
-**`status` (variant names for querying):**
-- `branch_state`: "" | "Conflicts" | "MergeTreeConflicts" | "MatchesMain" | "NoCommits"
-- `git_operation`: "" | "Rebase" | "Merge"
-- `worktree_attrs`: object (worktrees only) with:
-  - `locked`: null | "reason string"
-  - `prunable`: null | "reason string"
-- `main_divergence`: "" | "Ahead" | "Behind" | "Diverged"
-- `upstream_divergence`: "" | "Ahead" | "Behind" | "Diverged"
-- `working_tree`: object with booleans
-  - `untracked`: boolean - untracked files present
-  - `modified`: boolean - unstaged changes
-  - `staged`: boolean - staged changes
-  - `renamed`: boolean - renamed files
-  - `deleted`: boolean - deleted files
-- `user_status`: string (optional) - custom status from git config
+**`status`** - variant names for querying:
+- `working_tree`: `{untracked, modified, staged, renamed, deleted}` booleans
+- `branch_state`: `""` | `"Conflicts"` | `"MergeTreeConflicts"` | `"MatchesMain"` | `"NoCommits"`
+- `git_operation`: `""` | `"Rebase"` | `"Merge"`
+- `main_divergence`: `""` | `"Ahead"` | `"Behind"` | `"Diverged"`
+- `upstream_divergence`: `""` | `"Ahead"` | `"Behind"` | `"Diverged"`
+- `user_status`: string (optional)
 
-**`status_symbols` (display symbols for rendering):**
-- `branch_state`: "" | "✖" | "⚠" | "≡" | "∅"
-- `git_operation`: "" | "↻" | "⋈"
-- `worktree_attrs`: "⎇" (branch) | "⌫" (prunable) | "⊠" (locked) | ""
-- `main_divergence`: "" | "↑" | "↓" | "↕"
-- `upstream_divergence`: "" | "⇡" | "⇣" | "⇅"
-- `working_tree`: string - combination of "?!+»✘"
-- `user_status`: string (optional) - same as status.user_status
+**`status_symbols`** - Unicode symbols for display (same fields, plus `worktree_attrs`: ⎇/⌫/⊠)
+
+Note: `locked` and `prunable` are top-level fields on worktree objects, not in status.
 
 **Query examples:**
 
@@ -648,17 +636,17 @@ Use `--format=json` for structured data. Each object contains two status maps:
 # Find worktrees with conflicts
 jq '.[] | select(.status.branch_state == "Conflicts")'
 
-# Find locked worktrees
-jq '.[] | select(.status.worktree_attrs.locked != null)'
-
 # Find worktrees with untracked files
-jq '.[] | select(.status.working_tree.untracked == true)'
+jq '.[] | select(.status.working_tree.untracked)'
 
 # Find worktrees in rebase or merge
 jq '.[] | select(.status.git_operation != "")'
 
 # Get branches ahead of main
 jq '.[] | select(.status.main_divergence == "Ahead")'
+
+# Find locked worktrees
+jq '.[] | select(.locked != null)'
 ```
 
 </details>

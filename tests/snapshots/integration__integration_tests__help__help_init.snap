@@ -17,13 +17,13 @@ wt-init - Generate shell integration code
 Usage: wt init [OPTIONS] <SHELL>
 
 Options:
-  -C <path>
-      Change working directory
-
   --command-name <COMMAND_NAME>
       Command name             
                                
       [default: wt]            
+
+  -C <path>
+      Change working directory
 
   -v, --verbose
       Show commands and debug info

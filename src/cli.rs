@@ -115,11 +115,11 @@ pub enum OutputFormat {
 #[command(styles = help_styles())]
 pub struct Cli {
     /// Change working directory
-    #[arg(short = 'C', global = true, value_name = "path")]
+    #[arg(short = 'C', global = true, value_name = "path", display_order = 100)]
     pub directory: Option<std::path::PathBuf>,
 
     /// Show commands and debug info
-    #[arg(long, short = 'v', global = true)]
+    #[arg(long, short = 'v', global = true, display_order = 101)]
     pub verbose: bool,
 
     /// Use internal mode (outputs directives for shell wrapper)
@@ -256,7 +256,7 @@ pub enum StandaloneCommand {
         verify: bool,
     },
 
-    /// Push changes to target branch
+    /// Push changes to local target branch
     ///
     /// Automatically stashes non-conflicting edits in the target worktree before
     /// the push and restores them afterward so other agents' changes stay intact.
@@ -370,16 +370,7 @@ Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
     },
 
     /// List worktrees and optionally branches
-    #[command(after_long_help = "## OPERATION
-
-Displays worktrees in a table format with status information, commit details, and optional branch listings.
-
-- **By default:** Shows only worktrees
-- **With `--branches`:** Includes branches without worktrees
-- **With `--full`:** Adds CI status, conflict detection, and detailed diffs
-- **With `--format=json`:** Outputs structured JSON for scripting
-
-## COLUMNS
+    #[command(after_long_help = "## COLUMNS
 
 - **Branch:** Branch name
 - **Status:** Quick status symbols (see STATUS SYMBOLS below)
@@ -429,52 +420,40 @@ Order: `?!+»✘ ✖⚠≡∅ ↻⋈ ↑↓↕ ⇡⇣⇅ ⎇⌫⊠`
 
 ## JSON OUTPUT
 
-Use `--format=json` for structured data. Each object contains two status maps:
+Use `--format=json` for structured data. Each object contains two status maps
+with the same fields in the same order as STATUS SYMBOLS above:
 
-**`status` (variant names for querying):**
-- `branch_state`: \"\" | \"Conflicts\" | \"MergeTreeConflicts\" | \"MatchesMain\" | \"NoCommits\"
-- `git_operation`: \"\" | \"Rebase\" | \"Merge\"
-- `worktree_attrs`: object (worktrees only) with:
-  - `locked`: null | \"reason string\"
-  - `prunable`: null | \"reason string\"
-- `main_divergence`: \"\" | \"Ahead\" | \"Behind\" | \"Diverged\"
-- `upstream_divergence`: \"\" | \"Ahead\" | \"Behind\" | \"Diverged\"
-- `working_tree`: object with booleans
-  - `untracked`: boolean - untracked files present
-  - `modified`: boolean - unstaged changes
-  - `staged`: boolean - staged changes
-  - `renamed`: boolean - renamed files
-  - `deleted`: boolean - deleted files
-- `user_status`: string (optional) - custom status from git config
+**`status`** - variant names for querying:
+- `working_tree`: `{untracked, modified, staged, renamed, deleted}` booleans
+- `branch_state`: `\"\"` | `\"Conflicts\"` | `\"MergeTreeConflicts\"` | `\"MatchesMain\"` | `\"NoCommits\"`
+- `git_operation`: `\"\"` | `\"Rebase\"` | `\"Merge\"`
+- `main_divergence`: `\"\"` | `\"Ahead\"` | `\"Behind\"` | `\"Diverged\"`
+- `upstream_divergence`: `\"\"` | `\"Ahead\"` | `\"Behind\"` | `\"Diverged\"`
+- `user_status`: string (optional)
 
-**`status_symbols` (display symbols for rendering):**
-- `branch_state`: \"\" | \"✖\" | \"⚠\" | \"≡\" | \"∅\"
-- `git_operation`: \"\" | \"↻\" | \"⋈\"
-- `worktree_attrs`: \"⎇\" (branch) | \"⌫\" (prunable) | \"⊠\" (locked) | \"\"
-- `main_divergence`: \"\" | \"↑\" | \"↓\" | \"↕\"
-- `upstream_divergence`: \"\" | \"⇡\" | \"⇣\" | \"⇅\"
-- `working_tree`: string - combination of \"?!+»✘\"
-- `user_status`: string (optional) - same as status.user_status
+**`status_symbols`** - Unicode symbols for display (same fields, plus `worktree_attrs`: ⎇/⌫/⊠)
+
+Note: `locked` and `prunable` are top-level fields on worktree objects, not in status.
 
 **Query examples:**
 
   # Find worktrees with conflicts
   jq '.[] | select(.status.branch_state == \"Conflicts\")'
 
-  # Find locked worktrees
-  jq '.[] | select(.status.worktree_attrs.locked != null)'
-
   # Find worktrees with untracked files
-  jq '.[] | select(.status.working_tree.untracked == true)'
+  jq '.[] | select(.status.working_tree.untracked)'
 
   # Find worktrees in rebase or merge
   jq '.[] | select(.status.git_operation != \"\")'
 
   # Get branches ahead of main
-  jq '.[] | select(.status.main_divergence == \"Ahead\")'")]
+  jq '.[] | select(.status.main_divergence == \"Ahead\")'
+
+  # Find locked worktrees
+  jq '.[] | select(.locked != null)'")]
     List {
-        /// Output format
-        #[arg(long, value_enum, default_value = "table")]
+        /// Output format (table, json)
+        #[arg(long, value_enum, default_value = "table", hide_possible_values = true)]
         format: OutputFormat,
 
         /// Include branches without worktrees
@@ -482,16 +461,11 @@ Use `--format=json` for structured data. Each object contains two status maps:
         branches: bool,
 
         /// Show CI, conflicts, diffs
-        ///
-        /// Adds CI column, main…± diffs, and conflict detection (merge-tree + network).
-        #[arg(long, verbatim_doc_comment)]
+        #[arg(long)]
         full: bool,
 
-        /// Progressive rendering
-        ///
-        /// Use --progressive or --no-progressive to force rendering mode.
-        /// Default: auto (enabled for TTY, disabled for pipes).
-        #[arg(long, overrides_with = "no_progressive", verbatim_doc_comment)]
+        /// Force progressive (or --no-progressive)
+        #[arg(long, overrides_with = "no_progressive")]
         progressive: bool,
 
         /// Force buffered rendering
@@ -601,33 +575,20 @@ wt remove @                              # Remove current worktree
     /// Remove worktree and branch
     #[command(after_long_help = r#"## OPERATION
 
-**Remove Current Worktree** (no arguments):
-- Requires clean working tree (no uncommitted changes)
-- If in worktree: removes it and switches to main worktree
-- If in main worktree: switches to default branch (e.g., `main`)
-- If already on default branch in main: does nothing
+Removes worktree directory, git metadata, and branch. Requires clean working tree.
 
-**Remove Specific Worktree** (by name):
-- Requires target worktree has clean working tree
-- Removes specified worktree(s) and associated branches
-- If removing current worktree, switches to main first
-- Can remove multiple worktrees in one command
+**No arguments** (remove current):
+- Removes current worktree and switches to main worktree
+- In main worktree: switches to default branch
 
-**Remove Multiple Worktrees:**
-- When removing multiple, current worktree is removed last
-- Prevents deleting directory you're currently in
-- Each worktree must have clean working tree
+**By name** (remove specific):
+- Removes specified worktree(s) and branches
+- Current worktree removed last (switches to main first)
 
-**Removal Process** (by default):
-1. **Validates** worktree has no uncommitted changes
-2. **Changes directory** (if removing current worktree)
-3. **Spawns background removal process** (non-blocking)
-   - Directory deletion happens in background
-   - Git worktree metadata removed in background
-   - Branch deletion in background (uses `git branch -d`, safe delete)
-   - Logs: `.git/wt-logs/{branch}-remove.log`
-4. **Returns immediately** so you can continue working
-   - Use `--no-background` for foreground removal (blocking)
+**Background removal** (default):
+- Returns immediately so you can continue working
+- Logs: `.git/wt-logs/{branch}-remove.log`
+- Use `--no-background` for foreground (blocking)
 
 ## EXAMPLES
 
@@ -679,58 +640,24 @@ wt remove  # (when already in main worktree)
     },
 
     /// Merge worktree into target branch
-    #[command(long_about = r#"Merge worktree into target branch
+    #[command(after_long_help = r#"## OPERATION
 
-## OPERATION
+Commit → Squash → Rebase → Pre-merge hooks → Push → Cleanup → Post-merge hooks
 
-The merge operation follows a strict order designed for **fail-fast execution**:
+**Commit**: Uncommitted changes are staged and committed with LLM-generated message.
+Use `--tracked-only` to stage only tracked files.
 
-1. **Validate branches**
-   Verifies current branch exists (not detached HEAD) and determines target branch
-   (defaults to repository's default branch).
+**Squash**: Multiple commits are squashed into one with LLM-generated message.
+Skip with `--no-squash`. Safety backup: `git reflog show refs/wt-backup/<branch>`
 
-2. **Auto-commit uncommitted changes**
-   If working tree has uncommitted changes, stages changes and commits with LLM-generated
-   message. By default stages all changes (`git add -A`). Use `--tracked-only` to stage only
-   tracked files (`git add -u`).
+**Rebase**: Branch is rebased onto target. Conflicts abort the merge immediately.
 
-3. **Squash commits** (default)
-   By default, counts commits since merge base with target branch. When multiple
-   commits exist, squashes them into one with LLM-generated message. Skip squashing
-   with `--no-squash`.
+**Hooks**: Pre-merge commands run after rebase (failures abort). Post-merge commands
+run after cleanup (failures logged). Skip all with `--no-verify`.
 
-   A safety backup is created before squashing if there are working tree changes.
-   Recover with: `git reflog show refs/wt-backup/<branch>`
+**Push**: Fast-forward push to local target branch. Non-fast-forward pushes are rejected.
 
-4. **Rebase onto target**
-   Rebases current branch onto target branch. Detects conflicts and aborts if found.
-   This fails fast before running expensive checks.
-
-5. **Run pre-merge commands**
-   Runs commands from project config's `[pre-merge-command]` after rebase completes.
-   These receive `{{ target }}` placeholder for the target branch. Commands run sequentially
-   and any failure aborts the merge immediately. Skip with `--no-verify`.
-
-6. **Push to target**
-   Fast-forward pushes to target branch. Rejects non-fast-forward pushes (ensures
-   linear history). Temporarily stashes non-conflicting local edits in the target
-   worktree so they don't block the push, then restores them after success.
-
-7. **Clean up worktree and branch**
-   Removes current worktree, deletes the branch, and switches main worktree to target
-   branch if needed. Skip removal with `--no-remove`.
-
-8. **Run post-merge commands**
-   Runs commands from project config's `[post-merge-command]` in the destination worktree
-   after cleanup. These receive `{{ target }}` placeholder. Commands run sequentially,
-   failures are logged but don't abort. Skip with `--no-verify`.
-
-## HOOKS
-
-The `--no-verify` flag skips all project hooks:
-- Pre-commit hooks (before committing working tree changes)
-- Pre-merge hooks (after rebase, before push)
-- Post-merge hooks (after cleanup)
+**Cleanup**: Worktree and branch are removed. Skip with `--no-remove`.
 
 ## EXAMPLES
 

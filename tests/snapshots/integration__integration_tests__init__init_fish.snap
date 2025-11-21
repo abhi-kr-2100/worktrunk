@@ -19,7 +19,7 @@ info:
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpmxQ2Xu/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpDJ4JgG/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -238,7 +238,7 @@ complete -c wt -n "__fish_wt_using_subcommand beta; and not __fish_seen_subcomma
 complete -c wt -n "__fish_wt_using_subcommand beta; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approvals clear-approvals select" -f -a "run-hook" -d 'Run project hook'
 complete -c wt -n "__fish_wt_using_subcommand beta; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approvals clear-approvals select" -f -a "commit" -d 'Commit changes with LLM-generated message'
 complete -c wt -n "__fish_wt_using_subcommand beta; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approvals clear-approvals select" -f -a "squash" -d 'Squash commits with LLM-generated message'
-complete -c wt -n "__fish_wt_using_subcommand beta; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approvals clear-approvals select" -f -a "push" -d 'Push changes to target branch'
+complete -c wt -n "__fish_wt_using_subcommand beta; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approvals clear-approvals select" -f -a "push" -d 'Push changes to local target branch'
 complete -c wt -n "__fish_wt_using_subcommand beta; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approvals clear-approvals select" -f -a "rebase" -d 'Rebase onto target'
 complete -c wt -n "__fish_wt_using_subcommand beta; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approvals clear-approvals select" -f -a "ask-approvals" -d 'Store approvals in config'
 complete -c wt -n "__fish_wt_using_subcommand beta; and not __fish_seen_subcommand_from run-hook commit squash push rebase ask-approvals clear-approvals select" -f -a "clear-approvals" -d 'Clear approved commands from config'
@@ -276,12 +276,12 @@ complete -c wt -n "__fish_wt_using_subcommand beta; and __fish_seen_subcommand_f
 complete -c wt -n "__fish_wt_using_subcommand beta; and __fish_seen_subcommand_from select" -s C -d 'Change working directory' -r -F
 complete -c wt -n "__fish_wt_using_subcommand beta; and __fish_seen_subcommand_from select" -s v -l verbose -d 'Show commands and debug info'
 complete -c wt -n "__fish_wt_using_subcommand beta; and __fish_seen_subcommand_from select" -s h -l help -d 'Print help (see more with \'--help\')'
-complete -c wt -n "__fish_wt_using_subcommand list" -l format -d 'Output format' -r -f -a "table\t'Human-readable table format'
+complete -c wt -n "__fish_wt_using_subcommand list" -l format -d 'Output format (table, json)' -r -f -a "table\t'Human-readable table format'
 json\t'JSON output'"
 complete -c wt -n "__fish_wt_using_subcommand list" -s C -d 'Change working directory' -r -F
 complete -c wt -n "__fish_wt_using_subcommand list" -l branches -d 'Include branches without worktrees'
 complete -c wt -n "__fish_wt_using_subcommand list" -l full -d 'Show CI, conflicts, diffs'
-complete -c wt -n "__fish_wt_using_subcommand list" -l progressive -d 'Progressive rendering'
+complete -c wt -n "__fish_wt_using_subcommand list" -l progressive -d 'Force progressive (or --no-progressive)'
 complete -c wt -n "__fish_wt_using_subcommand list" -l no-progressive -d 'Force buffered rendering'
 complete -c wt -n "__fish_wt_using_subcommand list" -s v -l verbose -d 'Show commands and debug info'
 complete -c wt -n "__fish_wt_using_subcommand list" -s h -l help -d 'Print help (see more with \'--help\')'

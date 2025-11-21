@@ -41,25 +41,25 @@ exit_code: 0
     "upstream_behind": 0,
     "pr_status": null,
     "status": {
-      "branch_state": "",
-      "git_operation": "",
-      "main_divergence": "",
-      "upstream_divergence": "",
       "working_tree": {
         "untracked": false,
         "modified": false,
         "staged": false,
         "renamed": false,
         "deleted": false
-      }
-    },
-    "status_symbols": {
+      },
       "branch_state": "",
       "git_operation": "",
-      "worktree_attrs": "",
+      "main_divergence": "",
+      "upstream_divergence": ""
+    },
+    "status_symbols": {
+      "working_tree": "",
+      "branch_state": "",
+      "git_operation": "",
       "main_divergence": "",
       "upstream_divergence": "",
-      "working_tree": ""
+      "worktree_attrs": ""
     },
     "type": "worktree",
     "path": "[REPO]",
@@ -92,25 +92,25 @@ exit_code: 0
     "upstream_behind": 0,
     "pr_status": null,
     "status": {
-      "branch_state": "",
-      "git_operation": "",
-      "main_divergence": "Diverged",
-      "upstream_divergence": "",
       "working_tree": {
         "untracked": true,
         "modified": true,
         "staged": false,
         "renamed": false,
         "deleted": false
-      }
-    },
-    "status_symbols": {
+      },
       "branch_state": "",
       "git_operation": "",
-      "worktree_attrs": "",
+      "main_divergence": "Diverged",
+      "upstream_divergence": ""
+    },
+    "status_symbols": {
+      "working_tree": "?!",
+      "branch_state": "",
+      "git_operation": "",
       "main_divergence": "↕",
       "upstream_divergence": "",
-      "working_tree": "?!"
+      "worktree_attrs": ""
     },
     "commits_display": "/u001b[32m↑2/u001b[0m /u001b[2m/u001b[31m↓2/u001b[0m",
     "branch_diff_display": "/u001b[32m+1/u001b[0m",
@@ -143,25 +143,25 @@ exit_code: 0
     "upstream_behind": 0,
     "pr_status": null,
     "status": {
-      "branch_state": "NoCommits",
-      "git_operation": "",
-      "main_divergence": "Behind",
-      "upstream_divergence": "",
       "working_tree": {
         "untracked": false,
         "modified": false,
         "staged": false,
         "renamed": false,
         "deleted": false
-      }
+      },
+      "branch_state": "NoCommits",
+      "git_operation": "",
+      "main_divergence": "Behind",
+      "upstream_divergence": ""
     },
     "status_symbols": {
+      "working_tree": "",
       "branch_state": "∅",
       "git_operation": "",
-      "worktree_attrs": "",
       "main_divergence": "↓",
       "upstream_divergence": "",
-      "working_tree": ""
+      "worktree_attrs": ""
     },
     "commits_display": "/u001b[2m/u001b[31m↓2/u001b[0m",
     "type": "worktree",

@@ -20,7 +20,7 @@ Commands:
   run-hook         Run project hook
   commit           Commit changes with LLM-generated message
   squash           Squash commits with LLM-generated message
-  push             Push changes to target branch
+  push             Push changes to local target branch
   rebase           Rebase onto target
   ask-approvals    Store approvals in config
   clear-approvals  Clear approved commands from config

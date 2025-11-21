@@ -41,25 +41,25 @@ exit_code: 0
     "upstream_behind": 0,
     "pr_status": null,
     "status": {
-      "branch_state": "",
-      "git_operation": "",
-      "main_divergence": "",
-      "upstream_divergence": "",
       "working_tree": {
         "untracked": false,
         "modified": false,
         "staged": false,
         "renamed": false,
         "deleted": false
-      }
-    },
-    "status_symbols": {
+      },
       "branch_state": "",
       "git_operation": "",
-      "worktree_attrs": "",
+      "main_divergence": "",
+      "upstream_divergence": ""
+    },
+    "status_symbols": {
+      "working_tree": "",
+      "branch_state": "",
+      "git_operation": "",
       "main_divergence": "",
       "upstream_divergence": "",
-      "working_tree": ""
+      "worktree_attrs": ""
     },
     "type": "worktree",
     "path": "[REPO]",
@@ -92,10 +92,6 @@ exit_code: 0
     "upstream_behind": 0,
     "pr_status": null,
     "status": {
-      "branch_state": "MatchesMain",
-      "git_operation": "",
-      "main_divergence": "",
-      "upstream_divergence": "",
       "working_tree": {
         "untracked": false,
         "modified": false,
@@ -103,15 +99,19 @@ exit_code: 0
         "renamed": false,
         "deleted": false
       },
+      "branch_state": "MatchesMain",
+      "git_operation": "",
+      "main_divergence": "",
+      "upstream_divergence": "",
       "user_status": "🔧"
     },
     "status_symbols": {
+      "working_tree": "",
       "branch_state": "≡",
       "git_operation": "",
-      "worktree_attrs": "",
       "main_divergence": "",
       "upstream_divergence": "",
-      "working_tree": "",
+      "worktree_attrs": "",
       "user_status": "🔧"
     },
     "type": "worktree",
@@ -145,25 +145,25 @@ exit_code: 0
     "upstream_behind": 0,
     "pr_status": null,
     "status": {
-      "branch_state": "MatchesMain",
-      "git_operation": "",
-      "main_divergence": "",
-      "upstream_divergence": "",
       "working_tree": {
         "untracked": false,
         "modified": false,
         "staged": false,
         "renamed": false,
         "deleted": false
-      }
+      },
+      "branch_state": "MatchesMain",
+      "git_operation": "",
+      "main_divergence": "",
+      "upstream_divergence": ""
     },
     "status_symbols": {
+      "working_tree": "",
       "branch_state": "≡",
       "git_operation": "",
-      "worktree_attrs": "",
       "main_divergence": "",
       "upstream_divergence": "",
-      "working_tree": ""
+      "worktree_attrs": ""
     },
     "type": "worktree",
     "path": "[WORKTREE_WITHOUT_STATUS]",

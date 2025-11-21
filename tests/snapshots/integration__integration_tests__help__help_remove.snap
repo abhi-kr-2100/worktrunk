@@ -17,53 +17,41 @@ wt-remove - Remove worktree and branch
 Usage: wt remove [OPTIONS] [WORKTREES]...
 
 Options:
-  -C <path>
-      Change working directory
-
   --no-delete-branch           
       Keep branch after removal
 
   -D, --force-delete
       Delete unmerged branches
 
-  -v, --verbose
-      Show commands and debug info
-
   --no-background              
       Run removal in foreground
+
+  -C <path>
+      Change working directory
+
+  -v, --verbose
+      Show commands and debug info
 
   -h, --help
       Print help (see a summary with '-h')
 
 [38;5;10mOPERATION[39m
 
-Remove Current Worktree (no arguments):
-- Requires clean working tree (no uncommitted changes)
-- If in worktree: removes it and switches to main worktree
-- If in main worktree: switches to default branch (e.g., main)
-- If already on default branch in main: does nothing
+Removes worktree directory, git metadata, and branch. Requires clean working 
+tree.
 
-Remove Specific Worktree (by name):
-- Requires target worktree has clean working tree
-- Removes specified worktree(s) and associated branches
-- If removing current worktree, switches to main first
-- Can remove multiple worktrees in one command
+No arguments (remove current):
+- Removes current worktree and switches to main worktree
+- In main worktree: switches to default branch
 
-Remove Multiple Worktrees:
-- When removing multiple, current worktree is removed last
-- Prevents deleting directory you're currently in
-- Each worktree must have clean working tree
+By name (remove specific):
+- Removes specified worktree(s) and branches
+- Current worktree removed last (switches to main first)
 
-Removal Process (by default):
-1. Validates worktree has no uncommitted changes
-2. Changes directory (if removing current worktree)
-3. Spawns background removal process (non-blocking)
-   - Directory deletion happens in background
-   - Git worktree metadata removed in background
-   - Branch deletion in background (uses git branch -d, safe delete)
-   - Logs: .git/wt-logs/{branch}-remove.log
-4. Returns immediately so you can continue working
-   - Use --no-background for foreground removal (blocking)
+Background removal (default):
+- Returns immediately so you can continue working
+- Logs: .git/wt-logs/{branch}-remove.log
+- Use --no-background for foreground (blocking)
 
 [38;5;10mEXAMPLES[39m
 

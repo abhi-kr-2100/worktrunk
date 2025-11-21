@@ -688,26 +688,30 @@ impl WorkingTreeChanges {
 }
 
 /// Status variant names (for queryability)
+///
+/// Field order matches display order in STATUS SYMBOLS: working_tree → branch_state → ...
 #[derive(Debug, Clone, serde::Serialize)]
 struct QueryableStatus {
+    working_tree: WorkingTreeChanges,
     branch_state: &'static str,
     git_operation: &'static str,
     main_divergence: &'static str,
     upstream_divergence: &'static str,
-    working_tree: WorkingTreeChanges,
     #[serde(skip_serializing_if = "Option::is_none")]
     user_status: Option<String>,
 }
 
 /// Status symbols (for display)
+///
+/// Field order matches display order in STATUS SYMBOLS: working_tree → branch_state → ...
 #[derive(Debug, Clone, serde::Serialize)]
 struct DisplaySymbols {
+    working_tree: String,
     branch_state: String,
     git_operation: String,
-    worktree_attrs: String,
     main_divergence: String,
     upstream_divergence: String,
-    working_tree: String,
+    worktree_attrs: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     user_status: Option<String>,
 }
@@ -750,21 +754,21 @@ impl serde::Serialize for StatusSymbols {
         };
 
         let queryable_status = QueryableStatus {
+            working_tree: WorkingTreeChanges::from_symbols(&self.working_tree),
             branch_state: branch_state_variant,
             git_operation: git_operation_variant,
             main_divergence: main_divergence_variant,
             upstream_divergence: upstream_divergence_variant,
-            working_tree: WorkingTreeChanges::from_symbols(&self.working_tree),
             user_status: self.user_status.clone(),
         };
 
         let display_symbols = DisplaySymbols {
+            working_tree: self.working_tree.clone(),
             branch_state: self.branch_state.to_string(),
             git_operation: self.git_operation.to_string(),
-            worktree_attrs: self.item_attrs.clone(),
             main_divergence: self.main_divergence.to_string(),
             upstream_divergence: self.upstream_divergence.to_string(),
-            working_tree: self.working_tree.clone(),
+            worktree_attrs: self.item_attrs.clone(),
             user_status: self.user_status.clone(),
         };
 

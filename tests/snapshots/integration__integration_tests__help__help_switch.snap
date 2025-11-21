@@ -20,14 +20,8 @@ Options:
   -c, --create
       Create a new branch
 
-  -C <path>
-      Change working directory
-
   -b, --base <BASE>
       Base branch (defaults to default branch)
-
-  -v, --verbose
-      Show commands and debug info
 
   -x, --execute <EXECUTE>
       Execute command after switching
@@ -37,6 +31,12 @@ Options:
 
   --no-verify               
       Skip all project hooks
+
+  -C <path>
+      Change working directory
+
+  -v, --verbose
+      Show commands and debug info
 
   -h, --help
       Print help (see a summary with '-h')
