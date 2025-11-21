@@ -27,7 +27,7 @@ impl Worktree {
             match key {
                 "worktree" => {
                     let Some(path) = value else {
-                        bail!("{}", parse_error("worktree line missing path"));
+                        return Err(parse_error("worktree line missing path"));
                     };
                     current = Some(Worktree {
                         path: PathBuf::from(path),
@@ -42,14 +42,14 @@ impl Worktree {
                 key => match (key, current.as_mut()) {
                     ("HEAD", Some(wt)) => {
                         let Some(sha) = value else {
-                            bail!("{}", parse_error("HEAD line missing SHA"));
+                            return Err(parse_error("HEAD line missing SHA"));
                         };
                         wt.head = sha.to_string();
                     }
                     ("branch", Some(wt)) => {
                         // Strip refs/heads/ prefix if present
                         let Some(branch_ref) = value else {
-                            bail!("{}", parse_error("branch line missing ref"));
+                            return Err(parse_error("branch line missing ref"));
                         };
                         let branch = branch_ref
                             .strip_prefix("refs/heads/")

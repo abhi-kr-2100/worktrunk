@@ -234,7 +234,7 @@ pub fn change_directory(path: impl AsRef<Path>) -> io::Result<()> {
 }
 
 /// Request command execution
-pub fn execute(command: impl Into<String>) -> io::Result<()> {
+pub fn execute(command: impl Into<String>) -> anyhow::Result<()> {
     OUTPUT_CONTEXT.with(|ctx| {
         let cmd = command.into();
         match &mut *ctx.borrow_mut() {

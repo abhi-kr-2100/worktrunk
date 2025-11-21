@@ -3,7 +3,7 @@ use std::process;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::worktree::RemoveResult;
-use anyhow::{Context, bail};
+use anyhow::Context;
 use worktrunk::config::ProjectConfig;
 use worktrunk::git::{Repository, conflicting_changes, no_worktree_found, worktree_missing};
 use worktrunk::path::format_path_for_display;
@@ -80,12 +80,12 @@ impl RepositoryCliExt for Repository {
         let worktree_path = match self.worktree_for_branch(branch_name)? {
             Some(path) => path,
             None => {
-                bail!("{}", no_worktree_found(branch_name));
+                return Err(no_worktree_found(branch_name));
             }
         };
 
         if !worktree_path.exists() {
-            bail!("{}", worktree_missing(branch_name));
+            return Err(worktree_missing(branch_name));
         }
 
         let target_repo = Repository::at(&worktree_path);
@@ -144,7 +144,7 @@ impl RepositoryCliExt for Repository {
             .collect();
 
         if !overlapping.is_empty() {
-            bail!("{}", conflicting_changes(&overlapping, wt_path));
+            return Err(conflicting_changes(&overlapping, wt_path));
         }
 
         let nanos = SystemTime::now()

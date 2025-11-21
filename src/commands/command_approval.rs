@@ -107,7 +107,7 @@ fn prompt_for_batch_approval(commands: &[&Command], project_id: &str) -> anyhow:
     // This happens AFTER showing the commands so they appear in CI/CD logs
     // even when the prompt cannot be displayed (fail-fast principle)
     if !io::stdin().is_terminal() {
-        anyhow::bail!("{}", not_interactive());
+        return Err(not_interactive());
     }
 
     // Flush stderr before showing prompt to ensure all output is visible

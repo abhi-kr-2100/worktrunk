@@ -204,7 +204,7 @@ pub fn handle_switch(
 
     // Check for conflicting conditions
     if create && repo.local_branch_exists(&resolved_branch)? {
-        bail!("{}", branch_already_exists(&resolved_branch));
+        return Err(branch_already_exists(&resolved_branch));
     }
 
     // Check if base flag was provided without create flag
@@ -243,7 +243,7 @@ pub fn handle_switch(
             ));
         }
         Some(_) => {
-            bail!("{}", worktree_missing(&resolved_branch));
+            return Err(worktree_missing(&resolved_branch));
         }
         None => {}
     }
@@ -319,7 +319,7 @@ pub fn handle_switch(
                 let path = std::path::PathBuf::from(path_str);
                 // Canonicalize if possible, otherwise use as-is
                 let normalized_path = path.canonicalize().unwrap_or(path);
-                bail!("{}", worktree_path_exists(&normalized_path));
+                return Err(worktree_path_exists(&normalized_path));
             }
         }
         // Fall back to generic error with context
@@ -523,7 +523,7 @@ pub fn handle_push(
     // Check for merge commits unless allowed
     let has_merge_commits = repo.has_merge_commits(&target_branch, "HEAD")?;
     if !allow_merge_commits && has_merge_commits {
-        bail!("{}", merge_commits_found());
+        return Err(merge_commits_found());
     }
 
     // Configure receive.denyCurrentBranch if needed
@@ -635,7 +635,7 @@ pub fn handle_push(
             stash.restore()?;
         }
         // CommandFailed contains raw git output, wrap in PushFailed for proper formatting
-        bail!("{}", push_failed(&e.to_string()));
+        return Err(push_failed(&e.to_string()));
     }
 
     if let Some(stash) = target_worktree_stash.take() {

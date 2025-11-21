@@ -131,9 +131,10 @@ impl DirectiveOutput {
         io::stdout().flush()
     }
 
-    pub fn execute(&mut self, command: String) -> io::Result<()> {
+    pub fn execute(&mut self, command: String) -> anyhow::Result<()> {
         write!(io::stdout(), "__WORKTRUNK_EXEC__{}\0", command)?;
-        io::stdout().flush()
+        io::stdout().flush()?;
+        Ok(())
     }
 
     pub fn flush(&mut self) -> io::Result<()> {

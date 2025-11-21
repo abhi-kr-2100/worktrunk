@@ -138,14 +138,13 @@ pub fn handle_switch_output(
 
 /// Execute the --execute command after hooks have run
 pub fn execute_user_command(command: &str) -> anyhow::Result<()> {
-    use worktrunk::git::from_io_error;
     use worktrunk::styling::{CYAN, format_bash_with_gutter};
 
     // Show what command is being executed (section header + gutter content)
     super::progress(format!("{CYAN}Executing (--execute):{CYAN:#}"))?;
     super::gutter(format_bash_with_gutter(command, ""))?;
 
-    super::execute(command).map_err(from_io_error)?;
+    super::execute(command)?;
 
     Ok(())
 }
@@ -329,9 +328,9 @@ pub(crate) fn execute_streaming(
     command: &str,
     working_dir: &std::path::Path,
     redirect_stdout_to_stderr: bool,
-) -> std::io::Result<()> {
-    use std::io;
+) -> anyhow::Result<()> {
     use std::process::Command;
+    use worktrunk::git::WorktrunkError;
 
     let command_to_run = if redirect_stdout_to_stderr {
         // Use newline instead of semicolon before closing brace to support
@@ -349,20 +348,21 @@ pub(crate) fn execute_streaming(
         .stdout(std::process::Stdio::inherit()) // Preserve TTY for output
         .stderr(std::process::Stdio::inherit()) // Preserve TTY for errors
         .spawn()
-        .map_err(|e| io::Error::other(format!("Failed to execute command: {}", e)))?;
+        .map_err(|e| anyhow::anyhow!("Failed to execute command: {}", e))?;
 
     // Wait for command to complete
     let status = child
         .wait()
-        .map_err(|e| io::Error::other(format!("Failed to wait for command: {}", e)))?;
+        .map_err(|e| anyhow::anyhow!("Failed to wait for command: {}", e))?;
 
     if !status.success() {
         // Get the exit code if available (None means terminated by signal on some platforms)
         let code = status.code().unwrap_or(1);
-        return Err(io::Error::other(format!(
-            "CHILD_EXIT_CODE:{} exit status: {}",
-            code, code
-        )));
+        return Err(WorktrunkError::ChildProcessExited {
+            code,
+            message: format!("exit status: {}", code),
+        }
+        .into());
     }
 
     Ok(())
@@ -408,8 +408,7 @@ pub fn execute_command_in_worktree(
     stderr().flush().ok(); // Ignore flush errors - reset is best-effort, command execution should proceed
 
     // Execute with stdout→stderr redirect for deterministic ordering
-    // io::Error is converted via from_io_error to parse embedded exit codes
-    execute_streaming(command, worktree_path, true).map_err(worktrunk::git::from_io_error)?;
+    execute_streaming(command, worktree_path, true)?;
 
     // Flush to ensure all output appears before we continue
     super::flush()?;

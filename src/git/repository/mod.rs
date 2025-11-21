@@ -419,7 +419,7 @@ impl Repository {
     /// Returns an error if there are uncommitted changes.
     pub fn ensure_clean_working_tree(&self) -> anyhow::Result<()> {
         if self.is_dirty()? {
-            bail!("{}", uncommitted_changes());
+            return Err(uncommitted_changes());
         }
         Ok(())
     }

@@ -282,7 +282,7 @@ pub fn handle_rebase(target: Option<&str>) -> anyhow::Result<bool> {
     // Verify rebase completed successfully (safety check for edge cases)
     if let Some(state) = repo.worktree_state()? {
         let _ = state; // used for diagnostics
-        bail!("{}", worktrunk::git::rebase_conflict(&target_branch, ""));
+        return Err(worktrunk::git::rebase_conflict(&target_branch, ""));
     }
 
     // Success

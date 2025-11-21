@@ -116,7 +116,7 @@ impl InteractiveOutput {
         Ok(())
     }
 
-    pub fn execute(&mut self, command: String) -> io::Result<()> {
+    pub fn execute(&mut self, command: String) -> anyhow::Result<()> {
         // Execute command in the target directory with streaming output
         let exec_dir = self.target_dir.as_deref().unwrap_or_else(|| Path::new("."));
 
