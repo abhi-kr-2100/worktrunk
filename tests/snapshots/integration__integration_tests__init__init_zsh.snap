@@ -15,11 +15,10 @@ info:
     GIT_CONFIG_KEY_0: advice.mergeConflict
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_CONFIG_VALUE_0: "false"
-    GIT_EDITOR: ""
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpOSL0P3/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmp8OQXUV/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -50,6 +49,20 @@ wt_exec() {
     fi
 
     local exec_cmd="" chunk="" exit_code=0 tmp_dir="" fifo_path="" runner_pid=""
+
+    # Cleanup handler for signals and normal exit
+    _wt_cleanup() {
+        # Kill background process if still running
+        if [[ -n "$runner_pid" ]] && kill -0 "$runner_pid" 2>/dev/null; then
+            kill "$runner_pid" 2>/dev/null || true
+        fi
+        # Remove temp files
+        /bin/rm -f "$fifo_path" 2>/dev/null || true
+        /bin/rmdir "$tmp_dir" 2>/dev/null || true
+    }
+
+    # On SIGINT: cleanup and exit immediately with 130
+    trap '_wt_cleanup; return 130' INT
 
     # Create temp directory with FIFO for streaming output
     tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/wt.XXXXXX") || {
@@ -88,8 +101,8 @@ wt_exec() {
     wait "$runner_pid" >/dev/null 2>&1 || exit_code=$?
 
     # Cleanup
-    /bin/rm -f "$fifo_path"
-    /bin/rmdir "$tmp_dir" 2>/dev/null || true
+    trap - INT
+    _wt_cleanup
 
     # Execute deferred command if specified (its exit code takes precedence)
     if [[ -n "$exec_cmd" ]]; then

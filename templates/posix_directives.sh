@@ -17,6 +17,20 @@ wt_exec() {
 
     local exec_cmd="" chunk="" exit_code=0 tmp_dir="" fifo_path="" runner_pid=""
 
+    # Cleanup handler for signals and normal exit
+    _wt_cleanup() {
+        # Kill background process if still running
+        if [[ -n "$runner_pid" ]] && kill -0 "$runner_pid" 2>/dev/null; then
+            kill "$runner_pid" 2>/dev/null || true
+        fi
+        # Remove temp files
+        /bin/rm -f "$fifo_path" 2>/dev/null || true
+        /bin/rmdir "$tmp_dir" 2>/dev/null || true
+    }
+
+    # On SIGINT: cleanup and exit immediately with 130
+    trap '_wt_cleanup; return 130' INT
+
     # Create temp directory with FIFO for streaming output
     tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/wt.XXXXXX") || {
         echo "Failed to create temp directory for worktrunk shim" >&2
@@ -54,8 +68,8 @@ wt_exec() {
     wait "$runner_pid" >/dev/null 2>&1 || exit_code=$?
 
     # Cleanup
-    /bin/rm -f "$fifo_path"
-    /bin/rmdir "$tmp_dir" 2>/dev/null || true
+    trap - INT
+    _wt_cleanup
 
     # Execute deferred command if specified (its exit code takes precedence)
     if [[ -n "$exec_cmd" ]]; then
