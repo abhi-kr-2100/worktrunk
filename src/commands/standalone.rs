@@ -143,26 +143,35 @@ pub fn handle_squash(
     // Either multiple commits OR single commit with staged changes - squash them
     // Get diff stats early for display in progress message
     let range = format!("{}..HEAD", merge_base);
-    let stats_parts = repo.diff_stats_summary(&["diff", "--shortstat", &range]);
 
     let commit_text = if commit_count == 1 {
         "commit"
     } else {
         "commits"
     };
+
+    // Get total stats (commits + any working tree changes)
+    let total_stats = if has_staged {
+        repo.diff_stats_summary(&["diff", "--shortstat", &merge_base, "--cached"])
+    } else {
+        repo.diff_stats_summary(&["diff", "--shortstat", &range])
+    };
+
     let with_changes = if has_staged {
-        " with working tree changes"
+        " & working tree changes"
     } else {
         ""
     };
-    let squash_progress = match stats_parts.is_empty() {
-        true => {
-            format!("{CYAN}Squashing {commit_count} {commit_text}{with_changes} into 1...{CYAN:#}")
-        }
-        false => format!(
-            "{CYAN}Squashing {commit_count} {commit_text}{with_changes} into 1{CYAN:#} ({})...",
-            stats_parts.join(", ")
-        ),
+
+    let squash_progress = if total_stats.is_empty() {
+        format!(
+            "{CYAN}Squashing {commit_count} {commit_text}{with_changes} into a single commit...{CYAN:#}"
+        )
+    } else {
+        format!(
+            "{CYAN}Squashing {commit_count} {commit_text}{with_changes} into a single commit{CYAN:#} ({})...",
+            total_stats.join(", ")
+        )
     };
     crate::output::progress(squash_progress)?;
 

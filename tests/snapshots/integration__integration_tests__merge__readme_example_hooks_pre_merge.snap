@@ -23,7 +23,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-🔄 [36mSquashing 3 commits into 1[0m (2 files, [32m+45[0m)...
+🔄 [36mSquashing 3 commits into a single commit[0m (2 files, [32m+45[0m)...
 🔄 [36mGenerating squash commit message...[0m
 [107m [0m  [1mfeat(api): Add user authentication endpoints[0m
 [107m [0m  

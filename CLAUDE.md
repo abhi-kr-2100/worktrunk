@@ -227,7 +227,7 @@ Progress messages should include all relevant details (what's being done, counts
 
 ```rust
 // ✅ GOOD - detailed progress, minimal success
-output::progress("🔄 Squashing 3 commits with working tree changes into 1 (5 files, +120, -45)...")?;
+output::progress("🔄 Squashing 3 commits & working tree changes into a single commit (5 files, +60)...")?;
 perform_squash()?;
 output::success("✅ Squashed @ a1b2c3d")?;
 ```

@@ -23,7 +23,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-🔄 [36mSquashing 3 commits into 1[0m (3 files, [32m+33[0m)...
+🔄 [36mSquashing 3 commits into a single commit[0m (3 files, [32m+33[0m)...
 🔄 [36mGenerating squash commit message...[0m
 [107m [0m  [1mfeat(auth): Implement JWT authentication system[0m
 [107m [0m  

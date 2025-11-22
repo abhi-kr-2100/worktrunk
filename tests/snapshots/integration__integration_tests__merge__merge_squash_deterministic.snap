@@ -21,7 +21,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-🔄 [36mSquashing 3 commits into 1[0m (3 files, [32m+3[0m)...
+🔄 [36mSquashing 3 commits into a single commit[0m (3 files, [32m+3[0m)...
 🔄 [36mGenerating squash commit message...[0m
 💡 [2mUsing fallback commit message. Run 'wt config --help' for LLM setup guide[0m
 [107m [0m  [1mSquash commits from main[0m

@@ -21,7 +21,7 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-🔄 [36mSquashing 1 commit with working tree changes into 1[0m (1 file, [32m+1[0m)...
+🔄 [36mSquashing 1 commit & working tree changes into a single commit[0m (1 file, [32m+1[0m)...
 💡 Backup created @ [SHA]
 🔄 [36mGenerating squash commit message...[0m
 💡 [2mUsing fallback commit message. Run 'wt config --help' for LLM setup guide[0m

@@ -26,7 +26,7 @@ exit_code: 0
 🟡 [33mAuto-staging 2 untracked files:[0m
 [107m [0m  untracked1.txt
 [107m [0m  untracked2.txt
-🔄 [36mSquashing 1 commit with working tree changes into 1[0m (1 file, [32m+1[0m)...
+🔄 [36mSquashing 1 commit & working tree changes into a single commit[0m (3 files, [32m+3[0m)...
 💡 Backup created @ [SHA]
 🔄 [36mGenerating squash commit message...[0m
 💡 [2mUsing fallback commit message. Run 'wt config --help' for LLM setup guide[0m
