@@ -38,8 +38,13 @@ Options:
   -f, --force
       Skip approval prompts
 
-  --tracked-only              
-      Stage tracked files only
+  --stage <STAGE>                                   
+      What to stage before committing [default: all]
+
+      Possible values:                                                       
+      - all:     Stage everything: untracked files + unstaged tracked changes
+      - tracked: Stage tracked changes only (like git add -u)                
+      - none:    Stage nothing, commit only what's already in the index      
 
   -h, --help
       Print help (see a summary with '-h')
@@ -59,7 +64,8 @@ Global Options:
 Commit → Squash → Rebase → Pre-merge hooks → Push → Cleanup → Post-merge hooks
 
 Commit: Uncommitted changes are staged and committed with LLM message.
-Use --tracked-only to stage only tracked files.
+Use --stage=tracked to stage only tracked files, or --stage=none to commit only 
+what's already staged.
 
 Squash: Multiple commits are squashed into one with LLM message.
 Skip with --no-squash. Safety backup: git reflog show refs/wt-backup/<branch>

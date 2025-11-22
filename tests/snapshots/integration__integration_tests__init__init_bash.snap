@@ -12,13 +12,13 @@ info:
     COLUMNS: "150"
     GIT_AUTHOR_DATE: "2025-01-01T00:00:00Z"
     GIT_COMMITTER_DATE: "2025-01-01T00:00:00Z"
-    GIT_CONFIG_GLOBAL: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpb2n8Kq/test-gitconfig
+    GIT_CONFIG_GLOBAL: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpsHzJ9y/test-gitconfig
     GIT_CONFIG_SYSTEM: /dev/null
     GIT_EDITOR: ""
     LANG: C
     LC_ALL: C
     SOURCE_DATE_EPOCH: "1761609600"
-    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpb2n8Kq/test-config.toml
+    WORKTRUNK_CONFIG_PATH: /var/folders/wf/s6ycxvvs4ln8qsdbfx40hnc40000gn/T/.tmpsHzJ9y/test-config.toml
 ---
 success: true
 exit_code: 0
@@ -305,12 +305,16 @@ _wt() {
             return 0
             ;;
         wt__beta__commit)
-            opts="-f -C -v -h --force --no-verify --config --verbose --help"
+            opts="-f -C -v -h --force --no-verify --stage --config --verbose --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --stage)
+                    COMPREPLY=($(compgen -W "all tracked none" -- "${cur}"))
+                    return 0
+                    ;;
                 -C)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -415,12 +419,16 @@ _wt() {
             return 0
             ;;
         wt__beta__squash)
-            opts="-f -C -v -h --force --no-verify --config --verbose --help [TARGET]"
+            opts="-f -C -v -h --force --no-verify --stage --config --verbose --help [TARGET]"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 3 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --stage)
+                    COMPREPLY=($(compgen -W "all tracked none" -- "${cur}"))
+                    return 0
+                    ;;
                 -C)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0
@@ -761,12 +769,16 @@ _wt() {
             return 0
             ;;
         wt__merge)
-            opts="-f -C -v -h --squash --no-squash --commit --no-commit --remove --no-remove --verify --no-verify --force --tracked-only --no-tracked-only --config --verbose --help [TARGET]"
+            opts="-f -C -v -h --squash --no-squash --commit --no-commit --remove --no-remove --verify --no-verify --force --stage --config --verbose --help [TARGET]"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 2 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --stage)
+                    COMPREPLY=($(compgen -W "all tracked none" -- "${cur}"))
+                    return 0
+                    ;;
                 -C)
                     COMPREPLY=($(compgen -f "${cur}"))
                     return 0

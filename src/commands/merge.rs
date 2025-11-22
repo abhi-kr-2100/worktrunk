@@ -66,7 +66,7 @@ pub fn handle_merge(
     remove: bool,
     verify: bool,
     force: bool,
-    tracked_only: bool,
+    stage_mode: super::commit::StageMode,
 ) -> anyhow::Result<()> {
     let env = CommandEnv::current()?;
     let repo = &env.repo;
@@ -124,9 +124,9 @@ pub fn handle_merge(
             let mut options = CommitOptions::new(&ctx);
             options.target_branch = Some(&target_branch);
             options.no_verify = !verify;
-            options.tracked_only = tracked_only;
+            options.stage_mode = stage_mode;
             options.auto_trust = true;
-            options.warn_about_untracked = !tracked_only;
+            options.warn_about_untracked = stage_mode == super::commit::StageMode::All;
             options.show_no_squash_note = true;
 
             options.commit()?;
@@ -138,14 +138,7 @@ pub fn handle_merge(
 
     // Squash commits if enabled - track whether squashing occurred
     let squashed = if squash_enabled {
-        super::standalone::handle_squash(
-            Some(&target_branch),
-            force,
-            !verify,
-            true,
-            tracked_only,
-            !tracked_only,
-        )?
+        super::standalone::handle_squash(Some(&target_branch), force, !verify, true, stage_mode)?
     } else {
         false
     };

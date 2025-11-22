@@ -7,12 +7,15 @@ use super::command_executor::CommandContext;
 use super::hooks::HookPipeline;
 use super::repository_ext::RepositoryCliExt;
 
+// Re-export StageMode from config for use by CLI
+pub use worktrunk::config::StageMode;
+
 /// Options for committing current changes.
 pub struct CommitOptions<'a> {
     pub ctx: &'a CommandContext<'a>,
     pub target_branch: Option<&'a str>,
     pub no_verify: bool,
-    pub tracked_only: bool,
+    pub stage_mode: StageMode,
     pub auto_trust: bool,
     pub warn_about_untracked: bool,
     pub show_no_squash_note: bool,
@@ -25,7 +28,7 @@ impl<'a> CommitOptions<'a> {
             ctx,
             target_branch: None,
             no_verify: false,
-            tracked_only: false,
+            stage_mode: StageMode::All,
             auto_trust: false,
             warn_about_untracked: true,
             show_no_squash_note: false,
@@ -134,20 +137,29 @@ impl CommitOptions<'_> {
             pipeline.run_pre_commit(&project_config, self.target_branch, self.auto_trust)?;
         }
 
-        if self.warn_about_untracked && !self.tracked_only {
+        if self.warn_about_untracked && self.stage_mode == StageMode::All {
             self.ctx.repo.warn_if_auto_staging_untracked()?;
         }
 
-        if self.tracked_only {
-            self.ctx
-                .repo
-                .run_command(&["add", "-u"])
-                .context("Failed to stage tracked changes")?;
-        } else {
-            self.ctx
-                .repo
-                .run_command(&["add", "-A"])
-                .context("Failed to stage changes")?;
+        // Stage changes based on mode
+        match self.stage_mode {
+            StageMode::All => {
+                // Stage everything: tracked modifications + untracked files
+                self.ctx
+                    .repo
+                    .run_command(&["add", "-A"])
+                    .context("Failed to stage changes")?;
+            }
+            StageMode::Tracked => {
+                // Stage tracked modifications only (no untracked files)
+                self.ctx
+                    .repo
+                    .run_command(&["add", "-u"])
+                    .context("Failed to stage tracked changes")?;
+            }
+            StageMode::None => {
+                // Stage nothing - commit only what's already in the index
+            }
         }
 
         CommitGenerator::new(&self.ctx.config.commit_generation)

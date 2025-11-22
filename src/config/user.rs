@@ -20,6 +20,29 @@ pub fn set_config_path(path: PathBuf) {
 
 use super::expansion::expand_template;
 
+/// What to stage before committing
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    PartialEq,
+    Eq,
+    clap::ValueEnum,
+    serde::Serialize,
+    serde::Deserialize,
+)]
+#[serde(rename_all = "lowercase")]
+pub enum StageMode {
+    /// Stage everything: untracked files + unstaged tracked changes
+    #[default]
+    All,
+    /// Stage tracked changes only (like `git add -u`)
+    Tracked,
+    /// Stage nothing, commit only what's already in the index
+    None,
+}
+
 /// User-level configuration for worktree path formatting and LLM integration.
 ///
 /// This config is stored at `~/.config/worktrunk/config.toml` (or platform equivalent)
@@ -75,6 +98,10 @@ pub struct WorktrunkConfig {
     /// Configuration for the `wt list` command
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub list: Option<ListConfig>,
+
+    /// Configuration for the `wt beta commit` command (also used by merge)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commit: Option<CommitConfig>,
 
     /// Configuration for the `wt merge` command
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -166,7 +193,20 @@ pub struct ListConfig {
     pub remotes: Option<bool>,
 }
 
+/// Configuration for the `wt beta commit` command
+///
+/// Also used by `wt merge` for shared settings like `stage`.
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+pub struct CommitConfig {
+    /// What to stage before committing (default: all)
+    /// Values: "all", "tracked", "none"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stage: Option<StageMode>,
+}
+
 /// Configuration for the `wt merge` command
+///
+/// Note: `stage` defaults from `[commit]` section, not here.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct MergeConfig {
     /// Squash commits when merging (default: true)
@@ -184,10 +224,6 @@ pub struct MergeConfig {
     /// Run project hooks (default: true)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub verify: Option<bool>,
-
-    /// Stage tracked files only (default: false)
-    #[serde(rename = "tracked-only", skip_serializing_if = "Option::is_none")]
-    pub tracked_only: Option<bool>,
 }
 
 impl Default for WorktrunkConfig {
@@ -197,6 +233,7 @@ impl Default for WorktrunkConfig {
             commit_generation: CommitGenerationConfig::default(),
             projects: std::collections::BTreeMap::new(),
             list: None,
+            commit: None,
             merge: None,
         }
     }

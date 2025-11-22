@@ -156,14 +156,17 @@ worktree-path = "../{{ main_worktree }}.{{ branch }}"
 # branches = false   # Include branches without worktrees by default
 # remotes = false    # Include remote branches by default
 
+# Commit Defaults (shared by `wt beta commit`, `wt beta squash`, and `wt merge`)
+# [commit]
+# stage = "all"          # What to stage: "all", "tracked", or "none"
+
 # Merge Command Defaults
-# Configure default behavior for `wt merge`
+# Note: `stage` defaults from [commit] section above
 # [merge]
 # squash = true          # Squash commits when merging
 # commit = true          # Create commit after merge
 # remove = true          # Remove worktree after merge
 # verify = true          # Run project hooks
-# tracked-only = false   # Stage tracked files only
 
 # Approved Commands
 # Commands approved for automatic execution after switching worktrees

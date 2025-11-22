@@ -272,12 +272,31 @@ fn main() {
             StandaloneCommand::RunHook { hook_type, force } => {
                 handle_standalone_run_hook(hook_type, force)
             }
-            StandaloneCommand::Commit { force, verify } => handle_standalone_commit(force, !verify),
+            StandaloneCommand::Commit {
+                force,
+                verify,
+                stage,
+            } => WorktrunkConfig::load()
+                .context("Failed to load config")
+                .and_then(|config| {
+                    let stage_final = stage
+                        .or_else(|| config.commit.and_then(|c| c.stage))
+                        .unwrap_or_default();
+                    handle_standalone_commit(force, !verify, stage_final)
+                }),
             StandaloneCommand::Squash {
                 target,
                 force,
                 verify,
-            } => handle_squash(target.as_deref(), force, !verify, false, false, true).map(|_| ()),
+                stage,
+            } => WorktrunkConfig::load()
+                .context("Failed to load config")
+                .and_then(|config| {
+                    let stage_final = stage
+                        .or_else(|| config.commit.and_then(|c| c.stage))
+                        .unwrap_or_default();
+                    handle_squash(target.as_deref(), force, !verify, false, stage_final).map(|_| ())
+                }),
             StandaloneCommand::Push {
                 target,
                 allow_merge_commits,
@@ -448,8 +467,7 @@ fn main() {
             verify,
             no_verify,
             force,
-            tracked_only,
-            no_tracked_only,
+            stage,
         } => WorktrunkConfig::load()
             .context("Failed to load config")
             .and_then(|config| {
@@ -468,16 +486,17 @@ fn main() {
                 let commit_default = merge_config.and_then(|m| m.commit).unwrap_or(true);
                 let remove_default = merge_config.and_then(|m| m.remove).unwrap_or(true);
                 let verify_default = merge_config.and_then(|m| m.verify).unwrap_or(true);
-                let tracked_only_default =
-                    merge_config.and_then(|m| m.tracked_only).unwrap_or(false);
 
                 // CLI flags override config, config overrides defaults
                 let squash_final = flag_pair(squash, no_squash).unwrap_or(squash_default);
                 let commit_final = flag_pair(commit, no_commit).unwrap_or(commit_default);
                 let remove_final = flag_pair(remove, no_remove).unwrap_or(remove_default);
                 let verify_final = flag_pair(verify, no_verify).unwrap_or(verify_default);
-                let tracked_only_final =
-                    flag_pair(tracked_only, no_tracked_only).unwrap_or(tracked_only_default);
+
+                // Stage defaults from [commit] config section
+                let stage_final = stage
+                    .or_else(|| config.commit.and_then(|c| c.stage))
+                    .unwrap_or_default();
 
                 handle_merge(
                     target.as_deref(),
@@ -486,7 +505,7 @@ fn main() {
                     remove_final,
                     verify_final,
                     force,
-                    tracked_only_final,
+                    stage_final,
                 )
             }),
     };

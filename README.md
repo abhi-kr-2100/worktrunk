@@ -409,7 +409,7 @@ Options:
       --no-remove      Keep worktree after merge
       --no-verify      Skip all project hooks
   -f, --force          Skip approval prompts
-      --tracked-only   Stage tracked files only
+      --stage <STAGE>  What to stage before committing [default: all] [possible values: all, tracked, none]
   -h, --help           Print help
 
 Global Options:

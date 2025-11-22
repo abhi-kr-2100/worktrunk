@@ -48,7 +48,8 @@ pub use commands::{Command, CommandConfig, CommandPhase};
 pub use expansion::{expand_command_template, expand_template};
 pub use project::ProjectConfig;
 pub use user::{
-    CommitGenerationConfig, UserProjectConfig, WorktrunkConfig, get_config_path, set_config_path,
+    CommitGenerationConfig, StageMode, UserProjectConfig, WorktrunkConfig, get_config_path,
+    set_config_path,
 };
 
 #[cfg(test)]
@@ -79,6 +80,7 @@ mod tests {
             commit_generation: CommitGenerationConfig::default(),
             projects: std::collections::BTreeMap::new(),
             list: None,
+            commit: None,
             merge: None,
         };
         assert_eq!(
@@ -94,6 +96,7 @@ mod tests {
             commit_generation: CommitGenerationConfig::default(),
             projects: std::collections::BTreeMap::new(),
             list: None,
+            commit: None,
             merge: None,
         };
         assert_eq!(
@@ -109,6 +112,7 @@ mod tests {
             commit_generation: CommitGenerationConfig::default(),
             projects: std::collections::BTreeMap::new(),
             list: None,
+            commit: None,
             merge: None,
         };
         assert_eq!(
@@ -125,6 +129,7 @@ mod tests {
             commit_generation: CommitGenerationConfig::default(),
             projects: std::collections::BTreeMap::new(),
             list: None,
+            commit: None,
             merge: None,
         };
         assert_eq!(
@@ -140,6 +145,7 @@ mod tests {
             commit_generation: CommitGenerationConfig::default(),
             projects: std::collections::BTreeMap::new(),
             list: None,
+            commit: None,
             merge: None,
         };
         assert_eq!(
@@ -156,6 +162,7 @@ mod tests {
             commit_generation: CommitGenerationConfig::default(),
             projects: std::collections::BTreeMap::new(),
             list: None,
+            commit: None,
             merge: None,
         };
         assert_eq!(

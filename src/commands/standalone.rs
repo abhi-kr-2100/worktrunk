@@ -60,13 +60,20 @@ fn check_hook_configured<T>(hook: &Option<T>, hook_type: HookType) -> anyhow::Re
 }
 
 /// Handle `wt beta commit` command
-pub fn handle_standalone_commit(force: bool, no_verify: bool) -> anyhow::Result<()> {
+pub fn handle_standalone_commit(
+    force: bool,
+    no_verify: bool,
+    stage_mode: super::commit::StageMode,
+) -> anyhow::Result<()> {
     let env = CommandEnv::current()?;
     let ctx = env.context(force);
     let mut options = CommitOptions::new(&ctx);
     options.no_verify = no_verify;
+    options.stage_mode = stage_mode;
     options.auto_trust = false;
     options.show_no_squash_note = false;
+    // Only warn about untracked if we're staging all
+    options.warn_about_untracked = stage_mode == super::commit::StageMode::All;
 
     options.commit()
 }
@@ -75,8 +82,7 @@ pub fn handle_standalone_commit(force: bool, no_verify: bool) -> anyhow::Result<
 ///
 /// # Arguments
 /// * `auto_trust` - If true, skip approval prompts for pre-commit commands (already approved in batch)
-/// * `tracked_only` - Stage only tracked files (mirrors `--tracked-only` in merge)
-/// * `warn_about_untracked` - Emit a warning before auto-staging untracked files
+/// * `stage_mode` - What to stage before committing (All or Tracked; None not supported for squash)
 ///
 /// Returns true if a commit or squash operation occurred, false if nothing needed to be done
 pub fn handle_squash(
@@ -84,9 +90,10 @@ pub fn handle_squash(
     force: bool,
     skip_pre_commit: bool,
     auto_trust: bool,
-    tracked_only: bool,
-    warn_about_untracked: bool,
+    stage_mode: super::commit::StageMode,
 ) -> anyhow::Result<bool> {
+    use super::commit::StageMode;
+
     let env = CommandEnv::current()?;
     let repo = &env.repo;
     let current_branch = env.branch.clone();
@@ -97,16 +104,19 @@ pub fn handle_squash(
     let target_branch = repo.resolve_target_branch(target)?;
 
     // Auto-stage changes before running pre-commit hooks so both beta and merge paths behave identically
-    if warn_about_untracked && !tracked_only {
-        repo.warn_if_auto_staging_untracked()?;
-    }
-
-    if tracked_only {
-        repo.run_command(&["add", "-u"])
-            .context("Failed to stage tracked changes")?;
-    } else {
-        repo.run_command(&["add", "-A"])
-            .context("Failed to stage changes")?;
+    match stage_mode {
+        StageMode::All => {
+            repo.warn_if_auto_staging_untracked()?;
+            repo.run_command(&["add", "-A"])
+                .context("Failed to stage changes")?;
+        }
+        StageMode::Tracked => {
+            repo.run_command(&["add", "-u"])
+                .context("Failed to stage tracked changes")?;
+        }
+        StageMode::None => {
+            // Stage nothing - use what's already staged
+        }
     }
 
     // Run pre-commit hook unless explicitly skipped

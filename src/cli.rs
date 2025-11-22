@@ -303,6 +303,10 @@ pub enum StandaloneCommand {
         /// Skip pre-commit hooks
         #[arg(long = "no-verify", action = clap::ArgAction::SetFalse, default_value_t = true)]
         verify: bool,
+
+        /// What to stage before committing [default: all]
+        #[arg(long)]
+        stage: Option<crate::commands::commit::StageMode>,
     },
 
     /// Squash commits with LLM message
@@ -320,6 +324,10 @@ pub enum StandaloneCommand {
         /// Skip pre-commit hooks
         #[arg(long = "no-verify", action = clap::ArgAction::SetFalse, default_value_t = true)]
         verify: bool,
+
+        /// What to stage before committing [default: all]
+        #[arg(long)]
+        stage: Option<crate::commands::commit::StageMode>,
     },
 
     /// Push changes to local target branch
@@ -697,7 +705,7 @@ wt remove  # (when already in main worktree)
 Commit → Squash → Rebase → Pre-merge hooks → Push → Cleanup → Post-merge hooks
 
 **Commit**: Uncommitted changes are staged and committed with LLM message.
-Use `--tracked-only` to stage only tracked files.
+Use `--stage=tracked` to stage only tracked files, or `--stage=none` to commit only what's already staged.
 
 **Squash**: Multiple commits are squashed into one with LLM message.
 Skip with `--no-squash`. Safety backup: `git reflog show refs/wt-backup/<branch>`
@@ -775,12 +783,8 @@ wt merge --no-verify
         #[arg(short, long)]
         force: bool,
 
-        /// Stage tracked files only
-        #[arg(long, overrides_with = "no_tracked_only")]
-        tracked_only: bool,
-
-        /// Stage all files (tracked and untracked)
-        #[arg(long = "no-tracked-only", overrides_with = "tracked_only", hide = true)]
-        no_tracked_only: bool,
+        /// What to stage before committing [default: all]
+        #[arg(long)]
+        stage: Option<crate::commands::commit::StageMode>,
     },
 }
