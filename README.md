@@ -140,16 +140,7 @@ $ wt merge
 
 For more details: `wt config --help`
 
-<details>
-<summary>Advanced: Custom Prompt Templates</summary>
-
-Customize commit message prompts using [minijinja
-templates](https://docs.rs/minijinja/latest/minijinja/syntax/index.html).
-
-See [`config.example.toml`](dev/config.example.toml) for template examples with all
-available variables.
-
-</details>
+**Custom prompt templates:** Run `wt config create` to generate an example config with minijinja template variables.
 
 ### Project Hooks
 
@@ -784,53 +775,8 @@ See `wt step --help` for details.
 ```bash
 wt config list    # Show all config files and locations
 wt config create  # Create global config with examples
-wt config --help  # Show LLM setup guide
+wt config --help  # Show setup guide, file locations, and options
 ```
-
-<details>
-<summary>Configuration details</summary>
-
-**Global config** (loaded in order of precedence):
-
-1. `WORKTRUNK_CONFIG_PATH` environment variable
-2. `~/.config/worktrunk/config.toml` (Linux/macOS) or `%APPDATA%\worktrunk\config.toml` (Windows)
-
-Contents:
-
-- `worktree-path` - Path template for new worktrees
-- `[list]` - Default display options for `wt list` (full, branches, remotes)
-- `[commit-generation]` - LLM command and prompt templates
-- `[projects."project-id"]` - Per-project approved commands (auto-populated)
-
-**Project config** (`.config/wt.toml` in repository root):
-
-- `[post-create-command]` - Commands after worktree creation
-- `[post-start-command]` - Background commands after creation
-- `[pre-commit-command]` - Validation before committing
-- `[pre-merge-command]` - Validation before merge
-- `[post-merge-command]` - Cleanup after merge
-
----
-
-**Example global config** (`~/.config/worktrunk/config.toml`):
-
-```toml
-worktree-path = "../{{ main_worktree }}.{{ branch }}"
-
-[commit-generation]
-command = "llm"
-args = ["-m", "claude-haiku-4-5-20251001"]
-
-# Approved commands (auto-populated when approving project hooks)
-[projects."github.com/user/repo"]
-approved-commands = ["npm install", "npm test"]
-```
-
-**Example project config** (`.config/wt.toml`): See Project Hooks section above.
-
-**Path template defaults:** `../{{ main_worktree }}.{{ branch }}` (siblings to main repo). Available variables: `{{ main_worktree }}`, `{{ branch }}`, `{{ repo }}`.
-
-</details>
 
 ## Advanced Features
 

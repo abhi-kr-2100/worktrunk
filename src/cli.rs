@@ -471,6 +471,36 @@ For OpenAI:
 
 Use 'wt config list' to view your current configuration
 Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
+
+CONFIGURATION FILES:
+
+Global config (loaded in order of precedence):
+1. WORKTRUNK_CONFIG_PATH environment variable
+2. ~/.config/worktrunk/config.toml (Linux/macOS)
+   %APPDATA%\worktrunk\config.toml (Windows)
+
+Global config contents:
+- worktree-path: Path template for new worktrees
+- [list]: Default display options for 'wt list'
+- [commit-generation]: LLM command and prompt templates
+- [projects."project-id"]: Per-project approved commands (auto-populated)
+
+Project config (.config/wt.toml in repository root):
+- [post-create-command]: Commands after worktree creation
+- [post-start-command]: Background commands after creation
+- [pre-commit-command]: Validation before committing
+- [pre-merge-command]: Validation before merge
+- [post-merge-command]: Cleanup after merge
+
+Path template variables: {{ main_worktree }}, {{ branch }}, {{ repo }}
+Default: "../{{ main_worktree }}.{{ branch }}" (worktrees as siblings)
+
+CUSTOM PROMPT TEMPLATES:
+
+Customize commit message prompts using minijinja templates.
+Available variables: diff, files, commits, commit_count, branch, target.
+Run 'wt config create' to generate example config with template examples.
+Docs: https://docs.rs/minijinja/latest/minijinja/syntax/
 "#
     )]
     Config {
