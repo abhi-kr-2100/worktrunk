@@ -328,15 +328,15 @@ Global Options:
   -v, --verbose            Show commands and debug info
 ```
 
-**BEHAVIOR:**
+## Operation
 
-Switching to Existing Worktree:
+### Switching to Existing Worktree
 
 - If worktree exists for branch, changes directory via shell integration
 - No hooks run
 - No branch creation
 
-Creating New Worktree (--create):
+### Creating New Worktree (`--create`)
 
 1. Creates new branch (defaults to current default branch as base)
 2. Creates worktree in configured location (default: `../{{ main_worktree }}.{{ branch }}`)
@@ -345,50 +345,59 @@ Creating New Worktree (--create):
 5. Spawns post-start hooks in background (non-blocking)
 6. Changes directory to new worktree via shell integration
 
-**HOOKS:**
+## Hooks
 
-post-create (sequential, blocking):
+### post-create (sequential, blocking)
 
 - Run after worktree creation, before success message
-- Typically: npm install, cargo build, setup tasks
+- Typically: `npm install`, `cargo build`, setup tasks
 - Failures block the operation
-- Skip with --no-verify
+- Skip with `--no-verify`
 
-post-start (parallel, background):
+### post-start (parallel, background)
 
 - Spawned after success message shown
 - Typically: dev servers, file watchers, editors
 - Run in background, failures logged but don't block
 - Logs: `.git/wt-logs/{branch}-post-start-{name}.log`
-- Skip with --no-verify
+- Skip with `--no-verify`
 
-**EXAMPLES:**
+## Examples
 
-```bash
-# Switch to existing worktree
+Switch to existing worktree:
+```
 wt switch feature-branch
+```
 
-# Create new worktree from main
+Create new worktree from main:
+```
 wt switch --create new-feature
+```
 
-# Switch to previous worktree
+Switch to previous worktree:
+```
 wt switch -
+```
 
-# Create from specific base
+Create from specific base:
+```
 wt switch --create hotfix --base production
+```
 
-# Create and run command
+Create and run command:
+```
 wt switch --create docs --execute "code ."
+```
 
-# Skip hooks during creation
+Skip hooks during creation:
+```
 wt switch --create temp --no-verify
 ```
 
-**SHORTCUTS:**
+## Shortcuts
 
-Use '@' for current HEAD, '-' for previous, '^' for main:
-
-```bash
+Use `@` for current HEAD, `-` for previous, `^` for main:
+```
 wt switch @                              # Switch to current branch's worktree
 wt switch -                              # Switch to previous worktree
 wt switch --create new-feature --base=^  # Branch from main (default)
@@ -424,57 +433,56 @@ Global Options:
   -v, --verbose        Show commands and debug info
 ```
 
-**LIFECYCLE:**
+## Operation
 
-The merge operation follows a strict order designed for fail-fast execution:
+Commit → Squash → Rebase → Pre-merge hooks → Push → Cleanup → Post-merge hooks
 
-1. **Validate branches**
-   Verifies current branch exists (not detached HEAD) and determines target branch
-   (defaults to repository's default branch).
+### Commit
 
-2. **Auto-commit uncommitted changes**
-   If working tree has uncommitted changes, stages all changes (git add -A) and commits
-   with LLM message.
+Uncommitted changes are staged and committed with LLM message.
+Use `--stage=tracked` to stage only tracked files, or `--stage=none` to commit only what's already staged.
 
-3. **Squash commits (default)**
-   By default, counts commits since merge base with target branch. When multiple
-   commits exist, squashes them into one with LLM message. Skip squashing
-   with --no-squash.
+### Squash
 
-   A safety backup is created before squashing if there are working tree changes.
-   Recover with: `git reflog show refs/wt-backup/<branch>`
+Multiple commits are squashed into one with LLM message.
+Skip with `--no-squash`. Safety backup: `git reflog show refs/wt-backup/<branch>`
 
-4. **Rebase onto target**
-   Rebases current branch onto target branch. Detects conflicts and aborts if found.
-   This fails fast before running expensive checks.
+### Rebase
 
-5. **Run pre-merge commands**
-   Runs commands from project config's `[pre-merge-command]` after rebase completes.
-   These receive `{{ target }}` placeholder for the target branch. Commands run sequentially
-   and any failure aborts the merge immediately. Skip with --no-verify.
+Branch is rebased onto target. Conflicts abort the merge immediately.
 
-6. **Push to target**
-   Fast-forward pushes to target branch. Rejects non-fast-forward pushes (ensures
-   linear history). Temporarily stashes non-conflicting local edits in the target
-   worktree so they don't block the push, then restores them after success.
+### Hooks
 
-7. **Clean up worktree and branch**
-   Removes current worktree, deletes the branch, and switches to the main worktree or target
-   branch if needed. Skip removal with --no-remove.
+Pre-merge commands run after rebase (failures abort). Post-merge commands
+run after cleanup (failures logged). Skip all with `--no-verify`.
 
-**EXAMPLES:**
+### Push
 
-```bash
-# Basic merge to main
+Fast-forward push to local target branch. Non-fast-forward pushes are rejected.
+
+### Cleanup
+
+Worktree and branch are removed. Skip with `--no-remove`.
+
+## Examples
+
+Basic merge to main:
+```
 wt merge
+```
 
-# Merge without squashing
+Merge without squashing:
+```
 wt merge --no-squash
+```
 
-# Keep worktree after merging
+Keep worktree after merging:
+```
 wt merge --no-remove
+```
 
-# Skip pre-merge commands
+Skip all hooks:
+```
 wt merge --no-verify
 ```
 
@@ -501,61 +509,59 @@ Global Options:
   -v, --verbose           Show commands and debug info
 ```
 
-**BEHAVIOR:**
+## Operation
 
-Remove Current Worktree (no arguments):
+Removes worktree directory, git metadata, and branch. Requires clean working tree.
 
-- Requires clean working tree (no uncommitted changes)
-- If in worktree: removes it and switches to main worktree
-- If in main worktree: switches to default branch (e.g., main)
-- If already on default branch in main: does nothing
+### No arguments (remove current)
 
-Remove Specific Worktree (by name):
+- Removes current worktree and switches to main worktree
+- In main worktree: switches to default branch
 
-- Requires target worktree has clean working tree
-- Removes specified worktree(s) and associated branches
-- If removing current worktree, switches to main first
-- Can remove multiple worktrees in one command
+### By name (remove specific)
 
-Remove Multiple Worktrees:
+- Removes specified worktree(s) and branches
+- Current worktree removed last (switches to main first)
 
-- When removing multiple, current worktree is removed last
-- Prevents deleting directory you're currently in
-- Each worktree must have clean working tree
+### Background removal (default)
 
-**CLEANUP:**
+- Returns immediately so you can continue working
+- Logs: `.git/wt-logs/{branch}-remove.log`
+- Use `--no-background` for foreground (blocking)
 
-When removing a worktree (by default):
+### Cleanup
 
-1. Validates worktree has no uncommitted changes
-2. Changes directory (if removing current worktree)
-3. Spawns background removal process (non-blocking)
-   - Directory deletion happens in background
-   - Git worktree metadata removed in background
-   - Branch deletion in background (uses git branch -d, safe delete)
-   - Logs: `.git/wt-logs/{branch}-remove.log`
-4. Returns immediately so you can continue working
-   - Use --no-background for foreground removal (blocking)
+Stops any git fsmonitor daemon for the worktree before removal. This prevents orphaned processes when using builtin fsmonitor (`core.fsmonitor=true`). No effect on Watchman users.
 
-**EXAMPLES:**
+## Examples
 
-```bash
-# Remove current worktree and branch
+Remove current worktree and branch:
+```
 wt remove
+```
 
-# Remove specific worktree and branch
+Remove specific worktree and branch:
+```
 wt remove feature-branch
+```
 
-# Remove worktree but keep branch
+Remove worktree but keep branch:
+```
 wt remove --no-delete-branch feature-branch
+```
 
-# Remove multiple worktrees
+Remove multiple worktrees:
+```
 wt remove old-feature another-branch
+```
 
-# Remove in foreground (blocking)
+Remove in foreground (blocking):
+```
 wt remove --no-background feature-branch
+```
 
-# Switch to default in main
+Switch to default in main:
+```
 wt remove  # (when already in main worktree)
 ```
 
@@ -583,7 +589,7 @@ Global Options:
   -v, --verbose          Show commands and debug info
 ```
 
-**COLUMNS:**
+## Columns
 
 - **Branch:** Branch name
 - **Status:** Quick status symbols (see STATUS SYMBOLS below)

@@ -9,6 +9,7 @@ info:
     CLICOLOR_FORCE: "1"
     COLUMNS: "150"
     GIT_EDITOR: ""
+    WORKTRUNK_CONFIG_PATH: /nonexistent/test/config.toml
 ---
 success: true
 exit_code: 0
@@ -43,29 +44,34 @@ Global Options:
   -v, --verbose
       Show commands and debug info
 
-[38;5;10mOPERATION[39m
+[38;5;10mOperation[39m
 
 Removes worktree directory, git metadata, and branch. Requires clean working 
 tree.
 
-No arguments (remove current):
+No arguments (remove current)
+
 - Removes current worktree and switches to main worktree
 - In main worktree: switches to default branch
 
-By name (remove specific):
+By name (remove specific)
+
 - Removes specified worktree(s) and branches
 - Current worktree removed last (switches to main first)
 
-Background removal (default):
+Background removal (default)
+
 - Returns immediately so you can continue working
 - Logs: .git/wt-logs/{branch}-remove.log
 - Use --no-background for foreground (blocking)
 
-Cleanup: Stops any git fsmonitor daemon for the worktree before removal. This 
-prevents orphaned processes when using builtin fsmonitor (core.fsmonitor=true). 
-No effect on Watchman users.
+Cleanup
 
-[38;5;10mEXAMPLES[39m
+Stops any git fsmonitor daemon for the worktree before removal. This prevents 
+orphaned processes when using builtin fsmonitor (core.fsmonitor=true). No effect
+on Watchman users.
+
+[38;5;10mExamples[39m
 
 Remove current worktree and branch:
 wt remove

@@ -458,7 +458,7 @@ Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
     },
 
     /// List worktrees and optionally branches
-    #[command(after_long_help = "## COLUMNS
+    #[command(after_long_help = "## Columns
 
 - **Branch:** Branch name
 - **Status:** Quick status symbols (see STATUS SYMBOLS below)
@@ -479,7 +479,7 @@ Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
 - **Age:** Time since last commit (relative)
 - **Message:** Last commit message (truncated)
 
-## STATUS SYMBOLS
+## Status Symbols
 
 Order: `?!+»✘ ✖⚠≡∅ ↻⋈ ↑↓↕ ⇡⇣⇅ ⎇⌫⊠`
 
@@ -506,7 +506,7 @@ Order: `?!+»✘ ✖⚠≡∅ ↻⋈ ↑↓↕ ⇡⇣⇅ ⎇⌫⊠`
 
 *Rows are dimmed when no unique work (≡ matches main OR ∅ no commits).*
 
-## JSON OUTPUT
+## JSON Output
 
 Use `--format=json` for structured data. Each object contains two status maps
 with the same fields in the same order as STATUS SYMBOLS above:
@@ -569,14 +569,15 @@ Note: `locked` and `prunable` are top-level fields on worktree objects, not in s
     },
 
     /// Switch to a worktree
-    #[command(after_long_help = r#"## OPERATION
+    #[command(after_long_help = r#"## Operation
 
-**Switching to Existing Worktree:**
+### Switching to Existing Worktree
+
 - If worktree exists for branch, changes directory via shell integration
 - No hooks run
 - No branch creation
 
-**Creating New Worktree** (`--create`):
+### Creating New Worktree (`--create`)
 1. Creates new branch (defaults to current default branch as base)
 2. Creates worktree in configured location (default: `../{{ main_worktree }}.{{ branch }}`)
 3. Runs post-create hooks sequentially (blocking)
@@ -584,22 +585,23 @@ Note: `locked` and `prunable` are top-level fields on worktree objects, not in s
 5. Spawns post-start hooks in background (non-blocking)
 6. Changes directory to new worktree via shell integration
 
-## HOOKS
+## Hooks
 
-**post-create** (sequential, blocking):
+### post-create (sequential, blocking)
+
 - Run after worktree creation, before success message
 - Typically: `npm install`, `cargo build`, setup tasks
 - Failures block the operation
 - Skip with `--no-verify`
 
-**post-start** (parallel, background):
+### post-start (parallel, background)
 - Spawned after success message shown
 - Typically: dev servers, file watchers, editors
 - Run in background, failures logged but don't block
 - Logs: `.git/wt-logs/{branch}-post-start-{name}.log`
 - Skip with `--no-verify`
 
-## EXAMPLES
+## Examples
 
 Switch to existing worktree:
 ```
@@ -631,7 +633,7 @@ Skip hooks during creation:
 wt switch --create temp --no-verify
 ```
 
-## SHORTCUTS
+## Shortcuts
 
 Use `@` for current HEAD, `-` for previous, `^` for main:
 ```
@@ -670,26 +672,31 @@ wt remove @                              # Remove current worktree
     },
 
     /// Remove worktree and branch
-    #[command(after_long_help = r#"## OPERATION
+    #[command(after_long_help = r#"## Operation
 
 Removes worktree directory, git metadata, and branch. Requires clean working tree.
 
-**No arguments** (remove current):
+### No arguments (remove current)
+
 - Removes current worktree and switches to main worktree
 - In main worktree: switches to default branch
 
-**By name** (remove specific):
+### By name (remove specific)
+
 - Removes specified worktree(s) and branches
 - Current worktree removed last (switches to main first)
 
-**Background removal** (default):
+### Background removal (default)
+
 - Returns immediately so you can continue working
 - Logs: `.git/wt-logs/{branch}-remove.log`
 - Use `--no-background` for foreground (blocking)
 
-**Cleanup**: Stops any git fsmonitor daemon for the worktree before removal. This prevents orphaned processes when using builtin fsmonitor (`core.fsmonitor=true`). No effect on Watchman users.
+### Cleanup
 
-## EXAMPLES
+Stops any git fsmonitor daemon for the worktree before removal. This prevents orphaned processes when using builtin fsmonitor (`core.fsmonitor=true`). No effect on Watchman users.
+
+## Examples
 
 Remove current worktree and branch:
 ```
@@ -739,26 +746,38 @@ wt remove  # (when already in main worktree)
     },
 
     /// Merge worktree into target branch
-    #[command(after_long_help = r#"## OPERATION
+    #[command(after_long_help = r#"## Operation
 
 Commit → Squash → Rebase → Pre-merge hooks → Push → Cleanup → Post-merge hooks
 
-**Commit**: Uncommitted changes are staged and committed with LLM message.
+### Commit
+
+Uncommitted changes are staged and committed with LLM message.
 Use `--stage=tracked` to stage only tracked files, or `--stage=none` to commit only what's already staged.
 
-**Squash**: Multiple commits are squashed into one with LLM message.
+### Squash
+
+Multiple commits are squashed into one with LLM message.
 Skip with `--no-squash`. Safety backup: `git reflog show refs/wt-backup/<branch>`
 
-**Rebase**: Branch is rebased onto target. Conflicts abort the merge immediately.
+### Rebase
 
-**Hooks**: Pre-merge commands run after rebase (failures abort). Post-merge commands
+Branch is rebased onto target. Conflicts abort the merge immediately.
+
+### Hooks
+
+Pre-merge commands run after rebase (failures abort). Post-merge commands
 run after cleanup (failures logged). Skip all with `--no-verify`.
 
-**Push**: Fast-forward push to local target branch. Non-fast-forward pushes are rejected.
+### Push
 
-**Cleanup**: Worktree and branch are removed. Skip with `--no-remove`.
+Fast-forward push to local target branch. Non-fast-forward pushes are rejected.
 
-## EXAMPLES
+### Cleanup
+
+Worktree and branch are removed. Skip with `--no-remove`.
+
+## Examples
 
 Basic merge to main:
 ```

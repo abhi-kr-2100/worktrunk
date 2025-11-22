@@ -9,6 +9,7 @@ info:
     CLICOLOR_FORCE: "1"
     COLUMNS: "150"
     GIT_EDITOR: ""
+    WORKTRUNK_CONFIG_PATH: /nonexistent/test/config.toml
 ---
 success: true
 exit_code: 0
@@ -50,7 +51,7 @@ Global Options:
   -v, --verbose
       Show commands and debug info
 
-[38;5;10mCOLUMNS[39m
+[38;5;10mColumns[39m
 
 - Branch: Branch name
 - Status: Quick status symbols (see STATUS SYMBOLS below)
@@ -73,7 +74,7 @@ branch workflows)
 - Age: Time since last commit (relative)
 - Message: Last commit message (truncated)
 
-[38;5;10mSTATUS SYMBOLS[39m
+[38;5;10mStatus Symbols[39m
 
 Order: ?!+»✘ ✖⚠≡∅ ↻⋈ ↑↓↕ ⇡⇣⇅ ⎇⌫⊠
 
@@ -101,7 +102,7 @@ continuing)
 
 Rows are dimmed when no unique work (≡ matches main OR ∅ no commits).
 
-[38;5;10mJSON OUTPUT[39m
+[38;5;10mJSON Output[39m
 
 Use --format=json for structured data. Each object contains two status maps
 with the same fields in the same order as STATUS SYMBOLS above:
