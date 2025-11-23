@@ -44,8 +44,8 @@ impl Shell {
 
         match self {
             Self::Bash => {
-                // Use .bash_profile - canonical location for login shell initialization
-                vec![home.join(".bash_profile")]
+                // Use .bashrc - sourced by interactive shells (login shells should source .bashrc)
+                vec![home.join(".bashrc")]
             }
             Self::Zsh => {
                 let zdotdir = std::env::var("ZDOTDIR")

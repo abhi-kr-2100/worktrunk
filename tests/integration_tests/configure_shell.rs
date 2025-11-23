@@ -30,7 +30,7 @@ fn test_configure_shell_with_yes() {
         ----- stdout -----
         ✅ Added [1mzsh[0m ~/.zshrc
         [107m [0m  [1m[35mif[0m [1m[34mcommand[0m [36m-v[0m wt [36m>[0m/dev/null [33m2[0m>&1; [1m[35mthen[0m [1m[34meval[0m [32m"$([1m[34mcommand[0m wt config shell init zsh)"[0m; [1m[35mfi[0m[0m
-        💡 [2mbash ~/.bash_profile (not found)[0m
+        💡 [2mbash ~/.bashrc (not found)[0m
         💡 [2mfish ~/.config/fish/conf.d (not found)[0m
 
         ✅ [32mConfigured 1 shell[0m
@@ -197,7 +197,7 @@ fn test_configure_shell_no_files() {
         success: false
         exit_code: 1
         ----- stdout -----
-        💡 [2mbash ~/.bash_profile (not found)[0m
+        💡 [2mbash ~/.bashrc (not found)[0m
         💡 [2mzsh ~/.zshrc (not found)[0m
         💡 [2mfish ~/.config/fish/conf.d (not found)[0m
         ❌ [31mNo shell config files found[0m
@@ -214,7 +214,7 @@ fn test_configure_shell_multiple_configs() {
     let temp_home = TempDir::new().unwrap();
 
     // Create multiple shell config files
-    let bash_config_path = temp_home.path().join(".bash_profile");
+    let bash_config_path = temp_home.path().join(".bashrc");
     let zshrc_path = temp_home.path().join(".zshrc");
     fs::write(&bash_config_path, "# Existing bash config\n").unwrap();
     fs::write(&zshrc_path, "# Existing zsh config\n").unwrap();
@@ -234,7 +234,7 @@ fn test_configure_shell_multiple_configs() {
         success: true
         exit_code: 0
         ----- stdout -----
-        ✅ Added [1mbash[0m ~/.bash_profile
+        ✅ Added [1mbash[0m ~/.bashrc
         [107m [0m  [1m[35mif[0m [1m[34mcommand[0m [36m-v[0m wt [36m>[0m/dev/null [33m2[0m>&1; [1m[35mthen[0m [1m[34meval[0m [32m"$([1m[34mcommand[0m wt config shell init bash)"[0m; [1m[35mfi[0m[0m
         ✅ Added [1mzsh[0m ~/.zshrc
         [107m [0m  [1m[35mif[0m [1m[34mcommand[0m [36m-v[0m wt [36m>[0m/dev/null [33m2[0m>&1; [1m[35mthen[0m [1m[34meval[0m [32m"$([1m[34mcommand[0m wt config shell init zsh)"[0m; [1m[35mfi[0m[0m
@@ -269,7 +269,7 @@ fn test_configure_shell_mixed_states() {
     let temp_home = TempDir::new().unwrap();
 
     // Create bash config with wt already configured
-    let bash_config_path = temp_home.path().join(".bash_profile");
+    let bash_config_path = temp_home.path().join(".bashrc");
     fs::write(
         &bash_config_path,
         "# Existing config\nif command -v wt >/dev/null 2>&1; then eval \"$(command wt config shell init bash)\"; fi\n",
@@ -295,7 +295,7 @@ fn test_configure_shell_mixed_states() {
         success: true
         exit_code: 0
         ----- stdout -----
-        ⚪ Already configured [1mbash[0m ~/.bash_profile
+        ⚪ Already configured [1mbash[0m ~/.bashrc
         [107m [0m  [1m[35mif[0m [1m[34mcommand[0m [36m-v[0m wt [36m>[0m/dev/null [33m2[0m>&1; [1m[35mthen[0m [1m[34meval[0m [32m"$([1m[34mcommand[0m wt config shell init bash)"[0m; [1m[35mfi[0m[0m
         ✅ Added [1mzsh[0m ~/.zshrc
         [107m [0m  [1m[35mif[0m [1m[34mcommand[0m [36m-v[0m wt [36m>[0m/dev/null [33m2[0m>&1; [1m[35mthen[0m [1m[34meval[0m [32m"$([1m[34mcommand[0m wt config shell init zsh)"[0m; [1m[35mfi[0m[0m

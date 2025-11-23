@@ -145,7 +145,7 @@ pub enum ConfigShellCommand {
 
 Add one line to your shell config:
 
-Bash (~/.bash_profile):
+Bash (~/.bashrc):
 ```bash
 eval "$(wt config shell init bash)"
 ```
