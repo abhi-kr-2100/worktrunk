@@ -303,7 +303,7 @@ instead of duplicating logic:
 
 <!-- README:help:wt switch --help-md -->
 ```
-wt switch - Switch to a worktree
+wt switch — Switch to a worktree
 Usage: switch [OPTIONS] <BRANCH>
 
 Arguments:
@@ -331,6 +331,7 @@ Options:
   -h, --help
           Print help (see a summary with '-h')
 
+```
 ## Operation
 
 ### Switching to Existing Worktree
@@ -420,7 +421,7 @@ wt remove @                              # Remove current worktree
 
 <!-- README:help:wt merge --help-md -->
 ```
-wt merge - Merge worktree into target branch
+wt merge — Merge worktree into target branch
 Usage: merge [OPTIONS] [TARGET]
 
 Arguments:
@@ -456,6 +457,7 @@ Options:
   -h, --help
           Print help (see a summary with '-h')
 
+```
 ## Operation
 
 Commit → Squash → Rebase → Pre-merge hooks → Push → Cleanup → Post-merge hooks
@@ -514,7 +516,6 @@ Skip all hooks:
 ```bash
 wt merge --no-verify
 ```
-```
 <!-- README:end -->
 
 </details>
@@ -524,7 +525,7 @@ wt merge --no-verify
 
 <!-- README:help:wt remove --help-md -->
 ```
-wt remove - Remove worktree and branch
+wt remove — Remove worktree and branch
 Usage: remove [OPTIONS] [WORKTREES]...
 
 Arguments:
@@ -544,6 +545,7 @@ Options:
   -h, --help
           Print help (see a summary with '-h')
 
+```
 ## Operation
 
 Removes worktree directory, git metadata, and branch. Requires clean working tree.
@@ -599,7 +601,6 @@ Switch to default in main:
 ```bash
 wt remove  # (when already in main worktree)
 ```
-```
 <!-- README:end -->
 
 </details>
@@ -609,7 +610,7 @@ wt remove  # (when already in main worktree)
 
 <!-- README:help:wt list --help-md -->
 ```
-wt list - List worktrees and optionally branches
+wt list — List worktrees and optionally branches
 Usage: list [OPTIONS]
 
 Options:
@@ -635,6 +636,7 @@ Options:
   -h, --help
           Print help (see a summary with '-h')
 
+```
 ## Columns
 
 - **Branch:** Branch name
@@ -718,7 +720,6 @@ jq '.[] | select(.status.main_divergence == "Ahead")'
 # Find locked worktrees
 jq '.[] | select(.locked != null)'
 ```
-```
 <!-- README:end -->
 
 </details>
@@ -728,7 +729,7 @@ jq '.[] | select(.locked != null)'
 
 <!-- README:help:wt config --help-md -->
 ```
-wt config - Manage configuration and shell integration
+wt config — Manage configuration and shell integration
 Usage: config <COMMAND>
 
 Commands:
@@ -744,6 +745,7 @@ Options:
   -h, --help
           Print help (see a summary with '-h')
 
+```
 ## Setup Guide
 
 1. Set up shell integration
@@ -799,7 +801,6 @@ Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
 **Project config** (repository hooks):
 - Location: `.config/wt.toml` in repository root
 - Contains: post-create, post-start, pre-commit, pre-merge, post-merge hooks
-```
 <!-- README:end -->
 
 </details>
@@ -809,7 +810,7 @@ Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
 
 <!-- README:help:wt step --help-md -->
 ```
-wt step - Primitive operations (building blocks for workflows)
+wt step — Primitive operations (building blocks for workflows)
 Usage: step <COMMAND>
 
 Commands:

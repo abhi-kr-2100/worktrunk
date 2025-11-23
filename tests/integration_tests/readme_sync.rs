@@ -1,13 +1,9 @@
 //! README synchronization test
 //!
-//! Verifies that README.md examples stay in sync with their source snapshots.
-//! This replaces the Python `dev/update-readme.py` script with a native Rust test.
+//! Verifies that README.md examples stay in sync with their source snapshots and help output.
+//! Automatically updates help sections when out of sync.
 //!
 //! Run with: `cargo test --test integration readme_sync`
-//!
-//! To update README when snapshots change:
-//! 1. Run this test to see which sections are out of sync
-//! 2. Copy the expected content from the test output into README.md
 
 use regex::Regex;
 use std::fs;
@@ -23,9 +19,9 @@ static SNAPSHOT_MARKER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     .expect("Invalid marker regex")
 });
 
-/// Regex to find README help markers
+/// Regex to find README help markers (no wrapper - content is rendered markdown)
 static HELP_MARKER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?s)<!-- README:help:(.+?) -->\n```\n(.*?)```\n<!-- README:end -->")
+    Regex::new(r"(?s)<!-- README:help:(.+?) -->\n(.*?)\n<!-- README:end -->")
         .expect("Invalid help marker regex")
 });
 
@@ -181,7 +177,7 @@ fn get_help_output(command: &str, project_root: &Path) -> Result<String, String>
     let help_output = strip_ansi(&help_output);
 
     // Trim trailing whitespace from each line and join
-    let result = help_output
+    let help_output = help_output
         .lines()
         .map(|line| line.trim_end())
         .collect::<Vec<_>>()
@@ -189,7 +185,94 @@ fn get_help_output(command: &str, project_root: &Path) -> Result<String, String>
         .trim()
         .to_string();
 
+    // Format for README display:
+    // 1. Replace " - " with em dash in first line (command description)
+    // 2. Split at first ## header - synopsis in code block, rest as markdown
+    let result = if let Some(first_newline) = help_output.find('\n') {
+        let (first_line, rest) = help_output.split_at(first_newline);
+        // Replace hyphen-minus with em dash in command description
+        let first_line = first_line.replacen(" - ", " — ", 1);
+
+        if let Some(header_pos) = rest.find("\n## ") {
+            // Split at first H2 header
+            let (synopsis, docs) = rest.split_at(header_pos);
+            format!(
+                "```\n{}{}\n```\n{}",
+                first_line,
+                synopsis,
+                docs.trim_start_matches('\n')
+            )
+        } else {
+            // No documentation section, wrap everything in code block
+            format!("```\n{}{}\n```", first_line, rest)
+        }
+    } else {
+        // Single line output
+        help_output.replacen(" - ", " — ", 1)
+    };
+
     Ok(result)
+}
+
+/// Update a section in the README content, returning (new content, updated count, total count)
+fn update_readme_section(
+    content: &str,
+    pattern: &Regex,
+    get_replacement: impl Fn(&str) -> Result<String, String>,
+    wrapper: (&str, &str),
+) -> Result<(String, usize, usize), Vec<String>> {
+    let mut result = content.to_string();
+    let mut errors = Vec::new();
+    let mut updated = 0;
+
+    // Collect all matches first (to avoid borrowing issues)
+    let matches: Vec<_> = pattern
+        .captures_iter(content)
+        .map(|cap| {
+            let full_match = cap.get(0).unwrap();
+            let id = cap.get(1).unwrap().as_str().to_string();
+            let current = normalize_readme_content(cap.get(2).unwrap().as_str());
+            (full_match.start(), full_match.end(), id, current)
+        })
+        .collect();
+
+    let total = matches.len();
+
+    // Process in reverse order to preserve positions
+    for (start, end, id, current) in matches.into_iter().rev() {
+        let expected = match get_replacement(&id) {
+            Ok(content) => content,
+            Err(e) => {
+                errors.push(format!("❌ {}: {}", id, e));
+                continue;
+            }
+        };
+
+        if current != expected {
+            // Build replacement
+            let replacement = if wrapper.0.is_empty() {
+                // No wrapper (help sections - rendered markdown)
+                format!(
+                    "<!-- README:help:{} -->\n{}\n<!-- README:end -->",
+                    id, expected
+                )
+            } else {
+                // With wrapper (snapshot sections)
+                format!(
+                    "<!-- README:snapshot:{} -->\n{}\n{}\n{}\n<!-- README:end -->",
+                    id, wrapper.0, expected, wrapper.1
+                )
+            };
+            result.replace_range(start..end, &replacement);
+            updated += 1;
+        }
+    }
+
+    if errors.is_empty() {
+        Ok((result, updated, total))
+    } else {
+        Err(errors)
+    }
 }
 
 #[test]
@@ -201,6 +284,8 @@ fn test_readme_examples_are_in_sync() {
 
     let mut errors = Vec::new();
     let mut checked = 0;
+    let mut updated_content = readme_content.clone();
+    let mut total_updated = 0;
 
     // Check snapshot markers
     for cap in SNAPSHOT_MARKER_PATTERN.captures_iter(&readme_content) {
@@ -228,44 +313,39 @@ fn test_readme_examples_are_in_sync() {
         }
     }
 
-    // Check help markers
-    for cap in HELP_MARKER_PATTERN.captures_iter(&readme_content) {
-        let command = cap.get(1).unwrap().as_str();
-        let current_content = normalize_readme_content(cap.get(2).unwrap().as_str());
-        checked += 1;
-
-        // Get help output for the command
-        let expected = match get_help_output(command, project_root) {
-            Ok(content) => content,
-            Err(e) => {
-                errors.push(format!("❌ {}: {}", command, e));
-                continue;
-            }
-        };
-
-        // Compare
-        if current_content != expected {
-            errors.push(format!(
-                "❌ {} is out of sync\n\n--- Current (in README) ---\n{}\n\n--- Expected (from --help) ---\n{}\n",
-                command, current_content, expected
-            ));
+    // Update help markers (no wrapper - content is rendered markdown)
+    let project_root_clone = project_root.to_path_buf();
+    match update_readme_section(
+        &updated_content,
+        &HELP_MARKER_PATTERN,
+        |cmd| get_help_output(cmd, &project_root_clone),
+        ("", ""),
+    ) {
+        Ok((new_content, updated_count, total_count)) => {
+            updated_content = new_content;
+            total_updated += updated_count;
+            checked += total_count;
         }
+        Err(errs) => errors.extend(errs),
     }
 
     if checked == 0 {
         panic!("No README markers found in README.md");
     }
 
+    // Write updates
+    if total_updated > 0 {
+        fs::write(&readme_path, &updated_content).expect("Failed to write README.md");
+        println!("✅ Updated {} sections in README.md", total_updated);
+    }
+
     if !errors.is_empty() {
         panic!(
             "README examples are out of sync:\n\n{}\n\n\
-            To fix: Update the README sections with the expected content above.\n\
-            Checked {} markers, {} out of sync.",
+            Checked {} markers, {} errors.",
             errors.join("\n"),
             checked,
             errors.len()
         );
     }
-
-    // Test passes implicitly - no errors found
 }
