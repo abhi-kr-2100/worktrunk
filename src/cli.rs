@@ -43,15 +43,8 @@ fn help_styles() -> Styles {
 /// Default command name for worktrunk
 const DEFAULT_COMMAND_NAME: &str = "wt";
 
-/// Help template for commands without subcommands
+/// Help template for commands
 const HELP_TEMPLATE: &str = "\
-{before-help}{name} - {about-with-newline}\
-Usage: {usage}
-
-{all-args}{after-help}";
-
-/// Help template for commands with subcommands
-const HELP_TEMPLATE_WITH_SUBCOMMANDS: &str = "\
 {before-help}{name} - {about-with-newline}\
 Usage: {usage}
 
@@ -64,12 +57,7 @@ pub fn build_command() -> Command {
 }
 
 fn apply_help_template_recursive(mut cmd: Command, path: &str) -> Command {
-    let template = if cmd.get_subcommands().next().is_some() {
-        HELP_TEMPLATE_WITH_SUBCOMMANDS
-    } else {
-        HELP_TEMPLATE
-    };
-    cmd = cmd.help_template(template).display_name(path);
+    cmd = cmd.help_template(HELP_TEMPLATE).display_name(path);
 
     for sub in cmd.get_subcommands_mut() {
         let sub_cmd = std::mem::take(sub);
@@ -109,12 +97,7 @@ pub enum OutputFormat {
 #[command(disable_help_subcommand = true)]
 #[command(styles = help_styles())]
 #[command(
-    after_long_help = r#"-C <path>: Run as if started in <path> instead of current directory.
-
---config <path>: Override user config file location. Without this flag,
-config is loaded from (in order of precedence):
-1. WORKTRUNK_CONFIG_PATH environment variable
-2. ~/.config/worktrunk/config.toml (Linux/macOS) or %APPDATA%\worktrunk\config.toml (Windows)"#
+    after_long_help = r#"See `wt config --help` for configuration file locations and setup."#
 )]
 pub struct Cli {
     /// Change working directory
@@ -158,22 +141,28 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum ConfigShellCommand {
     /// Generate shell integration code
-    #[command(after_long_help = r#"MANUAL SETUP:
+    #[command(after_long_help = r#"## Manual Setup
 
 Add one line to your shell config:
 
 Bash (~/.bash_profile):
-  eval "$(wt config shell init bash)"
+```bash
+eval "$(wt config shell init bash)"
+```
 
 Fish (~/.config/fish/config.fish):
-  wt config shell init fish | source
+```fish
+wt config shell init fish | source
+```
 
 Zsh (~/.zshrc):
-  eval "$(wt config shell init zsh)"
+```zsh
+eval "$(wt config shell init zsh)"
+```
 
-AUTO SETUP:
+## Auto Setup
 
-Use 'wt config shell install' to automatically add to your shell config."#)]
+Use `wt config shell install` to automatically add to your shell config."#)]
     Init {
         /// Shell to generate code for
         #[arg(value_enum)]
@@ -185,16 +174,22 @@ Use 'wt config shell install' to automatically add to your shell config."#)]
     },
 
     /// Write shell integration to config files
-    #[command(after_long_help = r#"AUTO SETUP:
+    #[command(after_long_help = r#"## Auto Setup
 
 Detects existing shell config files and adds integration:
-  wt config shell install
+```
+wt config shell install
+```
 
 Install for specific shell only:
-  wt config shell install zsh
+```
+wt config shell install zsh
+```
 
 Skip confirmation prompt:
-  wt config shell install --force"#)]
+```
+wt config shell install --force
+```"#)]
     Install {
         /// Shell to install (default: auto-detect)
         #[arg(value_enum)]
@@ -213,6 +208,12 @@ Skip confirmation prompt:
 #[derive(Subcommand)]
 pub enum ApprovalsCommand {
     /// Store approvals in config
+    #[command(
+        after_long_help = r#"Prompts for approval of all project commands and saves them to user config.
+
+By default, shows only unapproved commands. Use `--all` to review all commands
+including previously approved ones. Use `--force` to approve without prompts."#
+    )]
     Ask {
         /// Skip approval prompts
         #[arg(short, long)]
@@ -224,6 +225,12 @@ pub enum ApprovalsCommand {
     },
 
     /// Clear approved commands from config
+    #[command(
+        after_long_help = r#"Removes saved approvals, requiring re-approval on next command run.
+
+By default, clears approvals for the current project. Use `--global` to clear
+all approvals across all projects."#
+    )]
     Clear {
         /// Clear global approvals
         #[arg(short, long)]
@@ -240,12 +247,31 @@ pub enum ConfigCommand {
     },
 
     /// Create global configuration file
+    #[command(
+        after_long_help = concat!(
+            "Creates `~/.config/worktrunk/config.toml` with the following content:\n\n```\n",
+            include_str!("../dev/config.example.toml"),
+            "```"
+        )
+    )]
     Create,
 
     /// List configuration files & locations
+    #[command(
+        after_long_help = r#"Shows location and contents of global config (`~/.config/worktrunk/config.toml`)
+and project config (`.config/wt.toml`).
+
+If a config file doesn't exist, shows defaults that would be used."#
+    )]
     List,
 
     /// Refresh default branch from remote
+    #[command(
+        after_long_help = r#"Queries the remote to determine the default branch and caches the result.
+
+Use when the remote default branch has changed. The cached value is used by
+`wt merge`, `wt list`, and other commands that reference the default branch."#
+    )]
     RefreshCache,
 
     /// Manage branch status markers
@@ -255,7 +281,7 @@ pub enum ConfigCommand {
     },
 
     /// Manage command approvals
-    #[command(after_long_help = r#"## HOW APPROVALS WORK
+    #[command(after_long_help = r#"## How Approvals Work
 
 Commands from project hooks (.config/wt.toml) and LLM configuration require
 approval on first run. This prevents untrusted projects from running arbitrary
@@ -274,7 +300,7 @@ commands.
 - `--force` flag on individual commands (e.g., `wt merge --force`)
 - Useful for CI/automation where prompts aren't possible
 
-## EXAMPLES
+## Examples
 
 Pre-approve all commands for current project:
 ```
@@ -299,6 +325,12 @@ wt config approvals clear --global
 #[derive(Subcommand)]
 pub enum StatusAction {
     /// Set status emoji for branch
+    #[command(
+        after_long_help = r#"Sets a custom status marker that appears in `wt list` output.
+
+Use emojis or short text to indicate work state (e.g., 🚧 WIP, ✅ ready, 🔒 blocked).
+Stored in git config under `worktrunk.status.<branch>`."#
+    )]
     Set {
         /// Status emoji to display
         value: String,
@@ -309,6 +341,9 @@ pub enum StatusAction {
     },
 
     /// Clear status emoji
+    #[command(
+        after_long_help = r#"Removes status marker from branch(es). Use `*` to clear all statuses."#
+    )]
     Unset {
         /// Branch or "*" for all
         #[arg(default_value = "", add = crate::completion::branch_value_completer())]
@@ -436,87 +471,61 @@ pub enum Commands {
     /// Manage configuration and shell integration
     #[command(
         about = "Manage configuration and shell integration",
-        after_long_help = r#"SETUP GUIDE:
+        after_long_help = r#"## Setup Guide
 
 1. Set up shell integration
-
+   ```
    wt config shell install
+   ```
 
    Or manually add to your shell config:
+   ```
    eval "$(wt config shell init bash)"
+   ```
 
 2. (Optional) Create config file
-
+   ```
    wt config create
+   ```
 
    This creates ~/.config/worktrunk/config.toml with examples.
 
 3. (Optional) Enable LLM commit messages
 
-   Install: uv tool install -U llm
-   Configure: llm keys set anthropic
+   Install: `uv tool install -U llm`
+   Configure: `llm keys set anthropic`
    Add to config.toml:
-     [commit-generation]
-     command = "llm"
+   ```toml
+   [commit-generation]
+   command = "llm"
+   ```
 
-LLM SETUP DETAILS:
+## LLM Setup Details
 
 For Claude:
-   llm install llm-anthropic
-   llm keys set anthropic
-   llm models default claude-3.5-sonnet
+```
+llm install llm-anthropic
+llm keys set anthropic
+llm models default claude-3.5-sonnet
+```
 
 For OpenAI:
-   llm keys set openai
+```
+llm keys set openai
+```
 
-Use 'wt config list' to view your current configuration
+Use `wt config list` to view your current configuration.
 Docs: https://llm.datasette.io/ | https://github.com/sigoden/aichat
 
-CONFIGURATION FILES:
+## Configuration Files
 
-Global config (loaded in order of precedence):
-1. WORKTRUNK_CONFIG_PATH environment variable
-2. ~/.config/worktrunk/config.toml (Linux/macOS)
-   %APPDATA%\worktrunk\config.toml (Windows)
+**Global config** (user settings):
+- Location: `~/.config/worktrunk/config.toml` (or `WORKTRUNK_CONFIG_PATH`)
+- Run `wt config create` to generate with documented examples
 
-Global config contents:
-- worktree-path: Path template (see CUSTOM WORKTREE PATHS below)
-- [list]: Default display options for 'wt list'
-- [commit-generation]: LLM command and prompt templates
-- [projects."project-id"]: Per-project approved commands (auto-populated)
-
-Project config (.config/wt.toml in repository root):
-- [post-create-command]: Commands after worktree creation
-- [post-start-command]: Background commands after creation
-- [pre-commit-command]: Validation before committing
-- [pre-merge-command]: Validation before merge
-- [post-merge-command]: Cleanup after merge
-
-CUSTOM WORKTREE PATHS:
-
-By default, worktrees live as siblings to the main repo:
-
-  myapp/               # main worktree
-  myapp.feature-x/     # secondary worktree
-  myapp.bugfix-y/      # secondary worktree
-
-Customize the pattern in ~/.config/worktrunk/config.toml:
-
-  # Inside the repo (keeps everything contained)
-  worktree-path = ".worktrees/{{ branch }}"
-
-  # Shared directory with multiple repos
-  worktree-path = "../worktrees/{{ main_worktree }}/{{ branch }}"
-
-Available variables: {{ main_worktree }}, {{ branch }}, {{ repo }}
-Default: "../{{ main_worktree }}.{{ branch }}"
-
-CUSTOM PROMPT TEMPLATES:
-
-Customize commit message prompts using minijinja templates.
-Available variables: diff, files, commits, commit_count, branch, target.
-Run 'wt config create' to generate example config with template examples.
-Docs: https://docs.rs/minijinja/latest/minijinja/syntax/
+**Project config** (repository hooks):
+- Location: `.config/wt.toml` in repository root
+- Contains: post-create, post-start, pre-commit, pre-merge, post-merge hooks
 "#
     )]
     Config {
@@ -542,7 +551,7 @@ Docs: https://docs.rs/minijinja/latest/minijinja/syntax/
     #[command(after_long_help = "## Columns
 
 - **Branch:** Branch name
-- **Status:** Quick status symbols (see STATUS SYMBOLS below)
+- **Status:** Quick status symbols (see Status Symbols below)
 - **HEAD±:** Uncommitted changes vs HEAD (+added -deleted lines, staged + unstaged)
 - **main↕:** Commit count ahead↑/behind↓ relative to main (commits in HEAD vs main)
 - **main…±** (`--full`): Line diffs in commits ahead of main (+added -deleted)
@@ -590,7 +599,7 @@ Order: `?!+»✘ ✖⚠≡∅ ↻⋈ ↑↓↕ ⇡⇣⇅ ⎇⌫⊠`
 ## JSON Output
 
 Use `--format=json` for structured data. Each object contains two status maps
-with the same fields in the same order as STATUS SYMBOLS above:
+with the same fields in the same order as Status Symbols above:
 
 **`status`** - variant names for querying:
 - `working_tree`: `{untracked, modified, staged, renamed, deleted}` booleans
@@ -606,20 +615,22 @@ Note: `locked` and `prunable` are top-level fields on worktree objects, not in s
 
 **Query examples:**
 
-  # Find worktrees with conflicts
-  jq '.[] | select(.status.branch_state == \"Conflicts\")'
+```bash
+# Find worktrees with conflicts
+jq '.[] | select(.status.branch_state == \"Conflicts\")'
 
-  # Find worktrees with untracked files
-  jq '.[] | select(.status.working_tree.untracked)'
+# Find worktrees with untracked files
+jq '.[] | select(.status.working_tree.untracked)'
 
-  # Find worktrees in rebase or merge
-  jq '.[] | select(.status.git_operation != \"\")'
+# Find worktrees in rebase or merge
+jq '.[] | select(.status.git_operation != \"\")'
 
-  # Get branches ahead of main
-  jq '.[] | select(.status.main_divergence == \"Ahead\")'
+# Get branches ahead of main
+jq '.[] | select(.status.main_divergence == \"Ahead\")'
 
-  # Find locked worktrees
-  jq '.[] | select(.locked != null)'")]
+# Find locked worktrees
+jq '.[] | select(.locked != null)'
+```")]
     List {
         /// Output format (table, json)
         #[arg(long, value_enum, default_value = "table", hide_possible_values = true)]

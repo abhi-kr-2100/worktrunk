@@ -272,8 +272,8 @@ _arguments "${_arguments_options[@]}" : \
 '--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
-'-h[Print help]' \
-'--help[Print help]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
 ;;
 (list)
@@ -282,8 +282,8 @@ _arguments "${_arguments_options[@]}" : \
 '--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
-'-h[Print help]' \
-'--help[Print help]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
 ;;
 (refresh-cache)
@@ -292,8 +292,8 @@ _arguments "${_arguments_options[@]}" : \
 '--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
-'-h[Print help]' \
-'--help[Print help]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
 ;;
 (status)
@@ -321,8 +321,8 @@ _arguments "${_arguments_options[@]}" : \
 '--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
-'-h[Print help]' \
-'--help[Print help]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
 ':value -- Status emoji to display:_default' \
 && ret=0
 ;;
@@ -332,8 +332,8 @@ _arguments "${_arguments_options[@]}" : \
 '--config=[User config file path]:path:_files' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
-'-h[Print help]' \
-'--help[Print help]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
 '::target -- Branch or "*" for all:_default' \
 && ret=0
 ;;
@@ -368,8 +368,8 @@ _arguments "${_arguments_options[@]}" : \
 '--all[Show all commands]' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
-'-h[Print help]' \
-'--help[Print help]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
 ;;
 (clear)
@@ -380,8 +380,8 @@ _arguments "${_arguments_options[@]}" : \
 '--global[Clear global approvals]' \
 '-v[Show commands and debug info]' \
 '--verbose[Show commands and debug info]' \
-'-h[Print help]' \
-'--help[Print help]' \
+'-h[Print help (see more with '\''--help'\'')]' \
+'--help[Print help (see more with '\''--help'\'')]' \
 && ret=0
 ;;
         esac

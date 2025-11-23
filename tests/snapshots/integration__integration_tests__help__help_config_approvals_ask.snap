@@ -3,6 +3,9 @@ source: tests/integration_tests/help.rs
 info:
   program: wt
   args:
+    - config
+    - approvals
+    - ask
     - "--help"
   env:
     CLICOLOR_FORCE: "1"
@@ -13,23 +16,18 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-wt - Git worktree management
-Usage: wt [OPTIONS] <COMMAND>
-
-Commands:
-  config  Manage configuration and shell integration
-  step    Primitive operations (building blocks for workflows)
-  list    List worktrees and optionally branches
-  switch  Switch to a worktree
-  remove  Remove worktree and branch
-  merge   Merge worktree into target branch
+wt config approvals ask - Store approvals in config
+Usage: wt config approvals ask [OPTIONS]
 
 Options:
+  -f, --force
+          Skip approval prompts
+
+      --all
+          Show all commands
+
   -h, --help
           Print help (see a summary with '-h')
-
-  -V, --version
-          Print version
 
 Global Options:
   -C <path>
@@ -41,6 +39,9 @@ Global Options:
   -v, --verbose
           Show commands and debug info
 
-See [2mwt config --help[0m for configuration file locations and setup.
+Prompts for approval of all project commands and saves them to user config.
+
+By default, shows only unapproved commands. Use [2m--all[0m to review all commands
+including previously approved ones. Use [2m--force[0m to approve without prompts.
 
 ----- stderr -----

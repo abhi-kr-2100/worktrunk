@@ -3,6 +3,9 @@ source: tests/integration_tests/help.rs
 info:
   program: wt
   args:
+    - config
+    - status
+    - set
     - "--help"
   env:
     CLICOLOR_FORCE: "1"
@@ -13,23 +16,19 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-wt - Git worktree management
-Usage: wt [OPTIONS] <COMMAND>
+wt config status set - Set status emoji for branch
+Usage: wt config status set [OPTIONS] <VALUE>
 
-Commands:
-  config  Manage configuration and shell integration
-  step    Primitive operations (building blocks for workflows)
-  list    List worktrees and optionally branches
-  switch  Switch to a worktree
-  remove  Remove worktree and branch
-  merge   Merge worktree into target branch
+Arguments:
+  <VALUE>
+          Status emoji to display
 
 Options:
+      --branch <BRANCH>
+          Target branch (defaults to current)
+
   -h, --help
           Print help (see a summary with '-h')
-
-  -V, --version
-          Print version
 
 Global Options:
   -C <path>
@@ -41,6 +40,9 @@ Global Options:
   -v, --verbose
           Show commands and debug info
 
-See [2mwt config --help[0m for configuration file locations and setup.
+Sets a custom status marker that appears in [2mwt list[0m output.
+
+Use emojis or short text to indicate work state (e.g., 🚧 WIP, ✅ ready, 🔒 blocked).
+Stored in git config under [2mworktrunk.status.<branch>[0m.
 
 ----- stderr -----

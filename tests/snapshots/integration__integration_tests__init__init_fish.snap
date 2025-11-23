@@ -217,15 +217,15 @@ complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from create" -s C -d 'Change working directory' -r -F
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from create" -l config -d 'User config file path' -r -F
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from create" -s v -l verbose -d 'Show commands and debug info'
-complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from create" -s h -l help -d 'Print help'
+complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from create" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from list" -s C -d 'Change working directory' -r -F
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from list" -l config -d 'User config file path' -r -F
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from list" -s v -l verbose -d 'Show commands and debug info'
-complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from list" -s h -l help -d 'Print help'
+complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from list" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from refresh-cache" -s C -d 'Change working directory' -r -F
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from refresh-cache" -l config -d 'User config file path' -r -F
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from refresh-cache" -s v -l verbose -d 'Show commands and debug info'
-complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from refresh-cache" -s h -l help -d 'Print help'
+complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from refresh-cache" -s h -l help -d 'Print help (see more with \'--help\')'
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from status" -s C -d 'Change working directory' -r -F
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from status" -l config -d 'User config file path' -r -F
 complete -c wt -n "__fish_wt_using_subcommand config; and __fish_seen_subcommand_from status" -s v -l verbose -d 'Show commands and debug info'

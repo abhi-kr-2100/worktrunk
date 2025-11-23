@@ -3,6 +3,9 @@ source: tests/integration_tests/help.rs
 info:
   program: wt
   args:
+    - config
+    - status
+    - unset
     - "--help"
   env:
     CLICOLOR_FORCE: "1"
@@ -13,23 +16,18 @@ info:
 success: true
 exit_code: 0
 ----- stdout -----
-wt - Git worktree management
-Usage: wt [OPTIONS] <COMMAND>
+wt config status unset - Clear status emoji
+Usage: wt config status unset [OPTIONS] [TARGET]
 
-Commands:
-  config  Manage configuration and shell integration
-  step    Primitive operations (building blocks for workflows)
-  list    List worktrees and optionally branches
-  switch  Switch to a worktree
-  remove  Remove worktree and branch
-  merge   Merge worktree into target branch
+Arguments:
+  [TARGET]
+          Branch or "*" for all
+          
+          [default: ]
 
 Options:
   -h, --help
           Print help (see a summary with '-h')
-
-  -V, --version
-          Print version
 
 Global Options:
   -C <path>
@@ -41,6 +39,6 @@ Global Options:
   -v, --verbose
           Show commands and debug info
 
-See [2mwt config --help[0m for configuration file locations and setup.
+Removes status marker from branch(es). Use [2m*[0m to clear all statuses.
 
 ----- stderr -----
