@@ -199,6 +199,22 @@ pub struct ListData {
 }
 
 impl ListItem {
+    /// Create a ListItem for a branch (not a worktree)
+    pub(crate) fn new_branch(head: String, branch: String) -> Self {
+        Self {
+            head,
+            branch: Some(branch),
+            commit: None,
+            counts: None,
+            branch_diff: None,
+            upstream: None,
+            pr_status: None,
+            status_symbols: None,
+            display: DisplayFields::default(),
+            kind: ItemKind::Branch,
+        }
+    }
+
     pub fn branch_name(&self) -> &str {
         self.branch.as_deref().unwrap_or("(detached)")
     }
