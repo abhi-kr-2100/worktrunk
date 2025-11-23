@@ -143,10 +143,7 @@ fn test_multiple_project_approvals() {
     args = []
 
     [projects."github.com/user1/repo1"]
-    approved-commands = [
-        "npm install",
-        "npm test",
-    ]
+    approved-commands = ["npm install", "npm test"]
 
     [projects."github.com/user2/repo2"]
     approved-commands = ["cargo build"]
@@ -268,6 +265,68 @@ fn test_force_flag_saves_to_new_config_file() {
     [projects."github.com/test/nested"]
     approved-commands = ["test command"]
     "#);
+}
+
+/// Test that saving config preserves TOML comments
+///
+/// When a user has a config file with comments and we save an approval,
+/// all their comments should be preserved. This test verifies the behavior.
+#[test]
+fn test_saving_approval_preserves_toml_comments() {
+    let temp_dir = TempDir::new().unwrap();
+    let config_path = temp_dir.path().join("config.toml");
+
+    // Create a config file with comments
+    let initial_content = r#"# User preferences for worktrunk
+# These comments should be preserved after saving
+
+worktree-path = "../{{ main_worktree }}.{{ branch }}"
+
+# LLM commit generation settings
+[commit-generation]
+command = "llm"  # inline comment should also be preserved
+args = ["-s"]
+
+# Per-project settings below
+"#;
+    fs::write(&config_path, initial_content).unwrap();
+
+    // Load the config manually by deserializing from TOML
+    // (bypasses WorktrunkConfig::load() which requires WORKTRUNK_CONFIG_PATH)
+    let toml_str = fs::read_to_string(&config_path).unwrap();
+    let mut config: WorktrunkConfig = toml::from_str(&toml_str).unwrap();
+
+    // Add an approval and save back to the same file
+    config
+        .approve_command_to(
+            "github.com/test/repo".to_string(),
+            "npm install".to_string(),
+            &config_path,
+        )
+        .unwrap();
+
+    // Read back the saved config
+    let saved_content = fs::read_to_string(&config_path).unwrap();
+
+    // Verify comments are preserved
+    assert!(
+        saved_content.contains("# User preferences for worktrunk"),
+        "Top-level comment was lost. Saved content:\n{saved_content}"
+    );
+    assert!(
+        saved_content.contains("# LLM commit generation settings"),
+        "Section comment was lost. Saved content:\n{saved_content}"
+    );
+    assert!(
+        saved_content.contains("# inline comment should also be preserved"),
+        "Inline comment was lost. Saved content:\n{saved_content}"
+    );
+
+    // Verify the approval was also saved
+    assert!(
+        saved_content.contains("npm install"),
+        "Approval was not saved. Saved content:\n{saved_content}"
+    );
 }
 
 /// Test that permission errors when saving config are handled gracefully

@@ -459,6 +459,7 @@ impl WorktrunkConfig {
     /// Save the current configuration to a specific file path
     ///
     /// Use this in tests to save to a temporary location instead of the user's config.
+    /// Preserves comments and formatting in the existing file when possible.
     pub fn save_to(&self, config_path: &std::path::Path) -> Result<(), ConfigError> {
         // Create parent directory if it doesn't exist
         if let Some(parent) = config_path.parent() {
@@ -467,8 +468,49 @@ impl WorktrunkConfig {
             })?;
         }
 
-        let toml_string = toml::to_string_pretty(self)
-            .map_err(|e| ConfigError::Message(format!("Failed to serialize config: {}", e)))?;
+        // If file exists, use toml_edit to preserve comments and formatting
+        let toml_string = if config_path.exists() {
+            let existing_content = std::fs::read_to_string(config_path)
+                .map_err(|e| ConfigError::Message(format!("Failed to read config file: {}", e)))?;
+
+            let mut doc: toml_edit::DocumentMut = existing_content
+                .parse()
+                .map_err(|e| ConfigError::Message(format!("Failed to parse config file: {}", e)))?;
+
+            // Only update the projects section - that's the only thing we modify programmatically
+            // Ensure projects table exists
+            if !doc.contains_key("projects") {
+                doc["projects"] = toml_edit::Item::Table(toml_edit::Table::new());
+            }
+
+            if let Some(projects) = doc["projects"].as_table_mut() {
+                // Remove stale projects
+                let stale: Vec<_> = projects
+                    .iter()
+                    .filter(|(k, _)| !self.projects.contains_key(*k))
+                    .map(|(k, _)| k.to_string())
+                    .collect();
+                for key in stale {
+                    projects.remove(&key);
+                }
+
+                // Add/update projects
+                for (project_id, project_config) in &self.projects {
+                    if !projects.contains_key(project_id) {
+                        projects[project_id] = toml_edit::Item::Table(toml_edit::Table::new());
+                    }
+                    let commands: toml_edit::Array =
+                        project_config.approved_commands.iter().collect();
+                    projects[project_id]["approved-commands"] = toml_edit::value(commands);
+                }
+            }
+
+            doc.to_string()
+        } else {
+            // No existing file, create from scratch
+            toml::to_string_pretty(self)
+                .map_err(|e| ConfigError::Message(format!("Failed to serialize config: {}", e)))?
+        };
 
         std::fs::write(config_path, toml_string)
             .map_err(|e| ConfigError::Message(format!("Failed to write config file: {}", e)))?;
