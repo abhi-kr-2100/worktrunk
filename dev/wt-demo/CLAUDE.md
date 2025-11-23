@@ -5,7 +5,7 @@
 Build and record the demo GIF:
 
 ```bash
-./dev/wt-demo-build.sh
+python3 dev/wt-demo-build.py
 ```
 
 This creates:
@@ -29,9 +29,11 @@ Claude Code cannot view GIFs directly. Use `run.txt` for verification.
 - `starship` for prompt
 - `llm` CLI with Claude model configured (for commit message generation)
 - `cargo-nextest` for running tests
+- Python 3
 
 ## Files
 
 - `demo.tape` - VHS tape file with recording script
-- `wt-demo-build.sh` - Build script that sets up demo repo and records
+- `wt-demo-build.py` - Python build script that sets up demo repo and records
+- `fixtures/` - Extracted content files (README, lib.rs, etc.)
 - `out/` - Output directory (gitignored)
