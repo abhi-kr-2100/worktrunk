@@ -586,8 +586,14 @@ pub fn collect(
     // Single-line invariant: use safe width to prevent line wrapping
     let max_width = super::layout::get_safe_list_width();
 
-    // Build initial footer message
-    let total_cells = all_items.len() * layout.columns.len();
+    // Create collection options
+    let options = super::collect_progressive_impl::CollectOptions {
+        fetch_ci,
+        check_merge_tree_conflicts,
+    };
+
+    // Counter for total cells - incremented as spawns are queued
+    let cell_count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let num_worktrees = all_items
         .iter()
         .filter(|item| item.worktree_data().is_some())
@@ -631,8 +637,7 @@ pub fn collect(
             })
             .collect();
 
-        let initial_footer =
-            format!("{INFO_EMOJI} {dim}{footer_base} (0/{total_cells} cells loaded){dim:#}");
+        let initial_footer = format!("{INFO_EMOJI} {dim}{footer_base} (loading...){dim:#}");
 
         Some(ProgressiveTable::new(
             layout.format_header_line(),
@@ -655,16 +660,11 @@ pub fn collect(
     // Create channel for cell updates
     let (tx, rx) = chan::unbounded();
 
-    // Create collection options
-    let options = super::collect_progressive_impl::CollectOptions {
-        fetch_ci,
-        check_merge_tree_conflicts,
-    };
-
     // Spawn worktree collection in background thread
     let sorted_worktrees_clone = sorted_worktrees.clone();
     let tx_worktrees = tx.clone();
     let default_branch_clone = default_branch.clone();
+    let cell_count_wt = cell_count.clone();
     std::thread::spawn(move || {
         sorted_worktrees_clone
             .par_iter()
@@ -678,6 +678,7 @@ pub fn collect(
                     &default_branch_clone,
                     &options,
                     tx_worktrees.clone(),
+                    &cell_count_wt,
                 );
             });
     });
@@ -688,6 +689,7 @@ pub fn collect(
         let main_path = main_worktree.path.clone();
         let tx_branches = tx.clone();
         let default_branch_clone = default_branch.clone();
+        let cell_count_br = cell_count.clone();
         std::thread::spawn(move || {
             branches_clone
                 .par_iter()
@@ -702,6 +704,7 @@ pub fn collect(
                         &default_branch_clone,
                         &options,
                         tx_branches.clone(),
+                        &cell_count_br,
                     );
                 });
         });
@@ -713,6 +716,7 @@ pub fn collect(
         let main_path = main_worktree.path.clone();
         let tx_remote = tx.clone();
         let default_branch_clone = default_branch.clone();
+        let cell_count_rm = cell_count.clone();
         std::thread::spawn(move || {
             remote_branches_clone.par_iter().enumerate().for_each(
                 |(idx, (branch_name, commit_sha))| {
@@ -725,6 +729,7 @@ pub fn collect(
                         &default_branch_clone,
                         &options,
                         tx_remote.clone(),
+                        &cell_count_rm,
                     );
                 },
             );
@@ -769,6 +774,7 @@ pub fn collect(
                 let dim = Style::new().dimmed();
 
                 completed_cells += 1;
+                let total_cells = cell_count.load(std::sync::atomic::Ordering::Relaxed);
 
                 // Update footer progress
                 let footer_msg = format!(

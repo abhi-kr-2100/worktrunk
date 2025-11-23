@@ -11,6 +11,8 @@
 
 use crossbeam_channel::Sender;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use worktrunk::git::{LineDiff, Repository, Worktree};
 use worktrunk::path::format_path_for_display;
 
@@ -360,6 +362,7 @@ pub fn collect_worktree_progressive(
     default_branch: &str,
     options: &CollectOptions,
     tx: Sender<CellUpdate>,
+    cell_count: &Arc<AtomicUsize>,
 ) {
     let ctx = TaskContext {
         repo_path: wt.path.clone(),
@@ -371,9 +374,13 @@ pub fn collect_worktree_progressive(
 
     std::thread::scope(|s| {
         spawn_commit_details(s, &ctx, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_ahead_behind(s, &ctx, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_branch_diff(s, &ctx, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_working_tree_diff(s, &ctx, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_merge_tree_conflicts(
             s,
             &ctx,
@@ -381,10 +388,15 @@ pub fn collect_worktree_progressive(
             true,
             tx.clone(),
         );
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_worktree_state(s, &ctx, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_user_status(s, &ctx, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_upstream(s, &ctx, true, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_ci_status(s, &ctx, options.fetch_ci, tx);
+        cell_count.fetch_add(1, Ordering::Relaxed);
     });
 }
 
@@ -465,6 +477,7 @@ fn parse_status_for_symbols(status_output: &str) -> (String, bool, bool) {
 /// 4. Upstream tracking status
 /// 5. Conflicts check
 /// 6. CI/PR status
+#[allow(clippy::too_many_arguments)]
 pub fn collect_branch_progressive(
     branch_name: &str,
     commit_sha: &str,
@@ -473,6 +486,7 @@ pub fn collect_branch_progressive(
     default_branch: &str,
     options: &CollectOptions,
     tx: Sender<CellUpdate>,
+    cell_count: &Arc<AtomicUsize>,
 ) {
     let ctx = TaskContext {
         repo_path: repo_path.to_path_buf(),
@@ -484,9 +498,13 @@ pub fn collect_branch_progressive(
 
     std::thread::scope(|s| {
         spawn_commit_details(s, &ctx, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_ahead_behind(s, &ctx, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_branch_diff(s, &ctx, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_upstream(s, &ctx, false, tx.clone());
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_merge_tree_conflicts(
             s,
             &ctx,
@@ -494,6 +512,8 @@ pub fn collect_branch_progressive(
             false,
             tx.clone(),
         );
+        cell_count.fetch_add(1, Ordering::Relaxed);
         spawn_ci_status(s, &ctx, options.fetch_ci, tx);
+        cell_count.fetch_add(1, Ordering::Relaxed);
     });
 }
