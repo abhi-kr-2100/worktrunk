@@ -1,6 +1,6 @@
 use crate::common::{
     TestRepo, make_snapshot_cmd, resolve_git_common_dir, setup_snapshot_settings, wait_for_file,
-    wait_for_file_count,
+    wait_for_file_content, wait_for_file_count,
 };
 use insta::assert_snapshot;
 use insta_cmd::assert_cmd_snapshot;
@@ -402,11 +402,11 @@ approved-commands = ["echo 'stdout output' && echo 'stderr output' >&2"]
         &["--create", "feature"],
     );
 
-    // Wait for log directory to be created
+    // Wait for log file to be created (not just the directory)
     let worktree_path = repo.root_path().parent().unwrap().join("test-repo.feature");
     let git_common_dir = resolve_git_common_dir(&worktree_path);
     let log_dir = git_common_dir.join("wt-logs");
-    wait_for_file(log_dir.as_path(), Duration::from_secs(5));
+    wait_for_file_count(&log_dir, "log", 1, Duration::from_secs(5));
 
     // Find the log file
     let log_files: Vec<_> = fs::read_dir(&log_dir)
@@ -423,7 +423,11 @@ approved-commands = ["echo 'stdout output' && echo 'stderr output' >&2"]
         log_files
     );
 
-    let log_contents = fs::read_to_string(&log_files[0]).unwrap();
+    // Wait for content to be written (background command might still be writing)
+    let log_file = &log_files[0];
+    wait_for_file_content(log_file, Duration::from_secs(5));
+
+    let log_contents = fs::read_to_string(log_file).unwrap();
 
     // Verify both stdout and stderr were captured
     assert_snapshot!(log_contents, @r"

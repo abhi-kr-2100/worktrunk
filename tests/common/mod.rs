@@ -906,6 +906,25 @@ pub fn wait_for_file_count(
     );
 }
 
+/// Wait for a file to have non-empty content, polling with exponential backoff.
+/// Use when a background process creates a file but may not have finished writing.
+pub fn wait_for_file_content(path: &Path, timeout: std::time::Duration) {
+    let start = std::time::Instant::now();
+    let mut attempt = 0;
+    while start.elapsed() < timeout {
+        if std::fs::metadata(path).is_ok_and(|m| m.len() > 0) {
+            return;
+        }
+        exponential_sleep(attempt);
+        attempt += 1;
+    }
+    panic!(
+        "File remained empty within {:?}: {}",
+        timeout,
+        path.display()
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
