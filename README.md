@@ -84,7 +84,7 @@ cargo install worktrunk
 wt config shell install  # Sets up shell integration
 ```
 
-See [Shell Integration](#shell-integration) for details.
+See [Shell Integration](#shell-integration) for setup and [`wt config`](#wt-config) for customization.
 
 ## Design Philosophy
 
@@ -99,6 +99,7 @@ Worktrunk is opinionated! It's designed for workflows which are:
   - A robust "auto-merge when 'local-CI' passes" approach
 - A small surface area: three core commands
 - 1:1 mapping between worktree and branch, worktrees are addressed by their branch
+- Sibling layout: worktrees live at `repo.feature-x/` (path template configurable)
 - Defaults to "stage everything and squash merge" (but configurable)
 - Extreme UI responsiveness; slow ops can't delay fast ones
 - Pluggable; adopting Worktrunk for a portion of a workflow doesn't require
@@ -901,16 +902,6 @@ Options:
 <!-- README:end -->
 
 </details>
-
-## Configuration
-
-By default, worktrees live as siblings to the main repo (`myapp.feature-x/`).
-
-```console
-wt config list    # Show all config files and locations
-wt config create  # Create global config with examples
-wt config --help  # Show setup guide, file locations, and options
-```
 
 ## Advanced Features
 
