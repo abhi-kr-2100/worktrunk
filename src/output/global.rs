@@ -183,11 +183,11 @@ pub fn flush() -> io::Result<()> {
 ///
 /// This prevents stream interleaving. Interactive prompts write to stderr, so we must
 /// ensure all previous output is flushed first:
-/// - In directive mode: Flushes both stdout (directives) and stderr (messages)
+/// - In directive mode: Flushes stderr (messages stream there in real-time)
 /// - In interactive mode: Flushes both stdout and stderr
 ///
 /// Note: With stderr separation (messages on stderr in directive mode), prompts
-/// naturally appear after messages without needing NUL terminators for synchronization.
+/// naturally appear after messages without needing special synchronization.
 pub fn flush_for_stderr_prompt() -> io::Result<()> {
     with_output(|h| h.flush_for_stderr_prompt())
 }

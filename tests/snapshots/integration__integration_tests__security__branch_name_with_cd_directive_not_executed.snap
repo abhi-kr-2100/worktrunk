@@ -25,4 +25,6 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-❌ [31mBranch [1m[31m__WORKTRUNK_CD__[PATH]
+❌ [31mBranch [1m[31m__WORKTRUNK_CD__/tmp[0m[31m already exists[0m
+
+💡 [2mRemove --create flag to switch to it[0m

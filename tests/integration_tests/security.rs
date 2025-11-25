@@ -221,7 +221,6 @@ fn test_branch_name_is_directive_not_executed() {
 
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
-    settings.add_filter(r"__WORKTRUNK_CD__[^\x00]+", "__WORKTRUNK_CD__[PATH]");
 
     settings.bind(|| {
         let mut cmd = wt_command();
@@ -263,7 +262,6 @@ fn test_branch_name_with_newline_directive_not_executed() {
 
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
-    settings.add_filter(r"__WORKTRUNK_CD__[^\x00]+", "__WORKTRUNK_CD__[PATH]");
 
     settings.bind(|| {
         let mut cmd = wt_command();
@@ -375,8 +373,7 @@ fn test_branch_name_with_cd_directive_not_executed() {
         return;
     }
 
-    let mut settings = setup_snapshot_settings(&repo);
-    settings.add_filter(r"__WORKTRUNK_CD__[^\x00]+", "__WORKTRUNK_CD__[PATH]");
+    let settings = setup_snapshot_settings(&repo);
 
     settings.bind(|| {
         let mut cmd = wt_command();
@@ -426,8 +423,8 @@ fn test_error_message_with_directive_not_executed() {
 /// Test that execute flag (-x) input is properly handled
 ///
 /// The -x flag is SUPPOSED to execute commands, so this tests that:
-/// 1. Commands from -x are executed via __WORKTRUNK_EXEC__
-/// 2. User content in branch names that looks like directives doesn't inject extra executions
+/// 1. Commands from -x are emitted as shell script to stdout
+/// 2. User content in branch names that looks like old directives doesn't cause injection
 #[test]
 fn test_execute_flag_with_directive_like_branch_name() {
     let repo = TestRepo::new();
@@ -450,7 +447,6 @@ fn test_execute_flag_with_directive_like_branch_name() {
 
     let mut settings = Settings::clone_current();
     settings.set_snapshot_path("../snapshots");
-    settings.add_filter(r"__WORKTRUNK_CD__[^\x00]+", "__WORKTRUNK_CD__[PATH]");
 
     settings.bind(|| {
         let mut cmd = wt_command();
@@ -463,8 +459,8 @@ fn test_execute_flag_with_directive_like_branch_name() {
             .arg("echo legitimate command")
             .current_dir(repo.root_path());
 
-        // Should see ONE __WORKTRUNK_EXEC__ from the -x flag
-        // The branch name should NOT create a second directive
+        // The -x command should appear in stdout as shell script
+        // The branch name should NOT inject additional commands
         assert_cmd_snapshot!(cmd);
     });
 

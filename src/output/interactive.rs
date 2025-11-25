@@ -91,7 +91,7 @@ impl OutputHandler for InteractiveOutput {
     }
 
     fn terminate_output(&mut self) -> io::Result<()> {
-        // No-op in interactive mode - no NUL terminators needed
+        // No-op in interactive mode - shell script only emitted in directive mode
         Ok(())
     }
 }
