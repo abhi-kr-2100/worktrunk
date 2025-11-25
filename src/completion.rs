@@ -82,7 +82,17 @@ impl ValueCompleter for BranchCompleter {
             return Vec::new();
         }
 
+        // Filter branches by prefix - clap doesn't filter ArgValueCompleter results
+        let prefix = current.to_string_lossy();
         complete_branches(self.suppress_with_create)
+            .into_iter()
+            .filter(|candidate| {
+                candidate
+                    .get_value()
+                    .to_string_lossy()
+                    .starts_with(&*prefix)
+            })
+            .collect()
     }
 }
 
