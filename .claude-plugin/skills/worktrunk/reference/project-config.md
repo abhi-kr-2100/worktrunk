@@ -423,7 +423,7 @@ Debug steps:
 1. Run command manually in worktree
 2. Check for missing dependencies (npm packages, system tools)
 3. Verify template variables expand correctly
-4. For background hooks, check `.wt-logs/` for output
+4. For background hooks, check `.git/wt-logs/` for output
 
 ### Slow Blocking Hooks
 
@@ -455,7 +455,7 @@ wt switch --create test-hooks     # Test hooks work
 ## Config File Location
 
 - **Always at**: `<repo>/.config/wt.toml` (checked into git)
-- **Background logs**: `.wt-logs/` (gitignored)
+- **Background logs**: `.git/wt-logs/` (in git directory, not tracked)
 
 ## Example Config
 

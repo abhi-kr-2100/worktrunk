@@ -51,7 +51,7 @@ post-create = [
 **Behavior**:
 - Runs in background, doesn't block user
 - Multiple commands run in parallel
-- Output logged to `.wt-logs/`
+- Output logged to `.git/wt-logs/`
 - Failure doesn't affect user session
 
 **Use cases**:
@@ -69,7 +69,7 @@ post-start = [
 ]
 ```
 
-**What happens**: User runs `wt switch --create feature-x`. After creation completes, all three commands start immediately in parallel in background. User can work while they run. Check `.wt-logs/` for output.
+**What happens**: User runs `wt switch --create feature-x`. After creation completes, all three commands start immediately in parallel in background. User can work while they run. Check `.git/wt-logs/` for output.
 
 ### pre-commit
 

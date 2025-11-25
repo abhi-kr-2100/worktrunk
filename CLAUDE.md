@@ -37,17 +37,17 @@ fn parse_config() { ... }
 ### Running Tests
 
 ```console
-# Unit tests (fast, ~200 tests)
+# Unit tests (fast, ~210 tests)
 cargo test --lib --bins
 
-# Integration tests without shell tests (~300 tests, no external dependencies)
+# Integration tests without shell tests (~370 tests, no external dependencies)
 cargo test --test integration
 
-# Integration tests WITH shell tests (~360 tests, requires bash/zsh/fish)
+# Integration tests WITH shell tests (~420 tests, requires bash/zsh/fish)
 cargo test --test integration --features shell-integration-tests
 
 # Run all tests via pre-merge hook (recommended before committing)
-cargo run -- beta run-hook pre-merge
+cargo run -- step pre-merge --force
 ```
 
 The pre-merge hook runs the full test suite and is the recommended way to verify changes before committing.
@@ -168,9 +168,9 @@ Six canonical message patterns with their emojis:
 3. **Errors**: ❌ + red text (failures, invalid states)
 4. **Warnings**: 🟡 + yellow text (non-blocking issues)
 5. **Hints**: 💡 + dimmed text (actionable suggestions, tips for user)
-6. **Info**: ⚪ + text (neutral status, system feedback, metadata)
-   - **NOT dimmed**: Primary status messages
-   - **Dimmed**: Supplementary metadata
+6. **Info**: ⚪ + unstyled text (neutral status, system feedback, metadata)
+   - Use `output::info()` for primary status (unstyled)
+   - Add `HINT` style manually for supplementary/dimmed metadata
 
 **Every user-facing message requires either an emoji or a gutter** for consistent visual separation.
 
@@ -245,27 +245,31 @@ output::success("✅ Squashed @ a1b2c3d")?;
 
 ### Semantic Style Constants
 
-Style constants defined in `src/styling.rs`:
+Style constants defined in `src/styling/constants.rs`:
 - `ERROR`: Red (errors, conflicts)
+- `ERROR_BOLD`: Red + bold
 - `WARNING`: Yellow (warnings)
+- `WARNING_BOLD`: Yellow + bold
 - `HINT`: Dimmed (hints, secondary information)
+- `HINT_BOLD`: Dimmed + bold
 - `CURRENT`: Magenta + bold (current worktree)
 - `ADDITION`: Green (diffs, additions)
 - `DELETION`: Red (diffs, deletions)
+- `CYAN`, `CYAN_BOLD`: Cyan (progress messages)
+- `GREEN`, `GREEN_BOLD`: Green (success messages)
+- `GRAY`: BrightBlack (secondary/metadata text)
+- `GUTTER`: BrightWhite background (quoted content)
 
-Emoji constants: `ERROR_EMOJI` (❌), `WARNING_EMOJI` (🟡), `HINT_EMOJI` (💡), `INFO_EMOJI` (⚪)
+Emoji constants: `PROGRESS_EMOJI` (🔄), `SUCCESS_EMOJI` (✅), `ERROR_EMOJI` (❌), `WARNING_EMOJI` (🟡), `HINT_EMOJI` (💡), `INFO_EMOJI` (⚪)
 
 ### Inline Formatting Pattern
 
 Use anstyle's inline pattern `{style}text{style:#}` where `#` means reset:
 
 ```rust
-use worktrunk::styling::{println, ERROR, ERROR_EMOJI, WARNING_EMOJI, HINT_EMOJI, AnstyleStyle};
-use anstyle::{AnsiColor, Color};
+use worktrunk::styling::{println, CYAN, ERROR, ERROR_EMOJI, HINT, HINT_EMOJI};
 
-let cyan = AnstyleStyle::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
-println!("🔄 {cyan}Rebasing onto main...{cyan:#}");
-
+println!("🔄 {CYAN}Rebasing onto main...{CYAN:#}");
 println!("{ERROR_EMOJI} {ERROR}Working tree has uncommitted changes{ERROR:#}");
 println!("{HINT_EMOJI} {HINT}Use 'wt list' to see all worktrees{HINT:#}");
 ```
@@ -338,18 +342,14 @@ See `src/commands/list/render.rs` for advanced usage.
 
 ### Gutter Formatting for Quoted Content
 
-Use `format_with_gutter()` for quoted content. Gutter content must be raw external output without our styling additions (emojis, colors).
+Use `format_with_gutter()` for quoted content. Gutter content displays external output (git errors, command output) in a visually distinct block.
 
 ```rust
-// ✅ GOOD - raw git output in gutter
-let raw_error = match &error {
-    GitError::CommandFailed(msg) => msg.as_str(),
-    _ => &error.to_string(),
-};
-super::gutter(format_with_gutter(raw_error, "", None))?;
-
-// ❌ BAD - includes our formatting (❌ emoji)
-super::gutter(format_with_gutter(&error.to_string(), "", None))?;
+// Show warning message, then external error in gutter
+super::warning(format!(
+    "{WARNING}Could not delete branch {WARNING_BOLD}{branch_name}{WARNING_BOLD:#}{WARNING:#}"
+))?;
+super::gutter(format_with_gutter(&e.to_string(), "", None))?;
 ```
 
 **Linebreaks:** Gutter content requires a single newline before it, never double newlines. Output functions (`progress()`, `success()`, etc.) use `println!()` internally, adding a trailing newline. Messages passed to these functions should not include `\n`:
@@ -386,23 +386,29 @@ Column alignment follows standard tabular data conventions:
 Every command output must have a snapshot test (`tests/integration_tests/`). Use this pattern:
 
 ```rust
-use crate::common::{make_snapshot_cmd, setup_snapshot_settings, TestRepo};
+use crate::common::{TestRepo, make_snapshot_cmd, setup_snapshot_settings};
 use insta_cmd::assert_cmd_snapshot;
+use std::path::Path;
 
-fn snapshot_command(test_name: &str, repo: &TestRepo, args: &[&str]) {
+fn snapshot_remove(test_name: &str, repo: &TestRepo, args: &[&str], cwd: Option<&Path>) {
     let settings = setup_snapshot_settings(repo);
     settings.bind(|| {
-        let mut cmd = make_snapshot_cmd(repo, "beta", &[], None);
-        cmd.arg("command-name").args(args);
+        let mut cmd = make_snapshot_cmd(repo, "remove", args, cwd);
         assert_cmd_snapshot!(test_name, cmd);
     });
 }
 
-#[test]
-fn test_command_success() {
-    let repo = TestRepo::new();
+fn setup_remove_repo() -> TestRepo {
+    let mut repo = TestRepo::new();
     repo.commit("Initial commit");
-    snapshot_command("command_success", &repo, &[]);
+    repo.setup_remote("main");
+    repo
+}
+
+#[test]
+fn test_remove_success() {
+    let repo = setup_remove_repo();
+    snapshot_remove("remove_success", &repo, &[], None);
 }
 ```
 
@@ -451,10 +457,18 @@ The output module (`src/output/global.rs`) provides:
 - `progress(message)` - Operations in progress (🔄, both modes)
 - `info(message)` - Neutral status/metadata (⚪, both modes)
 - `warning(message)` - Non-blocking issues (🟡, both modes)
+- `error(message)` - Critical failures (❌, stdout in interactive, stderr in directive)
 - `hint(message)` - Actionable suggestions (💡, interactive only, suppressed in directive)
-- `change_directory(path)` - Request directory change (directive) or store for execution (interactive)
-- `execute(command)` - Execute command (interactive) or emit directive (directive mode)
+- `shell_integration_hint(message)` - Shell integration hints (interactive only)
+- `gutter(content)` - Gutter-formatted content (use with `format_with_gutter()`)
+- `blank()` - Blank line for visual separation
+- `raw(content)` - Raw output without emoji (JSON data)
+- `raw_terminal(content)` - Raw terminal output to stderr (tables)
+- `change_directory(path)` - Request directory change
+- `execute(command)` - Execute command or emit directive
 - `flush()` - Flush output buffers
+- `flush_for_stderr_prompt()` - Flush before interactive prompts
+- `terminate_output()` - NUL terminator in directive mode (no-op in interactive)
 
 For the complete API, see `src/output/global.rs`.
 
@@ -535,60 +549,24 @@ Use `--force` to skip interactive prompts in tests. Don't pipe input to stdin.
 
 ## Benchmarks
 
-### Running Benchmarks Selectively
+For detailed benchmark documentation, see `benches/CLAUDE.md`.
 
-Run specific benchmarks by name to skip expensive ones:
+### Quick Start
+
 ```console
+# Run fast synthetic benchmarks (skip slow ones)
+cargo bench --bench list -- --skip cold --skip real
+
+# Run specific benchmark
 cargo bench --bench list bench_list_by_worktree_count
 cargo bench --bench completion
 ```
 
-`bench_list_real_repo` clones rust-lang/rust (~2-5 min first run). Skip during normal development.
+Real repo benchmarks clone rust-lang/rust (~2-5 min first run, cached thereafter). Skip during normal development with `--skip real`.
 
 ## JSON Output Format
 
-Use `wt list --format=json` for structured data access. The output is an array of objects with `type: "worktree" | "branch"`.
-
-### Common Fields (all objects)
-
-- `type`: "worktree" | "branch"
-- `head_sha`, `timestamp`, `commit_message`: commit info
-- `ahead`, `behind`: commits ahead/behind main branch
-- `branch_diff`: `{added, deleted}` - line diff vs main
-- `upstream_remote`, `upstream_ahead`, `upstream_behind`: remote tracking status
-- `pr_status`: PR/CI status object (null if not available)
-- `status_symbols`: structured status object with two maps:
-  - `status`: variant names for queryability (e.g., "MatchesMain", "Ahead")
-  - `status_symbols`: display symbols (e.g., "≡", "↑")
-
-### Worktree-Specific Fields
-
-- `path`: absolute path to worktree
-- `branch`: branch name (null if detached)
-- `bare`, `detached`: boolean flags
-- `locked`, `prunable`: reason strings (null if not applicable)
-- `working_tree_diff`: `{added, deleted}` - uncommitted changes
-- `working_tree_diff_with_main`: `{added, deleted}` or null (null = not computed, `{0,0}` = matches main exactly)
-- `worktree_state`: "rebase" | "merge" | null - git operation in progress
-- `is_main`: boolean - is main worktree
-
-### Branch-Specific Fields
-
-Branches use the same `branch` field as worktrees (no additional fields).
-
-### JSON Field Documentation
-
-**For complete field documentation and additional examples, see:**
-- `wt list --help` - authoritative source of truth
-- README.md - copy of help text for quick reference
-
-### Display Fields (json-pretty format only)
-
-ANSI-formatted strings for human-readable output:
-- `commits_display`, `branch_diff_display` (branches only)
-- `upstream_display`, `ci_status_display` (optional)
-- `status_display`: rendered status symbols + user status
-- `working_diff_display` (worktrees only, optional)
+Use `wt list --format=json` for structured data access. See `wt list --help` for complete field documentation, status variants, and query examples.
 
 ## Worktree Model
 

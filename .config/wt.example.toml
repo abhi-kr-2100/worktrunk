@@ -36,7 +36,7 @@
 # Use for: uv sync, npm install, bundle install, build, dev servers, file watchers,
 # long-running tasks
 # The worktree switch completes immediately, these run in parallel
-# Output is logged to ~/.cache/worktrunk/logs/{repo}/{branch}/{command}.log
+# Output is logged to .git/wt-logs/{branch}-post-start-{name}.log
 #
 # Format options:
 # 1. Single string:
