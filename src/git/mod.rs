@@ -32,10 +32,10 @@ static HEAVY_OPS_SEMAPHORE: LazyLock<semaphore::Semaphore> =
 pub use diff::{DiffStats, LineDiff};
 pub use error::{
     WorktrunkError, branch_already_exists, branch_deletion_failed, conflicting_changes,
-    detached_head, error_message, exit_code, is_command_not_approved, merge_commits_found,
-    no_worktree_found, not_interactive, parse_error, push_failed, rebase_conflict,
-    uncommitted_changes, worktree_creation_failed, worktree_missing, worktree_path_exists,
-    worktree_path_occupied, worktree_removal_failed,
+    detached_head, error_message, exit_code, is_command_not_approved, llm_command_failed,
+    merge_commits_found, no_worktree_found, not_interactive, parse_error, push_failed,
+    rebase_conflict, uncommitted_changes, worktree_creation_failed, worktree_missing,
+    worktree_path_exists, worktree_path_occupied, worktree_removal_failed,
 };
 pub use repository::{Repository, set_base_path};
 

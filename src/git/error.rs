@@ -8,7 +8,7 @@ use std::path::Path;
 use super::HookType;
 use crate::path::format_path_for_display;
 use crate::styling::{
-    ERROR, ERROR_BOLD, ERROR_EMOJI, HINT, HINT_BOLD, HINT_EMOJI, format_with_gutter,
+    ERROR, ERROR_BOLD, ERROR_EMOJI, HINT, HINT_BOLD, HINT_EMOJI, INFO_EMOJI, format_with_gutter,
 };
 
 /// Semantic errors that require special handling in main.rs
@@ -252,4 +252,25 @@ pub fn branch_deletion_failed(branch: &str, error: &str) -> anyhow::Error {
         "{ERROR_EMOJI} {ERROR}Failed to delete branch {ERROR_BOLD}{branch}{ERROR_BOLD:#}{ERROR:#}"
     );
     anyhow::anyhow!("{}", format_error_block(header, error))
+}
+
+/// LLM command failed error
+///
+/// `command` is the full command string (e.g., "llm --model claude")
+/// `error` is the stderr output from the command
+pub fn llm_command_failed(command: &str, error: &str) -> anyhow::Error {
+    let error_header = format!("{ERROR_EMOJI} {ERROR}Commit generation command failed{ERROR:#}");
+    let error_block = format_error_block(error_header, error);
+
+    // Build message: error block + blank line separator + info block
+    // Trim trailing newlines since output system adds one via println!
+    let command_gutter = format_with_gutter(command, "", None);
+
+    let mut msg = error_block.trim_end().to_string();
+    msg.push_str("\n\n"); // "One blank after blocks"
+    msg.push_str(INFO_EMOJI);
+    msg.push_str(" Ran command:\n");
+    msg.push_str(command_gutter.trim_end());
+
+    anyhow::anyhow!("{}", msg)
 }

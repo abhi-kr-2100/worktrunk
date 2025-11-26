@@ -2,7 +2,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{self, Stdio};
 use worktrunk::config::CommitGenerationConfig;
-use worktrunk::git::Repository;
+use worktrunk::git::{Repository, llm_command_failed};
 use worktrunk::path::format_path_for_display;
 
 use minijinja::Environment;
@@ -11,6 +11,15 @@ use minijinja::Environment;
 struct PromptContext<'a> {
     branch: &'a str,
     repo_name: &'a str,
+}
+
+/// Format a command and its arguments into a display string
+fn format_command_display(command: &str, args: &[String]) -> String {
+    if args.is_empty() {
+        command.to_string()
+    } else {
+        format!("{} {}", command, args.join(" "))
+    }
 }
 
 /// Default template for commit message prompts
@@ -103,7 +112,7 @@ fn execute_llm_command(command: &str, args: &[String], prompt: &str) -> anyhow::
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("LLM command failed: {}", stderr);
+        anyhow::bail!("{}", stderr.trim());
     }
 
     let message = String::from_utf8_lossy(&output.stdout).trim().to_owned();
@@ -216,17 +225,10 @@ pub fn generate_commit_message(
     // Check if commit generation is configured (non-empty command)
     if commit_generation_config.is_configured() {
         let command = commit_generation_config.command.as_ref().unwrap();
+        let args = &commit_generation_config.args;
         // Commit generation is explicitly configured - fail if it doesn't work
-        return try_generate_commit_message(
-            command,
-            &commit_generation_config.args,
-            commit_generation_config,
-        )
-        .map_err(|e| {
-            anyhow::anyhow!(format!(
-                "Commit generation command '{}' failed: {}",
-                command, e
-            ))
+        return try_generate_commit_message(command, args, commit_generation_config).map_err(|e| {
+            llm_command_failed(&format_command_display(command, args), &e.to_string())
         });
     }
 
@@ -311,6 +313,7 @@ pub fn generate_squash_message(
     // Check if commit generation is configured (non-empty command)
     if commit_generation_config.is_configured() {
         let command = commit_generation_config.command.as_ref().unwrap();
+        let args = &commit_generation_config.args;
         // Commit generation is explicitly configured - fail if it doesn't work
         let context = PromptContext {
             branch: current_branch,
@@ -318,7 +321,9 @@ pub fn generate_squash_message(
         };
         let prompt =
             build_squash_prompt(commit_generation_config, target_branch, subjects, &context)?;
-        return execute_llm_command(command, &commit_generation_config.args, &prompt);
+        return execute_llm_command(command, args, &prompt).map_err(|e| {
+            llm_command_failed(&format_command_display(command, args), &e.to_string())
+        });
     }
 
     // Fallback: deterministic commit message (only when not configured)

@@ -240,8 +240,7 @@ pub fn handle_squash(
         &current_branch,
         repo_name,
         &env.config.commit_generation,
-    )
-    .context("Failed to generate commit message")?;
+    )?;
 
     // Display the generated commit message
     let formatted_message = generator.format_message_for_display(&commit_message);

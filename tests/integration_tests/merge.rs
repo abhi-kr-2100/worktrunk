@@ -660,6 +660,72 @@ fn test_merge_squash_llm_fallback() {
 }
 
 #[test]
+fn test_merge_squash_llm_error() {
+    // Test that LLM command errors show proper gutter formatting with full command
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Create a worktree for main
+    let main_wt = repo.root_path().parent().unwrap().join("test-repo.main-wt");
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["worktree", "add", main_wt.to_str().unwrap(), "main"])
+        .current_dir(repo.root_path())
+        .output()
+        .unwrap();
+
+    // Create a feature worktree and make commits
+    let feature_wt = repo.add_worktree("feature", "feature");
+
+    std::fs::write(feature_wt.join("file1.txt"), "content 1").unwrap();
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "file1.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .unwrap();
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "feat: new feature"])
+        .current_dir(&feature_wt)
+        .output()
+        .unwrap();
+
+    std::fs::write(feature_wt.join("file2.txt"), "content 2").unwrap();
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["add", "file2.txt"])
+        .current_dir(&feature_wt)
+        .output()
+        .unwrap();
+    let mut cmd = Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["commit", "-m", "fix: bug fix"])
+        .current_dir(&feature_wt)
+        .output()
+        .unwrap();
+
+    // Configure LLM command via config file with command that will fail
+    // This tests that:
+    // 1. The full command (with args) is shown in the error header
+    // 2. The error output appears in a gutter
+    let worktrunk_config = r#"
+[commit-generation]
+command = "sh"
+args = ["-c", "echo 'Error: connection refused' >&2 && exit 1"]
+"#;
+    fs::write(repo.test_config_path(), worktrunk_config).unwrap();
+
+    snapshot_merge(
+        "merge_squash_llm_error",
+        &repo,
+        &["main"],
+        Some(&feature_wt),
+    );
+}
+
+#[test]
 fn test_merge_squash_single_commit() {
     let mut repo = TestRepo::new();
     repo.commit("Initial commit");

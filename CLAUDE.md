@@ -370,6 +370,25 @@ output::gutter(format_with_gutter(&log, "", None))?;
 output::progress(format!("{CYAN}Merging...{CYAN:#}\n"))?;
 ```
 
+### External Command Error Formatting
+
+When external commands (user-configured commands like LLM tools, hooks) fail, error messages must:
+1. **Show the command that was run** - Include the full command with arguments so users can debug
+2. **Put error output in a gutter** - Don't embed raw stderr inline in the message
+
+Use the `format_error_block` helper in `src/git/error.rs` or follow its pattern:
+
+```rust
+// ✅ GOOD - command shown in header, error in gutter
+❌ Commit generation command 'llm --model claude' failed
+   ┃ Error: [Errno 8] nodename nor servname provided, or not known
+
+// ❌ BAD - error embedded inline, command not shown
+❌ Commit generation command 'llm' failed: LLM command failed: Error: [Errno 8]...
+```
+
+**Implementation:** See `format_error_block()` in `src/git/error.rs` for the pattern, and `llm_command_failed()` for an example.
+
 ### Table Column Alignment
 
 **Principle: Headers and values align consistently within each column type.**
@@ -390,34 +409,7 @@ Column alignment follows standard tabular data conventions:
 
 ### Snapshot Testing Requirement
 
-Every command output must have a snapshot test (`tests/integration_tests/`). Use this pattern:
-
-```rust
-use crate::common::{TestRepo, make_snapshot_cmd, setup_snapshot_settings};
-use insta_cmd::assert_cmd_snapshot;
-use std::path::Path;
-
-fn snapshot_remove(test_name: &str, repo: &TestRepo, args: &[&str], cwd: Option<&Path>) {
-    let settings = setup_snapshot_settings(repo);
-    settings.bind(|| {
-        let mut cmd = make_snapshot_cmd(repo, "remove", args, cwd);
-        assert_cmd_snapshot!(test_name, cmd);
-    });
-}
-
-fn setup_remove_repo() -> TestRepo {
-    let mut repo = TestRepo::new();
-    repo.commit("Initial commit");
-    repo.setup_remote("main");
-    repo
-}
-
-#[test]
-fn test_remove_success() {
-    let repo = setup_remove_repo();
-    snapshot_remove("remove_success", &repo, &[], None);
-}
-```
+Every command output must have a snapshot test (`tests/integration_tests/`). See `tests/integration_tests/remove.rs` for the standard pattern using `setup_snapshot_settings()`, `make_snapshot_cmd()`, and `assert_cmd_snapshot!()`.
 
 Cover success/error states, with/without data, and flag variations.
 
