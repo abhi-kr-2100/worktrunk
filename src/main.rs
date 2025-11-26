@@ -5,7 +5,7 @@ use std::process;
 use worktrunk::config::{WorktrunkConfig, set_config_path};
 use worktrunk::git::{Repository, exit_code, is_command_not_approved, set_base_path};
 use worktrunk::path::format_path_for_display;
-use worktrunk::styling::println;
+use worktrunk::styling::{format_with_gutter, println};
 
 mod cli;
 mod commands;
@@ -757,13 +757,20 @@ fn main() {
     let _ = output::terminate_output();
 
     if let Err(e) = result {
-        // Error messages are already formatted with emoji and colors
         // Route through output system to respect mode:
         // - Interactive mode: errors go to stdout
         // - Directive mode: errors go to stderr
-        // Skip empty errors (already displayed by the command)
+        //
+        // Multi-line errors from external commands (e.g., git output) get gutter formatting.
+        // We detect this by checking if context was added: e.to_string() != root_cause means
+        // the error was wrapped with .context(), so the root cause is raw external output.
         let msg = e.to_string();
-        if !msg.is_empty() {
+        let root_cause = e.root_cause().to_string();
+        let has_context = msg != root_cause;
+        if has_context && root_cause.contains('\n') {
+            let _ = output::error(msg);
+            let _ = output::gutter(format_with_gutter(&root_cause, "", None));
+        } else {
             let _ = output::error(msg);
         }
 

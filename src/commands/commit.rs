@@ -1,7 +1,7 @@
 use anyhow::Context;
 use worktrunk::config::CommitGenerationConfig;
 use worktrunk::git::Repository;
-use worktrunk::styling::{AnstyleStyle, CYAN, ERROR, GREEN, HINT, format_with_gutter};
+use worktrunk::styling::{AnstyleStyle, CYAN, GREEN, HINT, format_with_gutter};
 
 use super::command_executor::CommandContext;
 use super::hooks::HookPipeline;
@@ -116,11 +116,8 @@ impl<'a> CommitGenerator<'a> {
         let formatted_message = self.format_message_for_display(&commit_message);
         crate::output::gutter(format_with_gutter(&formatted_message, "", None))?;
 
-        if let Err(e) = repo.run_command(&["commit", "-m", &commit_message]) {
-            crate::output::error(format!("{ERROR}Failed to commit{ERROR:#}"))?;
-            crate::output::gutter(format_with_gutter(&e.to_string(), "", None))?;
-            anyhow::bail!("");
-        }
+        repo.run_command(&["commit", "-m", &commit_message])
+            .context("Failed to commit")?;
 
         let commit_hash = repo
             .run_command(&["rev-parse", "--short", "HEAD"])?
