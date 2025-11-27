@@ -10,7 +10,7 @@ fn display_worktree_removal_failed() {
         error: "fatal: worktree is dirty\nerror: could not remove worktree".into(),
     };
 
-    assert_snapshot!("worktree_removal_failed", err.styled());
+    assert_snapshot!("worktree_removal_failed", err.to_string());
 }
 
 #[test]
@@ -19,5 +19,5 @@ fn display_push_failed() {
         error: "To /Users/user/workspace/repo/.git\n ! [remote rejected] HEAD -> main (Up-to-date check failed)\nerror: failed to push some refs to '/Users/user/workspace/repo/.git'".into(),
     };
 
-    assert_snapshot!("push_failed", err.styled());
+    assert_snapshot!("push_failed", err.to_string());
 }

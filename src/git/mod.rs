@@ -31,16 +31,13 @@ static HEAVY_OPS_SEMAPHORE: LazyLock<semaphore::Semaphore> =
 // Re-exports from submodules
 pub use diff::{DiffStats, LineDiff};
 pub use error::{
-    // Typed error enum
+    // Typed error enum (Display produces styled output)
     GitError,
-    // Special-handling error enum
+    // Special-handling error enum (Display produces styled output)
     WorktrunkError,
     // Error inspection functions
     exit_code,
-    is_branch_already_exists,
     is_command_not_approved,
-    is_detached_head,
-    is_git_error,
 };
 pub use repository::{Repository, set_base_path};
 

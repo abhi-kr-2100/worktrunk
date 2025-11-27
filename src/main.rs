@@ -783,21 +783,18 @@ fn main() {
     if let Err(e) = result {
         use worktrunk::styling::{ERROR, ERROR_EMOJI};
 
-        // GitError and WorktrunkError produce styled messages
+        // GitError and WorktrunkError produce styled output via Display
         if let Some(git_err) = e.downcast_ref::<worktrunk::git::GitError>() {
-            let _ = output::print(git_err.styled());
+            let _ = output::print(git_err.to_string());
         } else if let Some(wt_err) = e.downcast_ref::<worktrunk::git::WorktrunkError>() {
             let _ = output::print(wt_err.to_string());
         } else {
-            // Anyhow error - format with emoji/styling, multi-line gets gutter
+            // Anyhow error - show context message, multi-line root cause gets gutter
             let msg = e.to_string();
             let root_cause = e.root_cause().to_string();
-            let has_context = msg != root_cause;
-            if has_context && root_cause.contains('\n') {
-                let _ = output::print(format!("{ERROR_EMOJI} {ERROR}{msg}{ERROR:#}"));
+            let _ = output::print(format!("{ERROR_EMOJI} {ERROR}{msg}{ERROR:#}"));
+            if msg != root_cause && root_cause.contains('\n') {
                 let _ = output::gutter(format_with_gutter(&root_cause, "", None));
-            } else {
-                let _ = output::print(format!("{ERROR_EMOJI} {ERROR}{msg}{ERROR:#}"));
             }
         }
 
