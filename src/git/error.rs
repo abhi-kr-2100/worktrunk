@@ -46,6 +46,9 @@ pub enum GitError {
     BranchAlreadyExists {
         branch: String,
     },
+    InvalidReference {
+        reference: String,
+    },
 
     // Worktree errors
     WorktreeMissing {
@@ -142,6 +145,13 @@ impl std::fmt::Display for GitError {
                 cwrite!(
                     f,
                     "{ERROR_EMOJI} <red>Branch <bold>{branch}</> already exists</>\n\n{HINT_EMOJI} <dim>Remove --create flag to switch to it</>"
+                )
+            }
+
+            GitError::InvalidReference { reference } => {
+                cwrite!(
+                    f,
+                    "{ERROR_EMOJI} <red>Branch <bold>{reference}</> not found</>\n\n{HINT_EMOJI} <dim>Use --create to create it, or 'wt list --branches --remotes' for available branches</>"
                 )
             }
 

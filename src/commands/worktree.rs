@@ -370,6 +370,14 @@ pub fn handle_switch(
                 .into());
             }
         }
+        // Check if error is about invalid reference (branch not found)
+        // Format: "fatal: invalid reference: branch-name"
+        if msg.contains("invalid reference:") {
+            return Err(GitError::InvalidReference {
+                reference: resolved_branch.clone(),
+            }
+            .into());
+        }
         // Fall back to generic error with context
         return Err(GitError::WorktreeCreationFailed {
             branch: resolved_branch.clone(),

@@ -29,8 +29,9 @@ fn test_switch_internal_directive() {
         ----- stdout -----
 
         ----- stderr -----
-        ❌ [31mFailed to create worktree for [1mmy-feature[22m[39m
-        [107m [0m  fatal: invalid reference: my-feature
+        ❌ [31mBranch [1mmy-feature[22m not found[39m
+
+        💡 [2mUse --create to create it, or 'wt list --branches --remotes' for available branches[22m
         ");
     });
 }
@@ -57,8 +58,9 @@ fn test_switch_without_internal() {
         ----- stdout -----
 
         ----- stderr -----
-        ❌ [31mFailed to create worktree for [1mmy-feature[22m[39m
-        [107m [0m  fatal: invalid reference: my-feature
+        ❌ [31mBranch [1mmy-feature[22m not found[39m
+
+        💡 [2mUse --create to create it, or 'wt list --branches --remotes' for available branches[22m
         ");
     });
 }

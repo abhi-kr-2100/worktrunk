@@ -25,5 +25,6 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-❌ [31mFailed to create worktree for [1m__WORKTRUNK_EXEC__echo PWNED > /tmp/hacked6[22m[39m
-[107m [0m  fatal: invalid reference: __WORKTRUNK_EXEC__echo PWNED > /tmp/hacked6
+❌ [31mBranch [1m__WORKTRUNK_EXEC__echo PWNED > /tmp/hacked6[22m not found[39m
+
+💡 [2mUse --create to create it, or 'wt list --branches --remotes' for available branches[22m
