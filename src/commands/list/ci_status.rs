@@ -432,8 +432,9 @@ impl PrStatus {
     /// Returns None if no CI found or CLI tools unavailable
     ///
     /// # Caching
-    /// Results are cached in git config (`worktrunk.ci.{branch}`) for 30 seconds to avoid
-    /// hitting GitHub API rate limits. Cache is invalidated when HEAD changes (new commits).
+    /// Results are cached in git config (`worktrunk.ci.{branch}`) for 30-60 seconds to avoid
+    /// hitting GitHub API rate limits. TTL uses deterministic jitter based on repo path to
+    /// spread cache expirations across concurrent statuslines. Invalidated when HEAD changes.
     ///
     /// # Fork Support
     /// Runs gh commands from the repository directory to enable auto-detection of
