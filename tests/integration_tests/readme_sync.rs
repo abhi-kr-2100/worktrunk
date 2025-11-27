@@ -14,9 +14,10 @@ use std::sync::LazyLock;
 
 /// Regex to find README snapshot markers
 /// Format: <!-- ⚠️ AUTO-GENERATED from path.snap — edit source to update -->
+/// Captures: (1) snapshot path, (2) command line (e.g., "$ wt merge"), (3) content
 static SNAPSHOT_MARKER_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?s)<!-- ⚠️ AUTO-GENERATED from ([^\s]+\.snap) — edit source to update -->\n+```\w*\n(?:\$ [^\n]+\n)?(.*?)```\n+<!-- END AUTO-GENERATED -->",
+        r"(?s)<!-- ⚠️ AUTO-GENERATED from ([^\s]+\.snap) — edit source to update -->\n+```\w*\n(\$ [^\n]+)\n(.*?)```\n+<!-- END AUTO-GENERATED -->",
     )
     .unwrap()
 });
@@ -33,6 +34,9 @@ static ANSI_ESCAPE_REGEX: LazyLock<Regex> =
 
 /// Regex to strip literal bracket notation (as stored in snapshots)
 static ANSI_LITERAL_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[[0-9;]*m").unwrap());
+
+/// Regex for HASH placeholder (used by shell_wrapper tests)
+static HASH_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[HASH\]").unwrap());
 
 /// Regex for TMPDIR paths
 static TMPDIR_REGEX: LazyLock<Regex> =
@@ -208,16 +212,20 @@ fn parse_snapshot(path: &Path) -> Result<String, String> {
 
 /// Normalize snapshot output for README display
 fn normalize_for_readme(content: &str) -> String {
-    let content = TMPDIR_REGEX.replace_all(content, "../repo.$1");
+    // Real SHAs flow through from deterministic tests (fixed dates + git identity)
+    let content = HASH_REGEX.replace_all(content, "a1b2c3d");
+    let content = TMPDIR_REGEX.replace_all(&content, "../repo.$1");
     let content = REPO_REGEX.replace_all(&content, "../repo");
 
-    // Trim trailing whitespace from each line and overall (matches pre-commit behavior)
+    // Trim trailing whitespace from each line and overall trailing newlines
+    // NOTE: We use trim_end() not trim() to preserve leading spaces on the first line
+    // (e.g., the two-space gutter before table headers in `wt list` output)
     content
         .lines()
         .map(|line| line.trim_end())
         .collect::<Vec<_>>()
         .join("\n")
-        .trim()
+        .trim_end()
         .to_string()
 }
 
@@ -228,7 +236,7 @@ fn normalize_readme_content(content: &str) -> String {
         .map(|line| line.trim_end())
         .collect::<Vec<_>>()
         .join("\n")
-        .trim()
+        .trim_end()
         .to_string()
 }
 
@@ -472,15 +480,29 @@ fn test_readme_examples_are_in_sync() {
     let mut updated_content = readme_content.clone();
     let mut total_updated = 0;
 
-    // Check snapshot markers
-    for cap in SNAPSHOT_MARKER_PATTERN.captures_iter(&readme_content) {
-        let snap_path = cap.get(1).unwrap().as_str();
-        let current_content = normalize_readme_content(cap.get(2).unwrap().as_str());
-        checked += 1;
+    // Update snapshot markers (preserving command lines)
+    let matches: Vec<_> = SNAPSHOT_MARKER_PATTERN
+        .captures_iter(&updated_content.clone())
+        .map(|cap| {
+            let full_match = cap.get(0).unwrap();
+            let snap_path = cap.get(1).unwrap().as_str().to_string();
+            let command_line = cap.get(2).unwrap().as_str().to_string();
+            let current = normalize_readme_content(cap.get(3).unwrap().as_str());
+            (
+                full_match.start(),
+                full_match.end(),
+                snap_path,
+                command_line,
+                current,
+            )
+        })
+        .collect();
 
-        let full_path = project_root.join(snap_path);
+    checked += matches.len();
 
-        // Parse and normalize the snapshot
+    // Process in reverse order to preserve positions
+    for (start, end, snap_path, command_line, current) in matches.into_iter().rev() {
+        let full_path = project_root.join(&snap_path);
         let expected = match parse_snapshot(&full_path) {
             Ok(content) => normalize_for_readme(&content),
             Err(e) => {
@@ -489,12 +511,13 @@ fn test_readme_examples_are_in_sync() {
             }
         };
 
-        // Compare
-        if current_content != expected {
-            errors.push(format!(
-                "❌ {} is out of sync\n\n--- Current (in README) ---\n{}\n\n--- Expected (from snapshot) ---\n{}\n",
-                snap_path, current_content, expected
-            ));
+        if current != expected {
+            let replacement = format!(
+                "<!-- ⚠️ AUTO-GENERATED from {} — edit source to update -->\n\n```console\n{}\n{}\n```\n\n<!-- END AUTO-GENERATED -->",
+                snap_path, command_line, expected
+            );
+            updated_content.replace_range(start..end, &replacement);
+            total_updated += 1;
         }
     }
 
