@@ -79,6 +79,45 @@ mod tests {
         // Unsupported protocols
         assert_eq!(parse_remote_owner("http://github.com/owner/repo.git"), None);
     }
+
+    #[test]
+    fn test_ttl_jitter_range_and_determinism() {
+        // Check range: TTL should be in [30, 60)
+        let paths = [
+            "/tmp/repo1",
+            "/tmp/repo2",
+            "/workspace/project",
+            "/home/user/code",
+        ];
+        for path in paths {
+            let ttl = CachedCiStatus::ttl_for_repo(path);
+            assert!(
+                (30..60).contains(&ttl),
+                "TTL {} for path {} should be in [30, 60)",
+                ttl,
+                path
+            );
+        }
+
+        // Check determinism: same path should always produce same TTL
+        let path = "/some/consistent/path";
+        let ttl1 = CachedCiStatus::ttl_for_repo(path);
+        let ttl2 = CachedCiStatus::ttl_for_repo(path);
+        assert_eq!(ttl1, ttl2, "Same path should produce same TTL");
+
+        // Check diversity: different paths should likely produce different TTLs
+        let diverse_paths: Vec<_> = (0..20).map(|i| format!("/repo/path{}", i)).collect();
+        let ttls: std::collections::HashSet<_> = diverse_paths
+            .iter()
+            .map(|p| CachedCiStatus::ttl_for_repo(p))
+            .collect();
+        // With 20 paths mapping to 30 possible values, we expect good diversity
+        assert!(
+            ttls.len() >= 10,
+            "Expected diverse TTLs across paths, got {} unique values",
+            ttls.len()
+        );
+    }
 }
 
 /// Get the owner of the origin remote (for fork detection)
@@ -199,11 +238,30 @@ pub(crate) struct CachedCiStatus {
 }
 
 impl CachedCiStatus {
-    /// Cache TTL in seconds.
+    /// Base cache TTL in seconds.
+    const TTL_BASE_SECS: u64 = 30;
+
+    /// Maximum jitter added to TTL in seconds.
+    /// Actual TTL will be BASE + (0..JITTER) based on repo path hash.
+    const TTL_JITTER_SECS: u64 = 30;
+
+    /// Compute TTL with deterministic jitter based on repo path.
     ///
-    /// At 300ms polling interval, 30s TTL means ~100 polls per cache entry.
-    /// This reduces API calls by 99% while keeping status reasonably fresh.
-    pub const TTL_SECS: u64 = 30;
+    /// Different directories get different TTLs [30, 60) seconds, which spreads
+    /// out cache expirations when multiple statuslines run concurrently.
+    /// The jitter is deterministic so the same directory always gets the same TTL.
+    pub(crate) fn ttl_for_repo(repo_root: &str) -> u64 {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+        repo_root.hash(&mut hasher);
+        let hash = hasher.finish();
+
+        // Map hash to jitter range [0, TTL_JITTER_SECS)
+        let jitter = hash % Self::TTL_JITTER_SECS;
+        Self::TTL_BASE_SECS + jitter
+    }
 
     /// Escape branch name for use in git config key.
     ///
@@ -219,11 +277,12 @@ impl CachedCiStatus {
     }
 
     /// Check if the cache is still valid
-    fn is_valid(&self, current_head: &str, now_secs: u64) -> bool {
+    fn is_valid(&self, current_head: &str, now_secs: u64, repo_root: &str) -> bool {
         // Cache is valid if:
         // 1. HEAD hasn't changed (same commit)
-        // 2. TTL hasn't expired
-        self.head == current_head && now_secs.saturating_sub(self.checked_at) < Self::TTL_SECS
+        // 2. TTL hasn't expired (with deterministic jitter based on repo path)
+        let ttl = Self::ttl_for_repo(repo_root);
+        self.head == current_head && now_secs.saturating_sub(self.checked_at) < ttl
     }
 
     /// Read cached CI status from git config
@@ -393,18 +452,20 @@ impl PrStatus {
         let now_secs = SystemTime::now().duration_since(UNIX_EPOCH).ok()?.as_secs();
 
         if let Some(cached) = CachedCiStatus::read(branch, repo_root) {
-            if cached.is_valid(local_head, now_secs) {
+            if cached.is_valid(local_head, now_secs, repo_root) {
                 log::debug!(
-                    "Using cached CI status for {} (age={}s)",
+                    "Using cached CI status for {} (age={}s, ttl={}s)",
                     branch,
-                    now_secs - cached.checked_at
+                    now_secs - cached.checked_at,
+                    CachedCiStatus::ttl_for_repo(repo_root)
                 );
                 return Some(cached.status);
             }
             log::debug!(
-                "Cache expired for {} (age={}s, head_match={})",
+                "Cache expired for {} (age={}s, ttl={}s, head_match={})",
                 branch,
                 now_secs - cached.checked_at,
+                CachedCiStatus::ttl_for_repo(repo_root),
                 cached.head == local_head
             );
         }
