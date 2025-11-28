@@ -17,10 +17,16 @@ to make spinning up a new AI "developer" for a task feel as routine as `git
 switch`.
 
 Worktrunk can simplify standard workflows — a easier way to create / navigate /
-list / clean up worktrees. It also supports newer workflows, such as local
-merging of worktrees with CI-like checks. And there are some QoL improvements,
-such as listing which worktrees have a Claude Code instance working vs. waiting
-for input, and a Claude Code statusline.
+list / clean up worktrees. It also supports newer workflows, such as LLM commit
+messages, or local merging of worktrees gated on CI-like checks. And there are
+QoL improvements such as listing the CI status of all branches, listing which
+worktrees have Claude Code working vs. waiting for input, and a Claude Code
+statusline.
+
+I've been using Worktrunk as my daily driver while building it for the past
+couple of months, and found the workflows extremely good. It's built with love;
+there's no slop here! If some social proof is helpful: I also created PRQL and
+am a maintainer of Xarray & Insta & Numbagg.
 
 ## Demo
 
