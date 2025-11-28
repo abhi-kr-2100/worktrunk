@@ -19,7 +19,7 @@ pub struct DisplayFields {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status_display: Option<String>,
     /// Pre-formatted single-line representation for statusline tools.
-    /// Format: `branch  status  ±working  commits  upstream  ci` (2-space separators)
+    /// Format: `branch  status  @working  commits  ^branch_diff  upstream  ci` (2-space separators)
     ///
     /// Use via JSON: `wt list --format=json | jq '.[] | select(.is_current) | .status_line'`
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -334,7 +334,7 @@ impl ListItem {
 
     /// Format this item as a single-line statusline string.
     ///
-    /// Format: `branch  status  ±working  commits  upstream  ci`
+    /// Format: `branch  status  @working  commits  ^branch_diff  upstream  ci`
     /// Uses 2-space separators between non-empty parts.
     pub fn format_statusline(&self) -> String {
         let mut parts: Vec<String> = Vec::new();
@@ -351,13 +351,14 @@ impl ListItem {
         }
 
         // 3. Working diff (worktrees only)
+        // Prefix with @ ("at" current state) to distinguish from branch diff (^)
         if let Some(data) = self.worktree_data()
             && let Some(ref diff) = data.working_tree_diff
             && !diff.is_empty()
             && let Some(formatted) =
                 ColumnKind::WorkingDiff.format_diff_plain(diff.added, diff.deleted)
         {
-            parts.push(format!("±{formatted}"));
+            parts.push(format!("@{formatted}"));
         }
 
         // 4. Commits ahead/behind main
@@ -367,7 +368,17 @@ impl ListItem {
             parts.push(formatted);
         }
 
-        // 5. Upstream status
+        // 5. Branch diff vs main (line changes)
+        // Prefix with ^ (main) to distinguish from working diff (@)
+        let branch_diff = self.branch_diff();
+        if !branch_diff.diff.is_empty()
+            && let Some(formatted) = ColumnKind::BranchDiff
+                .format_diff_plain(branch_diff.diff.added, branch_diff.diff.deleted)
+        {
+            parts.push(format!("^{formatted}"));
+        }
+
+        // 6. Upstream status
         if let Some(ref upstream) = self.upstream
             && let Some((_, ahead, behind)) = upstream.active()
             && let Some(formatted) = ColumnKind::Upstream.format_diff_plain(ahead, behind)
@@ -375,7 +386,7 @@ impl ListItem {
             parts.push(formatted);
         }
 
-        // 6. CI status
+        // 7. CI status
         if let Some(Some(ref pr_status)) = self.pr_status {
             parts.push(pr_status.format_indicator());
         }
