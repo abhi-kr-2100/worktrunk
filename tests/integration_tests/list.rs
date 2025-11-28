@@ -1,4 +1,6 @@
-use crate::common::{DAY, HOUR, TestRepo, list_snapshots, setup_snapshot_settings, wt_command};
+use crate::common::{
+    DAY, HOUR, MINUTE, TestRepo, list_snapshots, setup_snapshot_settings, wt_command,
+};
 use insta::Settings;
 use insta_cmd::assert_cmd_snapshot;
 use std::path::Path;
@@ -965,42 +967,45 @@ fn test_list_user_status_with_special_characters() {
     snapshot_list("user_status_special_chars", &repo);
 }
 
-/// Generate README example: Simple list output showing multiple worktrees
-/// This demonstrates the basic list output format used in the Quick Start section.
+/// Generate README example: List output for Quick Start narrative
+///
+/// Shows main + fix-auth + feature-api worktrees (matches the Quick Start flow):
+/// - fix-auth: just created, no commits ahead (same as main)
+/// - feature-api: where we switched to and did work (commits ahead + staged changes)
+///
 /// Output: tests/snapshots/integration__integration_tests__list__readme_example_simple_list.snap
 #[test]
 fn test_readme_example_simple_list() {
     let mut repo = TestRepo::new();
-    // Initial commit on main - oldest (1 day ago)
+    // Initial commit on main (yesterday)
     repo.commit_with_age("Initial commit", DAY);
     repo.setup_remote("main");
 
-    // Create worktrees with various states
-    let feature_x = repo.add_worktree("feature-x");
-    let bugfix_y = repo.add_worktree("bugfix-y");
+    // Create fix-auth worktree (just created, no work yet - same commit as main)
+    let _fix_auth = repo.add_worktree("fix-auth");
 
-    // feature-x: ahead with uncommitted changes (3 commits, most recent 10min ago)
-    repo.commit_with_age_in("Add file 1", 3 * HOUR, &feature_x);
-    repo.commit_with_age_in("Add file 2", 2 * HOUR, &feature_x);
-    repo.commit_with_age_in("Add file 3", HOUR, &feature_x);
+    // Create feature-api worktree (existing work - we switched here and did work)
+    let feature_api = repo.add_worktree("feature-api");
 
-    // Add staged changes (+5 lines)
-    std::fs::write(
-        feature_x.join("modified.txt"),
-        "line1\nline2\nline3\nline4\nline5\n",
-    )
-    .unwrap();
+    // feature-api: several commits ahead with staged changes (a morning's work)
+    repo.commit_with_age_in("Add REST endpoints", 3 * HOUR, &feature_api);
+    repo.commit_with_age_in("Add authentication middleware", 2 * HOUR, &feature_api);
+    repo.commit_with_age_in("Add request validation", HOUR, &feature_api);
+    repo.commit_with_age_in("Add API tests", 30 * MINUTE, &feature_api);
+
+    // Staged changes: a few more files in progress
+    std::fs::write(feature_api.join("api.rs"), "// WIP: rate limiting\n").unwrap();
+    std::fs::write(feature_api.join("middleware.rs"), "// WIP: caching\n").unwrap();
+    std::fs::write(feature_api.join("tests.rs"), "// WIP: edge cases\n").unwrap();
     let mut cmd = Command::new("git");
     repo.configure_git_cmd(&mut cmd);
-    cmd.args(["add", "modified.txt"])
-        .current_dir(&feature_x)
+    cmd.args(["add", "api.rs", "middleware.rs", "tests.rs"])
+        .current_dir(&feature_api)
         .output()
         .unwrap();
 
-    // bugfix-y: 1 commit ahead (2 hours ago), clean tree
-    repo.commit_with_age_in("Fix bug", 2 * HOUR, &bugfix_y);
-
-    snapshot_list("readme_example_simple_list", &repo);
+    // Run from feature-api (we just switched there in step 3)
+    snapshot_list_from_dir("readme_example_simple_list", &repo, &feature_api);
 }
 
 #[test]

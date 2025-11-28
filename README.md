@@ -57,42 +57,49 @@ $ wt switch --create fix-auth
 
 This creates `../repo.fix-auth` on branch `fix-auth`.
 
-### 3. Merge it
+### 3. Switch between worktrees
 
-<!-- ⚠️ AUTO-GENERATED from tests/snapshots/integration__integration_tests__merge__readme_example_simple.snap — edit source to update -->
+<!-- ⚠️ AUTO-GENERATED from tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_switch_back.snap — edit source to update -->
 
 ```console
-$ wt merge
-🔄 Merging 1 commit to main @ d29e0fd (no commit/squash/rebase needed)
-   * d29e0fd Implement JWT validation
-    auth.rs | 13 +++++++++++++
-    1 file changed, 13 insertions(+)
-✅ Merged to main (1 commit, 1 file, +13)
-🔄 Removing fix-auth worktree & branch in background (ancestor of main)
+$ wt switch feature-api
+✅ Switched to worktree for feature-api at ../repo.feature-api
 ```
 
 <!-- END AUTO-GENERATED -->
 
-`wt merge` handles the full workflow: stage, commit, squash, rebase, run hooks,
-merge, cleanup.
-
 ### 4. List worktrees
+
+After doing some work:
 
 <!-- ⚠️ AUTO-GENERATED from tests/snapshots/integration__integration_tests__list__readme_example_simple_list.snap — edit source to update -->
 
 ```console
 $ wt list
-  Branch     Status         HEAD±    main↕  Path              Remote⇅  Commit    Age   Message
-@ main           ^∥                         ./repo               ∥     b834638e  1d    Initial commit
-+ feature-x  +   ↑        +5        ↑3      ./repo.feature-x           6bba16d6  1h    Add file 3
-+ bugfix-y       ↑                  ↑1      ./repo.bugfix-y            bafa4cbd  2h    Fix bug
+  Branch       Status         HEAD±    main↕  Path                Remote⇅  Commit    Age   Message
+@ feature-api  +   ↑        +3        ↑4      ./repo.feature-api           5b01afca  30m   Add API tests
+^ main             ^∥                         ./repo                 ∥     b834638e  1d    Initial commit
++ fix-auth        _                           ./repo.fix-auth              b834638e  1d    Initial commit
 
-⚪ Showing 3 worktrees, 1 with changes, 2 ahead
+⚪ Showing 3 worktrees, 1 with changes, 1 ahead
 ```
 
 <!-- END AUTO-GENERATED -->
 
 `--full` adds CI status and conflicts. `--branches` includes all branches.
+
+### 5. Clean up
+
+Say we merged via CI, our changes are on main, and we're finished with the worktree:
+
+<!-- ⚠️ AUTO-GENERATED from tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_remove.snap — edit source to update -->
+
+```console
+$ wt remove
+🔄 Removing feature-api worktree & branch in background
+```
+
+<!-- END AUTO-GENERATED -->
 
 ## Why worktrees?
 
@@ -108,7 +115,7 @@ So we use git worktrees: multiple working directories backed by a single reposit
 
 ## Why Worktrunk?
 
-Git's built-in `worktree` commands give you the primitives but not the lifecycle. Worktrunk bundles creation, hooks, merging, and cleanup into three commands: `wt switch`, `wt merge`, and `wt list`. A few examples:
+Git's built-in `worktree` commands give you the primitives but not the lifecycle. Worktrunk bundles creation, navigation, status, and cleanup into simple commands. A few examples:
 
 <table>
 <tr>
@@ -123,10 +130,9 @@ Git's built-in `worktree` commands give you the primitives but not the lifecycle
 cd ../repo.feature && claude</pre></td>
 </tr>
 <tr>
-<td>Merge + clean up</td>
-<td><pre lang="bash">wt merge</pre></td>
-<td><pre lang="bash">cd ../repo && git merge feature
-git worktree remove ../repo.feature
+<td>Clean up</td>
+<td><pre lang="bash">wt remove feature</pre></td>
+<td><pre lang="bash">git worktree remove ../repo.feature
 git branch -d feature</pre></td>
 </tr>
 <tr>
@@ -148,7 +154,34 @@ cargo install --path .</pre></td>
 </tr>
 </table>
 
-## Automation
+## Advanced
+
+Most Worktrunk users just use the commands above. But I've found these features really helpful too:
+
+### Local merging with `wt merge`
+
+`wt merge` handles the full merge workflow: stage, commit, squash, rebase, run hooks, merge, cleanup.
+
+<table>
+<tr>
+<th>Task</th>
+<th>Worktrunk</th>
+<th>Plain git</th>
+</tr>
+<tr>
+<td>Merge + clean up</td>
+<td><pre lang="bash">wt merge</pre></td>
+<td><pre lang="bash">git add -A
+git reset --soft $(git merge-base HEAD main)
+git diff --staged | llm "msg" | git commit -F -
+git rebase main
+cargo test  # pre-merge hook
+cd ../repo && git merge --ff-only feature
+git worktree remove ../repo.feature
+git branch -d feature
+cargo install --path .  # post-merge hook</pre></td>
+</tr>
+</table>
 
 ### LLM commit messages
 

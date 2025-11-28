@@ -1,0 +1,6 @@
+---
+source: tests/integration_tests/shell_wrapper.rs
+assertion_line: 1339
+expression: output.normalized()
+---
+✅ [32m[32mSwitched to worktree for [1mfeature-api[22m at [1m[TMPDIR]/repo.feature-api[39m[22m[39m

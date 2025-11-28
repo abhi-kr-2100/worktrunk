@@ -37,9 +37,14 @@ static ANSI_LITERAL_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[[0-
 /// Regex for HASH placeholder (used by shell_wrapper tests)
 static HASH_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[HASH\]").unwrap());
 
-/// Regex for TMPDIR paths
-static TMPDIR_REGEX: LazyLock<Regex> =
+/// Regex for TMPDIR paths with branch suffix (e.g., [TMPDIR]/repo.fix-auth)
+static TMPDIR_BRANCH_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\[TMPDIR\]/repo\.([^\s/]+)").unwrap());
+
+/// Regex for TMPDIR paths without branch suffix (e.g., [TMPDIR]/repo at end or followed by space/newline)
+/// Matches [TMPDIR]/repo when followed by end-of-string, whitespace, or non-word character (but not dot)
+static TMPDIR_MAIN_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\[TMPDIR\]/repo(\s|$)").unwrap());
 
 /// Regex for REPO placeholder
 static REPO_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\[REPO\]").unwrap());
@@ -241,7 +246,10 @@ fn trim_lines(content: &str) -> String {
 fn normalize_for_readme(content: &str) -> String {
     // Real SHAs flow through from deterministic tests (fixed dates + git identity)
     let content = HASH_REGEX.replace_all(content, "a1b2c3d");
-    let content = TMPDIR_REGEX.replace_all(&content, "../repo.$1");
+    // Replace branch worktree paths first (e.g., [TMPDIR]/repo.fix-auth -> ../repo.fix-auth)
+    let content = TMPDIR_BRANCH_REGEX.replace_all(&content, "../repo.$1");
+    // Replace main worktree paths (e.g., [TMPDIR]/repo -> ../repo), preserving trailing whitespace
+    let content = TMPDIR_MAIN_REGEX.replace_all(&content, "../repo$1");
     let content = REPO_REGEX.replace_all(&content, "../repo");
     trim_lines(&content)
 }

@@ -1316,6 +1316,52 @@ approved-commands = ["echo 'test command executed'"]
     }
 
     #[test]
+    fn test_readme_example_switch_back() {
+        let mut repo = TestRepo::new();
+        repo.commit("Initial commit");
+        repo.setup_remote("main");
+
+        // Create worktrees (fix-auth is where we are after step 2, feature-api exists from earlier)
+        exec_through_wrapper("bash", &repo, "switch", &["--create", "fix-auth"]);
+        // Create feature-api from main (simulating it already existed)
+        exec_through_wrapper("bash", &repo, "switch", &["--create", "feature-api"]);
+
+        // Switch to feature-api from fix-auth (showing navigation between worktrees)
+        let fix_auth_path = repo.root_path().parent().unwrap().join("repo.fix-auth");
+        let output =
+            exec_through_wrapper_from("bash", &repo, "switch", &["feature-api"], &fix_auth_path);
+
+        assert!(
+            !output.combined.contains("To enable automatic cd"),
+            "Shell integration hint should be suppressed"
+        );
+
+        assert_snapshot!(output.normalized());
+    }
+
+    #[test]
+    fn test_readme_example_remove() {
+        let mut repo = TestRepo::new();
+        repo.commit("Initial commit");
+        repo.setup_remote("main");
+
+        // Create worktrees
+        exec_through_wrapper("bash", &repo, "switch", &["--create", "fix-auth"]);
+        exec_through_wrapper("bash", &repo, "switch", &["--create", "feature-api"]);
+
+        // Remove feature-api from within it (current worktree removal)
+        let feature_api_path = repo.root_path().parent().unwrap().join("repo.feature-api");
+        let output = exec_through_wrapper_from("bash", &repo, "remove", &[], &feature_api_path);
+
+        assert!(
+            !output.combined.contains("To enable automatic cd"),
+            "Shell integration hint should be suppressed"
+        );
+
+        assert_snapshot!(output.normalized());
+    }
+
+    #[test]
     fn test_wrapper_preserves_progress_messages() {
         let repo = TestRepo::new();
         repo.commit("Initial commit");
