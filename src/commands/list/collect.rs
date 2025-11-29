@@ -30,7 +30,7 @@ use super::model::{
     ListItem, UpstreamStatus, WorktreeData,
 };
 
-/// Context for status symbol computation during cell updates
+/// Context for status symbol computation during result processing
 struct StatusContext {
     has_merge_tree_conflicts: bool,
     user_status: Option<String>,
@@ -38,11 +38,15 @@ struct StatusContext {
     has_conflicts: bool,
 }
 
-/// Cell update messages sent as each git operation completes.
+/// Task results sent as each git operation completes.
 /// These enable progressive rendering - update UI as data arrives.
+///
+/// Each spawned task produces exactly one TaskResult. Multiple results
+/// may feed into a single table column, and one result may feed multiple
+/// columns. See `drain_results()` for how results map to ListItem fields.
 #[derive(Debug, Clone, strum::IntoStaticStr)]
 #[strum(serialize_all = "snake_case")]
-pub(super) enum CellUpdate {
+pub(super) enum TaskResult {
     /// Commit timestamp and message
     CommitDetails {
         item_idx: usize,
@@ -99,20 +103,20 @@ pub(super) enum CellUpdate {
     },
 }
 
-impl CellUpdate {
-    /// Get the item index for this update
+impl TaskResult {
+    /// Get the item index for this result
     fn item_idx(&self) -> usize {
         match self {
-            CellUpdate::CommitDetails { item_idx, .. }
-            | CellUpdate::AheadBehind { item_idx, .. }
-            | CellUpdate::CommittedTreesMatch { item_idx, .. }
-            | CellUpdate::BranchDiff { item_idx, .. }
-            | CellUpdate::WorkingTreeDiff { item_idx, .. }
-            | CellUpdate::MergeTreeConflicts { item_idx, .. }
-            | CellUpdate::GitOperation { item_idx, .. }
-            | CellUpdate::UserStatus { item_idx, .. }
-            | CellUpdate::Upstream { item_idx, .. }
-            | CellUpdate::CiStatus { item_idx, .. } => *item_idx,
+            TaskResult::CommitDetails { item_idx, .. }
+            | TaskResult::AheadBehind { item_idx, .. }
+            | TaskResult::CommittedTreesMatch { item_idx, .. }
+            | TaskResult::BranchDiff { item_idx, .. }
+            | TaskResult::WorkingTreeDiff { item_idx, .. }
+            | TaskResult::MergeTreeConflicts { item_idx, .. }
+            | TaskResult::GitOperation { item_idx, .. }
+            | TaskResult::UserStatus { item_idx, .. }
+            | TaskResult::Upstream { item_idx, .. }
+            | TaskResult::CiStatus { item_idx, .. } => *item_idx,
         }
     }
 }
@@ -128,49 +132,49 @@ pub(super) fn detect_git_operation(repo: &Repository) -> GitOperationState {
     }
 }
 
-/// Result of draining cell updates - indicates whether all updates were received
+/// Result of draining task results - indicates whether all results were received
 /// or if a timeout occurred.
 #[derive(Debug)]
-enum DrainResult {
-    /// All updates received (channel closed normally)
+enum DrainOutcome {
+    /// All results received (channel closed normally)
     Complete,
     /// Timeout occurred - contains diagnostic info about what was received
     TimedOut {
-        /// Number of cell updates received before timeout
+        /// Number of task results received before timeout
         received_count: usize,
-        /// Items with missing cells: (item_idx, branch_name, missing_cell_types)
+        /// Items with missing results: (item_idx, branch_name, missing_result_types)
         items_with_missing: Vec<(usize, String, Vec<&'static str>)>,
     },
 }
 
-/// Tracks expected cell types per item for timeout diagnostics.
+/// Tracks expected result types per item for timeout diagnostics.
 ///
-/// Populated at spawn time so we know exactly which cells to expect,
-/// without hardcoding cell lists that could drift from the spawn functions.
+/// Populated at spawn time so we know exactly which results to expect,
+/// without hardcoding result lists that could drift from the spawn functions.
 #[derive(Default)]
-pub(super) struct ExpectedCells {
+pub(super) struct ExpectedResults {
     inner: std::sync::Mutex<std::collections::HashMap<usize, Vec<&'static str>>>,
 }
 
-impl ExpectedCells {
-    /// Record that we expect a cell of the given type for the given item.
-    /// Called immediately after spawning each cell task.
-    pub fn expect(&self, item_idx: usize, cell_type: &'static str) {
+impl ExpectedResults {
+    /// Record that we expect a result of the given type for the given item.
+    /// Called immediately after spawning each task.
+    pub fn expect(&self, item_idx: usize, result_type: &'static str) {
         self.inner
             .lock()
             .unwrap()
             .entry(item_idx)
             .or_default()
-            .push(cell_type);
+            .push(result_type);
     }
 
-    /// Total number of expected cells (for progress display).
+    /// Total number of expected results (for progress display).
     pub fn count(&self) -> usize {
         self.inner.lock().unwrap().values().map(|v| v.len()).sum()
     }
 
-    /// Expected cells for a specific item.
-    fn cells_for(&self, item_idx: usize) -> Vec<&'static str> {
+    /// Expected results for a specific item.
+    fn results_for(&self, item_idx: usize) -> Vec<&'static str> {
         self.inner
             .lock()
             .unwrap()
@@ -180,32 +184,32 @@ impl ExpectedCells {
     }
 }
 
-/// Drain cell updates from the channel and apply them to items.
+/// Drain task results from the channel and apply them to items.
 ///
 /// This is the shared logic between progressive and buffered collection modes.
-/// The `on_update` callback is called after each update is processed with the
+/// The `on_result` callback is called after each result is processed with the
 /// item index and a reference to the updated item, allowing progressive mode
 /// to update progress bars while buffered mode does nothing.
 ///
 /// Uses a 30-second deadline to prevent infinite hangs if git commands stall.
-/// When timeout occurs, returns `DrainResult::TimedOut` with diagnostic info.
+/// When timeout occurs, returns `DrainOutcome::TimedOut` with diagnostic info.
 ///
 /// Callers decide how to handle timeout:
 /// - `collect()`: Shows user-facing diagnostic (interactive command)
 /// - `populate_items()`: Logs silently (used by statusline)
-fn drain_cell_updates(
-    rx: chan::Receiver<CellUpdate>,
+fn drain_results(
+    rx: chan::Receiver<TaskResult>,
     items: &mut [ListItem],
-    expected_cells: &ExpectedCells,
-    mut on_update: impl FnMut(usize, &mut ListItem, &StatusContext),
-) -> DrainResult {
+    expected_results: &ExpectedResults,
+    mut on_result: impl FnMut(usize, &mut ListItem, &StatusContext),
+) -> DrainOutcome {
     use std::collections::HashMap;
     use std::time::{Duration, Instant};
 
     // Deadline for the entire drain operation (30 seconds should be more than enough)
     let deadline = Instant::now() + Duration::from_secs(30);
 
-    // Track which cell types we've received per item (for timeout diagnostics)
+    // Track which result types we've received per item (for timeout diagnostics)
     let mut received_by_item: HashMap<usize, Vec<&'static str>> = HashMap::new();
 
     // Temporary storage for data needed by status_symbols computation
@@ -218,30 +222,30 @@ fn drain_cell_updates(
         })
         .collect();
 
-    // Process cell updates as they arrive (with deadline)
+    // Process task results as they arrive (with deadline)
     loop {
         let remaining = deadline.saturating_duration_since(Instant::now());
         if remaining.is_zero() {
-            // Deadline exceeded - build diagnostic info showing MISSING cells
+            // Deadline exceeded - build diagnostic info showing MISSING results
             let received_count: usize = received_by_item.values().map(|v| v.len()).sum();
 
-            // Find items with missing cells by comparing received vs expected
+            // Find items with missing results by comparing received vs expected
             let mut items_with_missing: Vec<(usize, String, Vec<&'static str>)> = Vec::new();
 
             for (item_idx, item) in items.iter().enumerate() {
-                // Get expected cells for this item (populated at spawn time)
-                let expected = expected_cells.cells_for(item_idx);
+                // Get expected results for this item (populated at spawn time)
+                let expected = expected_results.results_for(item_idx);
 
-                // Get received cells for this item (empty vec if none received)
+                // Get received results for this item (empty vec if none received)
                 let received = received_by_item
                     .get(&item_idx)
                     .map(|v| v.as_slice())
                     .unwrap_or(&[]);
 
-                // Find missing cells
+                // Find missing results
                 let missing: Vec<&'static str> = expected
                     .iter()
-                    .filter(|&cell| !received.contains(cell))
+                    .filter(|&result| !received.contains(result))
                     .copied()
                     .collect();
 
@@ -258,46 +262,46 @@ fn drain_cell_updates(
             items_with_missing.sort_by_key(|(idx, _, _)| *idx);
             items_with_missing.truncate(5);
 
-            return DrainResult::TimedOut {
+            return DrainOutcome::TimedOut {
                 received_count,
                 items_with_missing,
             };
         }
 
-        let update = match rx.recv_timeout(remaining) {
-            Ok(update) => update,
+        let result = match rx.recv_timeout(remaining) {
+            Ok(result) => result,
             Err(chan::RecvTimeoutError::Timeout) => continue, // Check deadline in next iteration
             Err(chan::RecvTimeoutError::Disconnected) => break, // All senders dropped - done
         };
 
-        // Track this update for diagnostics (strum::IntoStaticStr provides the conversion)
-        let item_idx = update.item_idx();
-        let cell_type: &'static str = (&update).into();
+        // Track this result for diagnostics (strum::IntoStaticStr provides the conversion)
+        let item_idx = result.item_idx();
+        let result_type: &'static str = (&result).into();
         received_by_item
             .entry(item_idx)
             .or_default()
-            .push(cell_type);
+            .push(result_type);
 
-        match update {
-            CellUpdate::CommitDetails { item_idx, commit } => {
+        match result {
+            TaskResult::CommitDetails { item_idx, commit } => {
                 items[item_idx].commit = Some(commit);
             }
-            CellUpdate::AheadBehind { item_idx, counts } => {
+            TaskResult::AheadBehind { item_idx, counts } => {
                 items[item_idx].counts = Some(counts);
             }
-            CellUpdate::CommittedTreesMatch {
+            TaskResult::CommittedTreesMatch {
                 item_idx,
                 committed_trees_match,
             } => {
                 items[item_idx].committed_trees_match = Some(committed_trees_match);
             }
-            CellUpdate::BranchDiff {
+            TaskResult::BranchDiff {
                 item_idx,
                 branch_diff,
             } => {
                 items[item_idx].branch_diff = Some(branch_diff);
             }
-            CellUpdate::WorkingTreeDiff {
+            TaskResult::WorkingTreeDiff {
                 item_idx,
                 working_tree_diff,
                 working_tree_diff_with_main,
@@ -312,14 +316,14 @@ fn drain_cell_updates(
                 status_contexts[item_idx].working_tree_symbols = Some(working_tree_symbols);
                 status_contexts[item_idx].has_conflicts = has_conflicts;
             }
-            CellUpdate::MergeTreeConflicts {
+            TaskResult::MergeTreeConflicts {
                 item_idx,
                 has_merge_tree_conflicts,
             } => {
                 // Store for status_symbols computation
                 status_contexts[item_idx].has_merge_tree_conflicts = has_merge_tree_conflicts;
             }
-            CellUpdate::GitOperation {
+            TaskResult::GitOperation {
                 item_idx,
                 git_operation,
             } => {
@@ -327,17 +331,17 @@ fn drain_cell_updates(
                     data.git_operation = git_operation;
                 }
             }
-            CellUpdate::UserStatus {
+            TaskResult::UserStatus {
                 item_idx,
                 user_status,
             } => {
                 // Store for status_symbols computation
                 status_contexts[item_idx].user_status = user_status;
             }
-            CellUpdate::Upstream { item_idx, upstream } => {
+            TaskResult::Upstream { item_idx, upstream } => {
                 items[item_idx].upstream = Some(upstream);
             }
-            CellUpdate::CiStatus {
+            TaskResult::CiStatus {
                 item_idx,
                 pr_status,
             } => {
@@ -346,11 +350,11 @@ fn drain_cell_updates(
             }
         }
 
-        // Invoke rendering callback (progressive mode re-renders rows, buffered mode does nothing)
-        on_update(item_idx, &mut items[item_idx], &status_contexts[item_idx]);
+        // Invoke callback (progressive mode re-renders rows, buffered mode does nothing)
+        on_result(item_idx, &mut items[item_idx], &status_contexts[item_idx]);
     }
 
-    DrainResult::Complete
+    DrainOutcome::Complete
 }
 
 /// Get branches that don't have worktrees.
@@ -573,8 +577,8 @@ pub fn collect(
         check_merge_tree_conflicts,
     };
 
-    // Track expected cells per item - populated as spawns are queued
-    let expected_cells = std::sync::Arc::new(ExpectedCells::default());
+    // Track expected results per item - populated as spawns are queued
+    let expected_results = std::sync::Arc::new(ExpectedResults::default());
     let num_worktrees = all_items
         .iter()
         .filter(|item| item.worktree_data().is_some())
@@ -636,14 +640,14 @@ pub fn collect(
     // Cache last rendered (unclamped) message per row to avoid redundant updates.
     let mut last_rendered_lines: Vec<String> = vec![String::new(); all_items.len()];
 
-    // Create channel for cell updates
+    // Create channel for task results
     let (tx, rx) = chan::unbounded();
 
     // Spawn worktree collection in background thread
     let sorted_worktrees_clone = sorted_worktrees.clone();
     let tx_worktrees = tx.clone();
     let default_branch_clone = default_branch.clone();
-    let expected_cells_wt = expected_cells.clone();
+    let expected_results_wt = expected_results.clone();
     std::thread::spawn(move || {
         sorted_worktrees_clone
             .par_iter()
@@ -657,7 +661,7 @@ pub fn collect(
                     &default_branch_clone,
                     &options,
                     tx_worktrees.clone(),
-                    &expected_cells_wt,
+                    &expected_results_wt,
                 );
             });
     });
@@ -686,7 +690,7 @@ pub fn collect(
         let main_path = main_worktree.path.clone();
         let tx_branches = tx.clone();
         let default_branch_clone = default_branch.clone();
-        let expected_cells_br = expected_cells.clone();
+        let expected_results_br = expected_results.clone();
         std::thread::spawn(move || {
             all_branches
                 .par_iter()
@@ -699,23 +703,23 @@ pub fn collect(
                         &default_branch_clone,
                         &options,
                         tx_branches.clone(),
-                        &expected_cells_br,
+                        &expected_results_br,
                     );
                 });
         });
     }
 
-    // Drop the original sender so drain_cell_updates knows when all spawned threads are done
+    // Drop the original sender so drain_results knows when all spawned threads are done
     drop(tx);
 
-    // Track completed cells for footer progress
-    let mut completed_cells = 0;
+    // Track completed results for footer progress
+    let mut completed_results = 0;
 
-    // Drain cell updates with conditional progressive rendering
-    let drain_result = drain_cell_updates(
+    // Drain task results with conditional progressive rendering
+    let drain_outcome = drain_results(
         rx,
         &mut all_items,
-        &expected_cells,
+        &expected_results,
         |item_idx, item, ctx| {
             // Compute/recompute status symbols as data arrives (both modes)
             // This is idempotent and updates status as new data (like upstream) arrives
@@ -737,12 +741,12 @@ pub fn collect(
                 use anstyle::Style;
                 let dim = Style::new().dimmed();
 
-                completed_cells += 1;
-                let total_cells = expected_cells.count();
+                completed_results += 1;
+                let total_results = expected_results.count();
 
                 // Update footer progress
                 let footer_msg = format!(
-                    "{INFO_EMOJI} {dim}{footer_base} ({completed_cells}/{total_cells} cells loaded){dim:#}"
+                    "{INFO_EMOJI} {dim}{footer_base} ({completed_results}/{total_results} loaded){dim:#}"
                 );
                 if let Err(e) = table.update_footer(footer_msg) {
                     log::debug!("Progressive footer update failed: {}", e);
@@ -763,16 +767,16 @@ pub fn collect(
     );
 
     // Handle timeout if it occurred
-    if let DrainResult::TimedOut {
+    if let DrainOutcome::TimedOut {
         received_count,
         items_with_missing,
-    } = drain_result
+    } = drain_outcome
     {
         // Build diagnostic message showing what's MISSING (more useful for debugging)
-        let mut diag = format!("wt list timed out after 30s ({received_count} cells received)");
+        let mut diag = format!("wt list timed out after 30s ({received_count} results received)");
 
         if !items_with_missing.is_empty() {
-            diag.push_str("\nMissing cells:");
+            diag.push_str("\nMissing results:");
             for (_, name, missing) in &items_with_missing {
                 diag.push_str(&format!("\n  - {name}: {}", missing.join(", ")));
             }
@@ -946,11 +950,11 @@ pub fn populate_items(
         return Ok(());
     }
 
-    // Create channel for cell updates
+    // Create channel for task results
     let (tx, rx) = chan::unbounded();
 
-    // Track expected cells per item (populated at spawn time)
-    let expected_cells = Arc::new(ExpectedCells::default());
+    // Track expected results per item (populated at spawn time)
+    let expected_results = Arc::new(ExpectedResults::default());
 
     // Collect worktree info: (index, path, head, branch)
     let worktree_info: Vec<_> = items
@@ -970,7 +974,7 @@ pub fn populate_items(
 
     // Spawn collection in background thread
     let default_branch_clone = default_branch.to_string();
-    let expected_cells_clone = expected_cells.clone();
+    let expected_results_clone = expected_results.clone();
     std::thread::spawn(move || {
         for (idx, path, head, branch) in worktree_info {
             // Create a minimal Worktree struct for the collection function
@@ -989,13 +993,13 @@ pub fn populate_items(
                 &default_branch_clone,
                 &options,
                 tx.clone(),
-                &expected_cells_clone,
+                &expected_results_clone,
             );
         }
     });
 
-    // Drain cell updates (blocking until all complete)
-    let drain_result = drain_cell_updates(rx, items, &expected_cells, |_item_idx, item, ctx| {
+    // Drain task results (blocking until all complete)
+    let drain_outcome = drain_results(rx, items, &expected_results, |_item_idx, item, ctx| {
         // Compute status symbols as data arrives (same logic as in collect())
         let item_default_branch = if item.is_main() {
             None
@@ -1012,8 +1016,8 @@ pub fn populate_items(
     });
 
     // Handle timeout (silent for statusline - just log it)
-    if let DrainResult::TimedOut { received_count, .. } = drain_result {
-        log::warn!("populate_items timed out after 30s ({received_count} cells received)");
+    if let DrainOutcome::TimedOut { received_count, .. } = drain_outcome {
+        log::warn!("populate_items timed out after 30s ({received_count} results received)");
     }
 
     // Populate display fields (including status_line for statusline command)
