@@ -1071,7 +1071,7 @@ fn bench_many_branches(c: &mut Criterion) {
             |b, _| {
                 b.iter(|| {
                     Command::new(&binary)
-                        .args(["list", "--branches"])
+                        .args(["list", "--branches", "--progressive"])
                         .current_dir(&repo_path)
                         .output()
                         .unwrap();
@@ -1110,7 +1110,7 @@ fn bench_many_branches_cold(c: &mut Criterion) {
                     },
                     |_| {
                         Command::new(&binary)
-                            .args(["list", "--branches"])
+                            .args(["list", "--branches", "--progressive"])
                             .current_dir(&repo_path)
                             .output()
                             .unwrap();
