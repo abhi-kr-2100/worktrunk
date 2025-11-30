@@ -87,12 +87,15 @@ pub fn configure_completion_invocation(cmd: &mut Command, words: &[&str]) {
 /// (e.g., to execute shell pipelines).
 pub fn configure_cli_command(cmd: &mut Command) {
     for (key, _) in std::env::vars() {
-        if key.starts_with("GIT_") || key.starts_with("WORKTRUNK_") {
+        if key.starts_with("GIT_") {
             cmd.env_remove(&key);
         }
     }
     // Set to non-existent path to prevent loading user's real config
     // Tests that need config should use TestRepo::clean_cli_env() which overrides this
+    // Note: We explicitly set this rather than removing all WORKTRUNK_* vars,
+    // because env_remove causes insta-cmd to capture empty values in snapshots.
+    // WORKTRUNK_BIN doesn't need removal - tests invoke the binary directly.
     cmd.env("WORKTRUNK_CONFIG_PATH", "/nonexistent/test/config.toml");
     cmd.env("CLICOLOR_FORCE", "1");
     // Jan 2, 2025 - 1 day after default commit date (2025-01-01)
