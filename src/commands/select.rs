@@ -600,7 +600,7 @@ pub fn handle_select(is_directive_mode: bool) -> anyhow::Result<()> {
     let repo = Repository::current();
 
     // Initialize preview mode state file (auto-cleanup on drop)
-    let _state = PreviewState::new();
+    let state = PreviewState::new();
 
     // Load config (or use default) for path mismatch detection
     let config = WorktrunkConfig::load()
@@ -623,10 +623,14 @@ pub fn handle_select(is_directive_mode: bool) -> anyhow::Result<()> {
     };
 
     // Use the same layout system as `wt list` for proper column alignment
-    // Skim uses ~50% of terminal width for the list (rest is preview), so calculate
-    // layout based on available width to avoid truncation
+    // List width depends on preview position:
+    // - Right layout: skim splits ~50% for list, ~50% for preview
+    // - Down layout: list gets full width, preview is below
     let terminal_width = super::list::layout::get_safe_list_width();
-    let skim_list_width = terminal_width / 2;
+    let skim_list_width = match state.initial_layout {
+        PreviewLayout::Right => terminal_width / 2,
+        PreviewLayout::Down => terminal_width,
+    };
     let layout = super::list::layout::calculate_layout_with_width(
         &list_data.items,
         false, // show_full
@@ -670,7 +674,7 @@ pub fn handle_select(is_directive_mode: bool) -> anyhow::Result<()> {
     );
 
     // Get state path for key bindings
-    let state_path_str = _state.path.display().to_string();
+    let state_path_str = state.path.display().to_string();
 
     // Calculate half-page scroll: skim uses 90% of terminal height, half of that = 45%
     let half_page = terminal_size::terminal_size()
@@ -680,8 +684,7 @@ pub fn handle_select(is_directive_mode: bool) -> anyhow::Result<()> {
     // Calculate preview window spec based on auto-detected layout
     // items.len() - 1 because we added a header row
     let num_items = items.len().saturating_sub(1);
-    let initial_layout = _state.initial_layout;
-    let preview_window_spec = initial_layout.to_preview_window_spec(num_items);
+    let preview_window_spec = state.initial_layout.to_preview_window_spec(num_items);
 
     // Configure skim options with Rust-based preview and mode switching keybindings
     let options = SkimOptionsBuilder::default()
