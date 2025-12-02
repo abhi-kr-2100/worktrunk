@@ -300,7 +300,7 @@ main {
     margin: 1rem 0;
     font-family: var(--wt-font-mono);
     font-size: 0.875rem;
-    line-height: 1.5;
+    line-height: 1.4;
 
     code {
         background-color: transparent;
@@ -310,6 +310,15 @@ main {
 
     .prompt {
         color: var(--wt-color-text-soft);
+    }
+
+    // Gutter spans - extend vertically to form continuous line
+    // These are single-space spans with background color at line start
+    // Math: gap = (line-height - 1) / 2 = (1.4 - 1) / 2 = 0.2
+    span[style*="background:var(--bright-white"] {
+        display: inline-block;
+        margin: -0.2em 0;
+        padding: 0.2em 0;
     }
 }
 
