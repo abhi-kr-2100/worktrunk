@@ -1,6 +1,6 @@
 +++
 title = "Commands Reference"
-weight = 5
+weight = 6
 +++
 
 ## wt switch

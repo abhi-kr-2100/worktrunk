@@ -1,6 +1,6 @@
 +++
 title = "Tips & Patterns"
-weight = 6
+weight = 7
 +++
 
 Practical recipes for common Worktrunk workflows.

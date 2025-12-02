@@ -3,9 +3,6 @@ title = "Configuration"
 weight = 4
 +++
 
-<!-- TODO: This user config vs project config distinction is a good organizing
-     principle - consider orienting more of the docs around it -->
-
 Worktrunk uses two configuration files:
 
 - **User config**: `~/.config/worktrunk/config.toml` — Personal settings, LLM commands, saved approvals
@@ -13,68 +10,18 @@ Worktrunk uses two configuration files:
 
 ## Project Hooks
 
-Automate setup and validation at worktree lifecycle events:
+Create `.config/wt.toml` in your repository to automate setup and validation at worktree lifecycle events. See the dedicated [Hooks](/hooks/) page for complete documentation.
 
-| Hook | When | Example |
-|------|------|---------|
-| **post-create** | After worktree created | `cp -r .cache`, `ln -s` |
-| **post-start** | After worktree created (background) | `npm install`, `cargo build` |
-| **pre-commit** | Before creating any commit | `pre-commit run` |
-| **pre-merge** | After squash, before push | `cargo test`, `pytest` |
-| **post-merge** | After successful merge | `cargo install --path .` |
-
-### Example project config
-
-Create `.config/wt.toml` in your repository:
+Quick example:
 
 ```toml
-# Install dependencies, build setup (blocking)
 [post-create]
-"install" = "uv sync"
+install = "npm ci"
 
-# Dev servers, file watchers (runs in background)
-[post-start]
-"dev" = "uv run dev"
-
-# Tests and lints before merging (blocks on failure)
 [pre-merge]
-"lint" = "uv run ruff check"
-"test" = "uv run pytest"
-
-# After merge completes
-[post-merge]
-"install" = "cargo install --path ."
+test = "npm test"
+lint = "npm run lint"
 ```
-
-### Hook execution
-
-<!-- ⚠️ AUTO-GENERATED-HTML from tests/integration_tests/snapshots/integration__integration_tests__shell_wrapper__tests__readme_example_hooks_post_create.snap — edit source to update -->
-
-{% terminal() %}
-<span class="prompt">$</span> wt switch --create feature-x
-🔄 <span style='color:var(--cyan,#0aa)'>Running post-create <b>install</b>:</span>
-<span style='background:var(--bright-white,#fff)'> </span>  <span style='opacity:0.67'><span style='color:var(--blue,#00a)'>uv</span></span><span style='opacity:0.67'> sync</span>
-
-  Resolved 24 packages in 145ms
-  Installed 24 packages in 1.2s
-✅ <span style='color:var(--green,#0a0)'>Created new worktree for <b>feature-x</b> from <b>main</b> at <b>../repo.feature-x</b></span>
-🔄 <span style='color:var(--cyan,#0aa)'>Running post-start <b>dev</b>:</span>
-<span style='background:var(--bright-white,#fff)'> </span>  <span style='opacity:0.67'><span style='color:var(--blue,#00a)'>uv</span></span><span style='opacity:0.67'> run dev</span>
-{% end %}
-
-<!-- END AUTO-GENERATED -->
-
-**Security**: Project commands require approval on first run. Approvals are saved to user config. Use `--force` to bypass prompts or `--no-verify` to skip hooks entirely.
-
-### Template variables
-
-Hooks can use these variables:
-
-- `{{ repo }}` — Repository name
-- `{{ branch }}` — Branch name
-- `{{ worktree }}` — Worktree path
-- `{{ repo_root }}` — Repository root path
-- `{{ target }}` — Target branch (for merge hooks)
 
 ## LLM Commit Messages
 
