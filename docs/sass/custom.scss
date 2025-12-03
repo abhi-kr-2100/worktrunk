@@ -298,6 +298,35 @@ main {
     }
 }
 
+// Copy button for code blocks
+.code-copy-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.4rem;
+    background: var(--wt-color-bg-soft);
+    border: 1px solid var(--wt-color-border-subtle);
+    border-radius: 0.3rem;
+    cursor: pointer;
+    color: var(--wt-color-text-muted);
+    opacity: 0;
+    transition: opacity 150ms, background 150ms, color 150ms;
+    line-height: 0;
+
+    &:hover {
+        background: var(--wt-color-bg);
+        color: var(--wt-color-text);
+    }
+
+    &.copied {
+        color: var(--wt-color-accent);
+    }
+}
+
+.content pre:hover .code-copy-btn {
+    opacity: 1;
+}
+
 // Terminal output styling (ANSI colors)
 .terminal {
     position: relative;
