@@ -1,10 +1,12 @@
 +++
 title = "wt remove"
-weight = 13
+weight = 12
 
 [extra]
 group = "Commands"
 +++
+
+<!-- ⚠️ AUTO-GENERATED from `wt remove --help-page` — edit src/cli.rs to update -->
 
 Removes worktrees and their branches. Without arguments, removes the current worktree and returns to the main worktree.
 

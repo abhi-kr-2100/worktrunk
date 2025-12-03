@@ -1,10 +1,12 @@
 +++
 title = "wt merge"
-weight = 12
+weight = 13
 
 [extra]
 group = "Commands"
 +++
+
+<!-- ⚠️ AUTO-GENERATED from `wt merge --help-page` — edit src/cli.rs to update -->
 
 Merge the current branch into the target branch and clean up. Handles the full workflow: commit uncommitted changes, squash commits, rebase, run hooks, push to target, and remove the worktree.
 

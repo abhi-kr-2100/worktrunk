@@ -6,6 +6,8 @@ weight = 11
 group = "Commands"
 +++
 
+<!-- ⚠️ AUTO-GENERATED from `wt list --help-page` — edit src/cli.rs to update -->
+
 Show all worktrees with their status. The table includes uncommitted changes, divergence from main and remote, and optional CI status.
 
 The table renders progressively: branch names, paths, and commit hashes appear immediately, then status, divergence, and other columns fill in as background git operations complete. CI status (with `--full`) requires network requests and may take longer.

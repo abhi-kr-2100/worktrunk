@@ -6,6 +6,8 @@ weight = 10
 group = "Commands"
 +++
 
+<!-- ⚠️ AUTO-GENERATED from `wt switch --help-page` — edit src/cli.rs to update -->
+
 Two distinct operations:
 
 - **Switch to existing worktree** — Changes directory, nothing else
@@ -22,20 +24,6 @@ wt switch --create hotfix --base production
 
 For interactive selection, use [`wt select`](/select/).
 
-## Shortcuts
-
-| Symbol | Meaning |
-|--------|---------|
-| `-` | Previous worktree |
-| `@` | Current branch's worktree |
-| `^` | Default branch worktree |
-
-```bash
-wt switch -                      # Back to previous
-wt switch ^                      # Main worktree
-wt switch --create fix --base=@  # Branch from current HEAD
-```
-
 ## Creating Worktrees
 
 With `--create`, worktrunk:
@@ -51,6 +39,20 @@ wt switch --create api-refactor
 wt switch --create fix --base release-2.0
 wt switch --create docs --execute "code ."
 wt switch --create temp --no-verify      # Skip hooks
+```
+
+## Shortcuts
+
+| Symbol | Meaning |
+|--------|---------|
+| `-` | Previous worktree |
+| `@` | Current branch's worktree |
+| `^` | Default branch worktree |
+
+```bash
+wt switch -                      # Back to previous
+wt switch ^                      # Main worktree
+wt switch --create fix --base=@  # Branch from current HEAD
 ```
 
 ## Path-First Lookup

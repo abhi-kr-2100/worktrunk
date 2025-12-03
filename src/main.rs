@@ -242,12 +242,12 @@ fn handle_help_page(args: &[String]) {
 
     // Weight mapping (for nav order)
     // Commands are grouped together after Concepts (weight 3)
-    // Order: switch, list (daily use), merge, remove (workflow completion), then utilities
+    // Order: switch, list (daily use), remove, merge (workflow completion), then utilities
     let weight = match subcommand.as_str() {
         "switch" => 10,
         "list" => 11,
-        "merge" => 12,
-        "remove" => 13,
+        "remove" => 12,
+        "merge" => 13,
         "select" => 14,
         "config" => 15,
         "step" => 16,
@@ -262,6 +262,10 @@ fn handle_help_page(args: &[String]) {
     println!("[extra]");
     println!("group = \"Commands\"");
     println!("+++");
+    println!();
+    println!(
+        "<!-- ⚠️ AUTO-GENERATED from `wt {subcommand} --help-page` — edit src/cli.rs to update -->"
+    );
     println!();
     println!("{}", after_help.trim());
     println!();

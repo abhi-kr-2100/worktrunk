@@ -6,6 +6,8 @@ weight = 14
 group = "Commands"
 +++
 
+<!-- ⚠️ AUTO-GENERATED from `wt select --help-page` — edit src/cli.rs to update -->
+
 Interactive worktree picker with live preview. Navigate worktrees with keyboard shortcuts and press Enter to switch.
 
 ## Examples

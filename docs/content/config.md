@@ -6,6 +6,8 @@ weight = 15
 group = "Commands"
 +++
 
+<!-- ⚠️ AUTO-GENERATED from `wt config --help-page` — edit src/cli.rs to update -->
+
 Manages configuration, shell integration, and runtime settings. The command provides subcommands for setup, inspection, and cache management.
 
 ## Examples

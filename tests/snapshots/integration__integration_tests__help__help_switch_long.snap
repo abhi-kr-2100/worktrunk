@@ -71,18 +71,6 @@ Two distinct operations:
 
 For interactive selection, use [[2mwt select[0m](/select/).
 
-[32mShortcuts[0m
-
-| Symbol | Meaning |
-|--------|---------|
-| [2m-[0m | Previous worktree |
-| [2m@[0m | Current branch's worktree |
-| [2m^[0m | Default branch worktree |
-
-  [2mwt switch -                      # Back to previous[0m
-  [2mwt switch ^                      # Main worktree[0m
-  [2mwt switch --create fix --base=@  # Branch from current HEAD[0m
-
 [32mCreating Worktrees[0m
 
 With [2m--create[0m, worktrunk:
@@ -97,6 +85,18 @@ With [2m--create[0m, worktrunk:
   [2mwt switch --create fix --base release-2.0[0m
   [2mwt switch --create docs --execute "code ."[0m
   [2mwt switch --create temp --no-verify      # Skip hooks[0m
+
+[32mShortcuts[0m
+
+| Symbol | Meaning |
+|--------|---------|
+| [2m-[0m | Previous worktree |
+| [2m@[0m | Current branch's worktree |
+| [2m^[0m | Default branch worktree |
+
+  [2mwt switch -                      # Back to previous[0m
+  [2mwt switch ^                      # Main worktree[0m
+  [2mwt switch --create fix --base=@  # Branch from current HEAD[0m
 
 [32mPath-First Lookup[0m
 

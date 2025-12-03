@@ -6,6 +6,8 @@ weight = 16
 group = "Commands"
 +++
 
+<!-- ⚠️ AUTO-GENERATED from `wt step --help-page` — edit src/cli.rs to update -->
+
 Run individual workflow operations: commits, squashes, rebases, pushes, and [hooks](/hooks/).
 
 ## Examples
