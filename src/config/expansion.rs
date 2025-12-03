@@ -98,9 +98,14 @@ pub fn expand_template(
 /// Supported variables:
 /// - `{{ repo }}` - Repository name
 /// - `{{ branch }}` - Branch name (sanitized: slashes → dashes)
-/// - `{{ worktree }}` - Path to the worktree
-/// - `{{ repo_root }}` - Path to the main repository root
+/// - `{{ worktree }}` - Absolute path to the worktree
+/// - `{{ worktree_name }}` - Worktree directory name (basename of worktree path)
+/// - `{{ repo_root }}` - Absolute path to the main repository root
 /// - `{{ default_branch }}` - Default branch name (e.g., "main")
+/// - `{{ commit }}` - Current HEAD commit SHA (full 40-character hash)
+/// - `{{ short_commit }}` - Current HEAD commit SHA (short 7-character hash)
+/// - `{{ remote }}` - Primary remote name (e.g., "origin")
+/// - `{{ upstream }}` - Upstream tracking branch (e.g., "origin/feature"), if configured
 /// - `{{ target }}` - Target branch (for merge commands, optional)
 ///
 /// # Examples

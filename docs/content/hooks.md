@@ -72,14 +72,26 @@ Hooks can use template variables that expand at runtime:
 - `{{ repo }}` — Repository name (e.g., "my-project")
 - `{{ branch }}` — Branch name (slashes replaced with dashes)
 - `{{ worktree }}` — Absolute path to the worktree
+- `{{ worktree_name }}` — Worktree directory name (e.g., "my-project.feature-foo")
 - `{{ repo_root }}` — Absolute path to the repository root
 - `{{ default_branch }}` — Default branch name (e.g., "main")
+
+### Git Variables (All Hooks)
+
+- `{{ commit }}` — Current HEAD commit SHA (full 40-character hash)
+- `{{ short_commit }}` — Current HEAD commit SHA (short 7-character hash)
+- `{{ remote }}` — Primary remote name (e.g., "origin")
+- `{{ upstream }}` — Upstream tracking branch (e.g., "origin/feature"), if configured
 
 ### Merge Variables (pre-commit, pre-merge, post-merge)
 
 - `{{ target }}` — Target branch for the merge (e.g., "main")
 
 ```toml
+# Tag builds with commit hash
+post-create = "echo '{{ short_commit }}' > .version"
+
+# Reference merge target
 pre-merge = "echo 'Merging {{ branch }} into {{ target }}'"
 ```
 

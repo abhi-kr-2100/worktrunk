@@ -72,6 +72,31 @@ fn expand_commands(
     if let Ok(default_branch) = ctx.repo.default_branch() {
         extras_owned.insert("default_branch".to_string(), default_branch);
     }
+
+    // Git ref variables
+    if let Ok(commit) = ctx.repo.run_command(&["rev-parse", "HEAD"]) {
+        let commit = commit.trim();
+        extras_owned.insert("commit".to_string(), commit.to_string());
+        // Short commit is first 7 characters
+        if commit.len() >= 7 {
+            extras_owned.insert("short_commit".to_string(), commit[..7].to_string());
+        }
+    }
+
+    // Remote variables
+    if let Ok(remote) = ctx.repo.primary_remote() {
+        extras_owned.insert("remote".to_string(), remote.clone());
+        // Upstream tracking branch (if configured)
+        if let Ok(Some(upstream)) = ctx.repo.upstream_branch(ctx.branch) {
+            extras_owned.insert("upstream".to_string(), upstream);
+        }
+    }
+
+    // Worktree name (basename of worktree path)
+    if let Some(name) = ctx.worktree_path.file_name().and_then(|n| n.to_str()) {
+        extras_owned.insert("worktree_name".to_string(), name.to_string());
+    }
+
     for &(key, value) in extra_vars {
         extras_owned.insert(key.to_string(), value.to_string());
     }

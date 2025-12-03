@@ -275,6 +275,124 @@ approved-commands = ["echo 'Default: {{ default_branch }}' > default.txt"]
     );
 }
 
+#[test]
+fn test_post_create_git_variables_template() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Set up an upstream tracking branch
+    repo.git_command(&["push", "-u", "origin", "main"])
+        .output()
+        .expect("failed to push");
+
+    // Create project config with git-related template variables
+    repo.write_project_config(
+        r#"post-create = [
+    "echo 'Commit: {{ commit }}' > git_vars.txt",
+    "echo 'Short: {{ short_commit }}' >> git_vars.txt",
+    "echo 'Remote: {{ remote }}' >> git_vars.txt",
+    "echo 'Worktree Name: {{ worktree_name }}' >> git_vars.txt"
+]"#,
+    );
+
+    repo.commit("Add config with git template variables");
+
+    // Create a feature branch worktree (--force skips approval prompt)
+    snapshot_switch(
+        "post_create_git_variables_template",
+        &repo,
+        &["--create", "feature", "--force"],
+    );
+
+    // Verify template expansion actually worked
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
+    let vars_file = worktree_path.join("git_vars.txt");
+
+    assert!(
+        vars_file.exists(),
+        "git_vars.txt should have been created in the worktree"
+    );
+
+    let contents = fs::read_to_string(&vars_file).unwrap();
+
+    // Verify commit variable (should be 40 char hex)
+    assert!(
+        contents.contains("Commit: ")
+            && contents.lines().any(|l| {
+                l.starts_with("Commit: ") && l.len() == 48 // "Commit: " (8) + 40 hex chars
+            }),
+        "Should contain expanded commit SHA, got: {}",
+        contents
+    );
+
+    // Verify short_commit variable (should be 7 char hex)
+    assert!(
+        contents.contains("Short: ")
+            && contents.lines().any(|l| {
+                l.starts_with("Short: ") && l.len() == 14 // "Short: " (7) + 7 hex chars
+            }),
+        "Should contain expanded short_commit SHA, got: {}",
+        contents
+    );
+
+    // Verify remote variable
+    assert!(
+        contents.contains("Remote: origin"),
+        "Should contain expanded remote name, got: {}",
+        contents
+    );
+
+    // Verify worktree_name variable (basename of worktree path)
+    assert!(
+        contents.contains("Worktree Name: repo.feature"),
+        "Should contain expanded worktree_name, got: {}",
+        contents
+    );
+}
+
+#[test]
+fn test_post_create_upstream_template() {
+    let mut repo = TestRepo::new();
+    repo.commit("Initial commit");
+    repo.setup_remote("main");
+
+    // Push main to set up tracking
+    repo.git_command(&["push", "-u", "origin", "main"])
+        .output()
+        .expect("failed to push main");
+
+    // Create project config with upstream template variable
+    repo.write_project_config(r#"post-create = "echo 'Upstream: {{ upstream }}' > upstream.txt""#);
+
+    repo.commit("Add config with upstream template");
+
+    // Create a feature branch based on main (which has upstream tracking)
+    // The new branch will inherit upstream since it's created from main
+    snapshot_switch(
+        "post_create_upstream_template",
+        &repo,
+        &["--create", "feature", "--force"],
+    );
+
+    // Verify template expansion actually worked
+    let worktree_path = repo.root_path().parent().unwrap().join("repo.feature");
+    let upstream_file = worktree_path.join("upstream.txt");
+
+    assert!(
+        upstream_file.exists(),
+        "upstream.txt should have been created in the worktree"
+    );
+
+    let contents = fs::read_to_string(&upstream_file).unwrap();
+    // New branches don't have upstream until pushed - upstream should be empty
+    assert!(
+        contents.contains("Upstream: "),
+        "Should have upstream line (possibly empty), got: {}",
+        contents
+    );
+}
+
 // ============================================================================
 // Post-Start Command Tests (parallel, background)
 // ============================================================================
