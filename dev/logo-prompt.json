@@ -2,7 +2,7 @@
   "image_type": "hand_drawn_sketch",
   "medium": "colored_pencil",
   "style_descriptors": {
-    "color_palette": ["deep indigo blue"],
+    "color_palette": ["warm amber orange"],
     "texture": "heavy grain, visible pencil strokes with uneven pressure, creating a textured, slightly waxy fill",
     "line_quality": "organic, slightly imperfect, sketched, thick (approx 4-6mm stroke width), consistent density",
     "background": "CRITICAL: The background MUST be perfectly uniform, flat, solid white (#FFFFFF) with ZERO variation, NO texture, NO grain, NO gradients, NO shadows, NO vignetting - just a completely flat uniform white that is identical in every pixel",
@@ -17,7 +17,7 @@
       },
       "nodes": {
         "count": 7,
-        "appearance": "Solid blue circular nodes, approx 0.6 units diameter, filled with dense scribbled pencil texture.",
+        "appearance": "Solid amber orange circular nodes, approx 0.6 units diameter, filled with dense scribbled pencil texture.",
         "list": [
           { "id": "n1_root", "grid_location": {"x": 0, "y": -5}, "role": "Root Node (Bottom)" },
           { "id": "n2_hub", "grid_location": {"x": 0, "y": 0}, "role": "Central Junction (Hub)" },
