@@ -146,10 +146,23 @@ pub fn handle_list(
     render_mode: RenderMode,
     config: &worktrunk::config::WorktrunkConfig,
 ) -> anyhow::Result<()> {
+    use collect::TaskKind;
+
     let repo = Repository::current();
 
-    let fetch_ci = show_full; // Only fetch CI with --full (expensive)
-    let check_merge_tree_conflicts = show_full; // Only check conflicts with --full (expensive)
+    // Build skip set based on flags
+    // Without --full: skip expensive operations (BranchDiff, CiStatus, MergeTreeConflicts)
+    let skip_tasks: std::collections::HashSet<TaskKind> = if show_full {
+        std::collections::HashSet::new() // Compute everything
+    } else {
+        [
+            TaskKind::BranchDiff,
+            TaskKind::CiStatus,
+            TaskKind::MergeTreeConflicts,
+        ]
+        .into_iter()
+        .collect()
+    };
 
     // Progressive rendering only for table format with Progressive mode
     let show_progress = match format {
@@ -164,9 +177,7 @@ pub fn handle_list(
         &repo,
         show_branches,
         show_remotes,
-        show_full,
-        fetch_ci,
-        check_merge_tree_conflicts,
+        &skip_tasks,
         show_progress,
         render_table,
         config,

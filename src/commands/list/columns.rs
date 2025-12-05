@@ -1,3 +1,5 @@
+use super::collect::TaskKind;
+
 /// Logical identifier for each column rendered by `wt list`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ColumnKind {
@@ -31,8 +33,8 @@ pub struct ColumnSpec {
     pub kind: ColumnKind,
     pub header: &'static str,
     pub base_priority: u8,
-    pub requires_show_full: bool,
-    pub requires_fetch_ci: bool,
+    /// Task required for this column's data. If Some and task is skipped, column is hidden.
+    pub requires_task: Option<TaskKind>,
     pub display_index: u8,
 }
 
@@ -41,16 +43,14 @@ impl ColumnSpec {
         kind: ColumnKind,
         header: &'static str,
         base_priority: u8,
-        requires_show_full: bool,
-        requires_fetch_ci: bool,
+        requires_task: Option<TaskKind>,
         display_index: u8,
     ) -> Self {
         Self {
             kind,
             header,
             base_priority,
-            requires_show_full,
-            requires_fetch_ci,
+            requires_task,
             display_index,
         }
     }
@@ -58,100 +58,52 @@ impl ColumnSpec {
 
 /// Static registry of all possible columns in display order.
 pub const COLUMN_SPECS: &[ColumnSpec] = &[
-    ColumnSpec::new(
-        ColumnKind::Gutter,
-        super::layout::HEADER_GUTTER,
-        0,
-        false,
-        false,
-        0,
-    ),
-    ColumnSpec::new(
-        ColumnKind::Branch,
-        super::layout::HEADER_BRANCH,
-        1,
-        false,
-        false,
-        1,
-    ),
-    ColumnSpec::new(
-        ColumnKind::Status,
-        super::layout::HEADER_STATUS,
-        2,
-        false,
-        false,
-        2,
-    ),
+    ColumnSpec::new(ColumnKind::Gutter, super::layout::HEADER_GUTTER, 0, None, 0),
+    ColumnSpec::new(ColumnKind::Branch, super::layout::HEADER_BRANCH, 1, None, 1),
+    ColumnSpec::new(ColumnKind::Status, super::layout::HEADER_STATUS, 2, None, 2),
     ColumnSpec::new(
         ColumnKind::WorkingDiff,
         super::layout::HEADER_WORKING_DIFF,
         3,
-        false,
-        false,
+        None,
         3,
     ),
     ColumnSpec::new(
         ColumnKind::AheadBehind,
         super::layout::HEADER_AHEAD_BEHIND,
         4,
-        false,
-        false,
+        None,
         4,
     ),
     ColumnSpec::new(
         ColumnKind::BranchDiff,
         super::layout::HEADER_BRANCH_DIFF,
         5,
-        true,
-        false,
+        Some(TaskKind::BranchDiff),
         5,
     ),
-    ColumnSpec::new(
-        ColumnKind::Path,
-        super::layout::HEADER_PATH,
-        6,
-        false,
-        false,
-        6,
-    ),
+    ColumnSpec::new(ColumnKind::Path, super::layout::HEADER_PATH, 6, None, 6),
     ColumnSpec::new(
         ColumnKind::Upstream,
         super::layout::HEADER_UPSTREAM,
         7,
-        false,
-        false,
+        None,
         7,
     ),
     ColumnSpec::new(
         ColumnKind::CiStatus,
         super::layout::HEADER_CI,
         8,
-        false,
-        true,
+        Some(TaskKind::CiStatus),
         8,
     ),
-    ColumnSpec::new(
-        ColumnKind::Commit,
-        super::layout::HEADER_COMMIT,
-        9,
-        false,
-        false,
-        9,
-    ),
-    ColumnSpec::new(
-        ColumnKind::Time,
-        super::layout::HEADER_AGE,
-        10,
-        false,
-        false,
-        10,
-    ),
+    ColumnSpec::new(ColumnKind::Commit, super::layout::HEADER_COMMIT, 9, None, 9),
+    ColumnSpec::new(ColumnKind::Time, super::layout::HEADER_AGE, 10, None, 10),
     ColumnSpec::new(
         ColumnKind::Message,
         super::layout::HEADER_MESSAGE,
         11,
-        false,
-        false,
+        None,
         11,
     ),
 ];

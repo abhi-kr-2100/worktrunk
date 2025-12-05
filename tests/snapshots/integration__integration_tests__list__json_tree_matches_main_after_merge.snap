@@ -29,10 +29,6 @@ exit_code: 0
     "commit_message": "Same content on main",
     "ahead": 0,
     "behind": 0,
-    "branch_diff": {
-      "added": 0,
-      "deleted": 0
-    },
     "upstream_remote": null,
     "upstream_ahead": 0,
     "upstream_behind": 0,
@@ -80,10 +76,6 @@ exit_code: 0
     "commit_message": "Merge main into feature",
     "ahead": 2,
     "behind": 0,
-    "branch_diff": {
-      "added": 0,
-      "deleted": 0
-    },
     "upstream_remote": null,
     "upstream_ahead": 0,
     "upstream_behind": 0,

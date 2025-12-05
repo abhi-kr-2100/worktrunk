@@ -29,10 +29,6 @@ exit_code: 0
     "commit_message": "Main commit 2",
     "ahead": 0,
     "behind": 0,
-    "branch_diff": {
-      "added": 0,
-      "deleted": 0
-    },
     "upstream_remote": null,
     "upstream_ahead": 0,
     "upstream_behind": 0,
@@ -80,10 +76,6 @@ exit_code: 0
     "commit_message": "Feature commit 2",
     "ahead": 2,
     "behind": 2,
-    "branch_diff": {
-      "added": 1,
-      "deleted": 0
-    },
     "upstream_remote": null,
     "upstream_ahead": 0,
     "upstream_behind": 0,
@@ -109,8 +101,7 @@ exit_code: 0
       "worktree_state": ""
     },
     "commits_display": "/u001b[32m↑2/u001b[0m /u001b[2m/u001b[31m↓2/u001b[0m",
-    "branch_diff_display": "/u001b[32m+1/u001b[0m",
-    "status_line": "feature-ahead  /u001b[36m!/u001b[39m/u001b[36m?/u001b[39m/u001b[2m↕/u001b[22m  @/u001b[32m+1/u001b[0m /u001b[31m-1/u001b[0m  /u001b[32m↑2/u001b[0m /u001b[2m/u001b[31m↓2/u001b[0m  ^/u001b[32m+1/u001b[0m",
+    "status_line": "feature-ahead  /u001b[36m!/u001b[39m/u001b[36m?/u001b[39m/u001b[2m↕/u001b[22m  @/u001b[32m+1/u001b[0m /u001b[31m-1/u001b[0m  /u001b[32m↑2/u001b[0m /u001b[2m/u001b[31m↓2/u001b[0m",
     "type": "worktree",
     "path": "[REPO].feature-ahead",
     "bare": false,
@@ -130,10 +121,6 @@ exit_code: 0
     "commit_message": "Initial commit on main",
     "ahead": 0,
     "behind": 2,
-    "branch_diff": {
-      "added": 0,
-      "deleted": 0
-    },
     "upstream_remote": null,
     "upstream_ahead": 0,
     "upstream_behind": 0,

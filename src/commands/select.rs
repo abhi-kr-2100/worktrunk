@@ -608,12 +608,20 @@ pub fn handle_select(is_directive_mode: bool) -> anyhow::Result<()> {
         .unwrap_or_default();
 
     // Gather list data using simplified collection (buffered mode)
+    // Skip expensive operations not needed for select UI
+    let skip_tasks = [
+        collect::TaskKind::BranchDiff,
+        collect::TaskKind::CiStatus,
+        collect::TaskKind::MergeTreeConflicts,
+    ]
+    .into_iter()
+    .collect();
+
     let Some(list_data) = collect::collect(
-        &repo, true,  // show_branches (include branches without worktrees)
+        &repo,
+        true,  // show_branches (include branches without worktrees)
         false, // show_remotes (local branches only, not remote branches)
-        false, // show_full (no full layout needed)
-        false, // fetch_ci (no CI with select command)
-        false, // check_conflicts (no conflict checking with select command)
+        &skip_tasks,
         false, // show_progress (no progress bars)
         false, // render_table (select renders its own UI)
         &config,
@@ -633,8 +641,7 @@ pub fn handle_select(is_directive_mode: bool) -> anyhow::Result<()> {
     };
     let layout = super::list::layout::calculate_layout_with_width(
         &list_data.items,
-        false, // show_full
-        false, // fetch_ci
+        &skip_tasks,
         skim_list_width,
     );
 

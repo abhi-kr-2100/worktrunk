@@ -36,16 +36,22 @@ use super::model::{AheadBehind, BranchDiffTotals, CommitDetails, UpstreamStatus}
 // ============================================================================
 
 /// Options for controlling what data to collect.
-#[derive(Clone, Copy)]
+///
+/// Uses a skip set to control which tasks are spawned. Tasks not in the set
+/// will be computed; tasks in the set will be skipped.
+#[derive(Clone, Default)]
 pub struct CollectOptions {
-    pub fetch_ci: bool,
-    pub check_merge_tree_conflicts: bool,
+    /// Tasks to skip (not compute). Empty set means compute everything.
+    ///
+    /// This controls both:
+    /// - Task spawning (in `collect_worktree_progressive`/`collect_branch_progressive`)
+    /// - Column visibility (layout filters columns via `ColumnSpec::requires_task`)
+    pub skip_tasks: std::collections::HashSet<super::collect::TaskKind>,
 }
 
 /// Context for task computation. Cloned and moved into spawned threads.
 ///
-/// Contains all data needed by any task, including options that control
-/// conditional behavior.
+/// Contains all data needed by any task.
 #[derive(Clone)]
 pub struct TaskContext {
     pub repo_path: PathBuf,
@@ -53,9 +59,6 @@ pub struct TaskContext {
     pub branch: Option<String>,
     pub default_branch: Option<String>,
     pub item_idx: usize,
-    // Options that affect task behavior
-    pub fetch_ci: bool,
-    pub check_merge_tree_conflicts: bool,
     pub verbose_errors: bool,
 }
 
@@ -290,15 +293,13 @@ impl Task for MergeTreeConflictsTask {
     const KIND: TaskKind = TaskKind::MergeTreeConflicts;
 
     fn compute(ctx: TaskContext) -> TaskResult {
-        let has_merge_tree_conflicts =
-            if ctx.check_merge_tree_conflicts && ctx.default_branch.is_some() {
-                let base = ctx.default_branch.as_deref().unwrap();
-                let repo = Repository::at(&ctx.repo_path);
-                repo.has_merge_conflicts(base, &ctx.commit_sha)
-                    .unwrap_or(false)
-            } else {
-                false
-            };
+        let has_merge_tree_conflicts = if let Some(base) = ctx.default_branch.as_deref() {
+            let repo = Repository::at(&ctx.repo_path);
+            repo.has_merge_conflicts(base, &ctx.commit_sha)
+                .unwrap_or(false)
+        } else {
+            false
+        };
 
         TaskResult::MergeTreeConflicts {
             item_idx: ctx.item_idx,
@@ -399,13 +400,6 @@ impl Task for CiStatusTask {
     const KIND: TaskKind = TaskKind::CiStatus;
 
     fn compute(ctx: TaskContext) -> TaskResult {
-        if !ctx.fetch_ci {
-            return TaskResult::CiStatus {
-                item_idx: ctx.item_idx,
-                pr_status: None,
-            };
-        }
-
         let repo_path = Repository::at(&ctx.repo_path)
             .worktree_root()
             .ok()
@@ -429,8 +423,8 @@ impl Task for CiStatusTask {
 
 /// Collect worktree data progressively, sending results as each task completes.
 ///
-/// Spawns 10 parallel git operations. Each task sends a TaskResult when it
-/// completes, enabling progressive UI updates.
+/// Spawns parallel git operations (up to 10). Each task sends a TaskResult when it
+/// completes, enabling progressive UI updates. Tasks in `options.skip_tasks` are not spawned.
 pub fn collect_worktree_progressive(
     wt: &Worktree,
     item_idx: usize,
@@ -439,38 +433,47 @@ pub fn collect_worktree_progressive(
     tx: Sender<TaskResult>,
     expected_results: &Arc<ExpectedResults>,
 ) {
+    use super::collect::TaskKind;
+
     let ctx = TaskContext {
         repo_path: wt.path.clone(),
         commit_sha: wt.head.clone(),
         branch: wt.branch.clone(),
         default_branch: Some(default_branch.to_string()),
         item_idx,
-        fetch_ci: options.fetch_ci,
-        check_merge_tree_conflicts: options.check_merge_tree_conflicts,
         verbose_errors: true, // Worktrees show verbose errors
     };
 
     let spawner = TaskSpawner::new(tx, expected_results.clone());
+    let skip = &options.skip_tasks;
 
     std::thread::scope(|s| {
-        // All 10 worktree tasks
+        // Core tasks (always run)
         spawner.spawn::<CommitDetailsTask>(s, &ctx);
         spawner.spawn::<AheadBehindTask>(s, &ctx);
         spawner.spawn::<CommittedTreesMatchTask>(s, &ctx);
-        spawner.spawn::<BranchDiffTask>(s, &ctx);
         spawner.spawn::<WorkingTreeDiffTask>(s, &ctx);
-        spawner.spawn::<MergeTreeConflictsTask>(s, &ctx);
         spawner.spawn::<GitOperationTask>(s, &ctx);
         spawner.spawn::<UserMarkerTask>(s, &ctx);
         spawner.spawn::<UpstreamTask>(s, &ctx);
-        spawner.spawn::<CiStatusTask>(s, &ctx);
+
+        // Optional tasks (check skip set)
+        if !skip.contains(&TaskKind::BranchDiff) {
+            spawner.spawn::<BranchDiffTask>(s, &ctx);
+        }
+        if !skip.contains(&TaskKind::MergeTreeConflicts) {
+            spawner.spawn::<MergeTreeConflictsTask>(s, &ctx);
+        }
+        if !skip.contains(&TaskKind::CiStatus) {
+            spawner.spawn::<CiStatusTask>(s, &ctx);
+        }
     });
 }
 
 /// Collect branch data progressively, sending results as each task completes.
 ///
-/// Spawns 7 parallel git operations (similar to worktrees but without working
-/// tree operations).
+/// Spawns parallel git operations (up to 7, similar to worktrees but without working
+/// tree operations). Tasks in `options.skip_tasks` are not spawned.
 #[allow(clippy::too_many_arguments)]
 pub fn collect_branch_progressive(
     branch_name: &str,
@@ -482,28 +485,37 @@ pub fn collect_branch_progressive(
     tx: Sender<TaskResult>,
     expected_results: &Arc<ExpectedResults>,
 ) {
+    use super::collect::TaskKind;
+
     let ctx = TaskContext {
         repo_path: repo_path.to_path_buf(),
         commit_sha: commit_sha.to_string(),
         branch: Some(branch_name.to_string()),
         default_branch: Some(default_branch.to_string()),
         item_idx,
-        fetch_ci: options.fetch_ci,
-        check_merge_tree_conflicts: options.check_merge_tree_conflicts,
         verbose_errors: false, // Branches don't show verbose errors
     };
 
     let spawner = TaskSpawner::new(tx, expected_results.clone());
+    let skip = &options.skip_tasks;
 
     std::thread::scope(|s| {
-        // 7 branch tasks (no working tree operations)
+        // Core tasks (always run)
         spawner.spawn::<CommitDetailsTask>(s, &ctx);
         spawner.spawn::<AheadBehindTask>(s, &ctx);
         spawner.spawn::<CommittedTreesMatchTask>(s, &ctx);
-        spawner.spawn::<BranchDiffTask>(s, &ctx);
         spawner.spawn::<UpstreamTask>(s, &ctx);
-        spawner.spawn::<MergeTreeConflictsTask>(s, &ctx);
-        spawner.spawn::<CiStatusTask>(s, &ctx);
+
+        // Optional tasks (check skip set)
+        if !skip.contains(&TaskKind::BranchDiff) {
+            spawner.spawn::<BranchDiffTask>(s, &ctx);
+        }
+        if !skip.contains(&TaskKind::MergeTreeConflicts) {
+            spawner.spawn::<MergeTreeConflictsTask>(s, &ctx);
+        }
+        if !skip.contains(&TaskKind::CiStatus) {
+            spawner.spawn::<CiStatusTask>(s, &ctx);
+        }
     });
 }
 

@@ -14,7 +14,7 @@ use std::path::Path;
 use std::time::Duration;
 use worktrunk::git::Repository;
 
-use super::list::{self, CollectOptions};
+use super::list::{self, CollectOptions, collect::TaskKind};
 
 /// Claude Code context parsed from stdin JSON
 struct ClaudeCodeContext {
@@ -257,8 +257,8 @@ fn get_git_status(repo: &Repository, cwd: &Path) -> Result<Option<String>> {
         &mut items,
         &default_branch,
         CollectOptions {
-            fetch_ci: true,
-            check_merge_tree_conflicts: false,
+            // Statusline: fetch CI, skip only merge-tree conflicts
+            skip_tasks: [TaskKind::MergeTreeConflicts].into_iter().collect(),
         },
     )?;
 

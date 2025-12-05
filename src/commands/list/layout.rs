@@ -159,10 +159,12 @@
 
 use crate::display::{find_common_prefix, get_terminal_width};
 use anstyle::Style;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use unicode_width::UnicodeWidthStr;
 use worktrunk::styling::{ADDITION, DELETION};
 
+use super::collect::TaskKind;
 use super::columns::{COLUMN_SPECS, ColumnKind, ColumnSpec, DiffVariant};
 
 /// Width of short commit hash display (first 8 hex characters)
@@ -435,7 +437,7 @@ struct PendingColumn<'a> {
 /// Uses generous fixed allocations for expensive-to-compute columns (status, diffs, time, CI)
 /// that handle overflow with compact notation (K suffix). This provides consistent layout
 /// without requiring a data scan.
-fn build_estimated_widths(max_branch: usize, show_full: bool, fetch_ci: bool) -> LayoutMetadata {
+fn build_estimated_widths(max_branch: usize, skip_tasks: &HashSet<TaskKind>) -> LayoutMetadata {
     // Fixed widths for slow columns (require expensive git operations)
     // Values exceeding these widths use compact notation (K suffix)
     //
@@ -450,13 +452,14 @@ fn build_estimated_widths(max_branch: usize, show_full: bool, fetch_ci: bool) ->
     let ci_estimate = fit_header(HEADER_CI, 1); // Single indicator symbol
 
     // Assume columns will have data (better to show and hide than to not show)
+    // Columns whose required task is skipped won't have data
     let data_flags = ColumnDataFlags {
         status: true,
         working_diff: true,
         ahead_behind: true,
-        branch_diff: show_full,
+        branch_diff: !skip_tasks.contains(&TaskKind::BranchDiff),
         upstream: true,
-        ci_status: fetch_ci,
+        ci_status: !skip_tasks.contains(&TaskKind::CiStatus),
     };
 
     let widths = ColumnWidths {
@@ -503,8 +506,7 @@ fn build_estimated_widths(max_branch: usize, show_full: bool, fetch_ci: bool) ->
 /// with pre-allocated width estimates for expensive-to-compute columns.
 fn allocate_columns_with_priority(
     metadata: &LayoutMetadata,
-    show_full: bool,
-    fetch_ci: bool,
+    skip_tasks: &HashSet<TaskKind>,
     max_path_width: usize,
     commit_width: usize,
     terminal_width: usize,
@@ -514,10 +516,12 @@ fn allocate_columns_with_priority(
     let mut remaining = terminal_width;
 
     // Build candidates with priorities
+    // Filter out columns whose required task is being skipped
     let mut candidates: Vec<ColumnCandidate> = COLUMN_SPECS
         .iter()
         .filter(|spec| {
-            (!spec.requires_show_full || show_full) && (!spec.requires_fetch_ci || fetch_ci)
+            spec.requires_task
+                .is_none_or(|task| !skip_tasks.contains(&task))
         })
         .map(|spec| ColumnCandidate {
             spec,
@@ -680,17 +684,15 @@ fn allocate_columns_with_priority(
 /// - Message: flexible (20-100 chars)
 pub fn calculate_layout_from_basics(
     items: &[super::model::ListItem],
-    show_full: bool,
-    fetch_ci: bool,
+    skip_tasks: &HashSet<TaskKind>,
 ) -> LayoutConfig {
-    calculate_layout_with_width(items, show_full, fetch_ci, get_safe_list_width())
+    calculate_layout_with_width(items, skip_tasks, get_safe_list_width())
 }
 
 /// Calculate layout with explicit width (for contexts like skim where available width differs)
 pub fn calculate_layout_with_width(
     items: &[super::model::ListItem],
-    show_full: bool,
-    fetch_ci: bool,
+    skip_tasks: &HashSet<TaskKind>,
     terminal_width: usize,
 ) -> LayoutConfig {
     // Calculate common prefix from worktree paths
@@ -724,14 +726,13 @@ pub fn calculate_layout_with_width(
     let max_path_width = fit_header(HEADER_PATH, path_data_width);
 
     // Build pre-allocated width estimates (same as buffered mode)
-    let metadata = build_estimated_widths(max_branch, show_full, fetch_ci);
+    let metadata = build_estimated_widths(max_branch, skip_tasks);
 
     let commit_width = fit_header(HEADER_COMMIT, COMMIT_HASH_WIDTH);
 
     allocate_columns_with_priority(
         &metadata,
-        show_full,
-        fetch_ci,
+        skip_tasks,
         max_path_width,
         commit_width,
         terminal_width,
@@ -749,7 +750,8 @@ mod tests {
     #[test]
     fn test_pre_allocated_width_estimates() {
         // Test that build_estimated_widths() returns correct pre-allocated estimates
-        let metadata = build_estimated_widths(20, true, true);
+        // Empty skip set means all tasks are computed (equivalent to --full)
+        let metadata = build_estimated_widths(20, &HashSet::new());
         let widths = metadata.widths;
 
         // Line diffs (Signs variant: +/-) allocate 3 digits for 100-999 range
@@ -858,7 +860,10 @@ mod tests {
         };
 
         let items = vec![item];
-        let layout = calculate_layout_from_basics(&items, false, false);
+        let skip_tasks: HashSet<TaskKind> = [TaskKind::BranchDiff, TaskKind::CiStatus]
+            .into_iter()
+            .collect();
+        let layout = calculate_layout_from_basics(&items, &skip_tasks);
 
         assert!(
             !layout.columns.is_empty(),
@@ -945,7 +950,10 @@ mod tests {
         };
 
         let items = vec![item];
-        let layout = calculate_layout_from_basics(&items, false, false);
+        let skip_tasks: HashSet<TaskKind> = [TaskKind::BranchDiff, TaskKind::CiStatus]
+            .into_iter()
+            .collect();
+        let layout = calculate_layout_from_basics(&items, &skip_tasks);
 
         assert!(
             layout
