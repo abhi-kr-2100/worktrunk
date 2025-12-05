@@ -15,37 +15,7 @@
 {% block head %}
 {# _variables.html is already included by the theme at line 12 of juice/templates/index.html #}
 {# Zola resolves it to our custom templates/_variables.html, so no need to include it again #}
-<script>
-// iOS viewport height fix: Capture a STABLE height once on page load.
-// Do NOT update on resize/scroll - that's what causes the jank!
-// On Firefox iOS and Chrome iOS, svh/lvh behave like dvh due to missing
-// minimumViewportInset/maximumViewportInset WebKit APIs.
-// See: https://github.com/mozilla-mobile/firefox-ios/issues/11574
-(function() {
-    // Only run on iOS WebKit browsers
-    var isIOS = /iP(hone|ad|od)/.test(navigator.platform) ||
-                (/Macintosh/.test(navigator.userAgent) && 'ontouchend' in document);
-    if (!isIOS) return;
-
-    // Capture initial viewport height ONCE (with browser chrome visible)
-    // and use it as a stable value. Never update on resize.
-    var h = window.innerHeight;
-    if (h) {
-        document.documentElement.style.setProperty('--vh-full', h + 'px');
-    }
-
-    // Only update on orientation change (actual device rotation)
-    window.addEventListener('orientationchange', function() {
-        // Small delay to let the new orientation settle
-        setTimeout(function() {
-            var newH = window.innerHeight;
-            if (newH) {
-                document.documentElement.style.setProperty('--vh-full', newH + 'px');
-            }
-        }, 100);
-    });
-})();
-</script>
+<!-- iOS viewport fix disabled for testing - see if jank persists without it -->
 <meta name="view-transition" content="same-origin">
 <meta name="description" content="{{ config.extra.site_description }}">
 

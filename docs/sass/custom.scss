@@ -23,7 +23,7 @@ body {
     background-color: var(--wt-color-bg);
     // Override Juice theme's min-height: 100vh. Use lvh (large viewport height)
     // which is stable on Firefox iOS, unlike svh which behaves like dvh.
-    min-height: var(--vh-full, 100lvh);
+    min-height: 100lvh;
 }
 
 // Override Juice theme's .text class (sets font-size: 18px, we want 15px)
@@ -521,7 +521,7 @@ table {
     border-top: 3px solid var(--wt-color-accent);
     padding: 0.75rem 0 1rem;
     // Use lvh which is stable on Firefox iOS (svh behaves like dvh there)
-    max-height: calc(var(--vh-full, 100lvh) - var(--wt-header-height) - var(--wt-main-padding-top) - 20px);
+    max-height: calc(100lvh - var(--wt-header-height) - var(--wt-main-padding-top) - 20px);
     overflow-y: auto;
     overscroll-behavior: contain; // Trap scroll events within TOC
 }
@@ -663,8 +663,8 @@ footer {
     // Use lvh (large viewport height) which is stable on Firefox iOS.
     // Firefox iOS incorrectly implements svh as dvh, causing scroll jank.
     // See: https://github.com/mozilla-mobile/firefox-ios/issues/11574
-    height: calc(var(--vh-full, 100lvh) - var(--wt-header-height) - env(safe-area-inset-top, 0px)) !important;
-    max-height: calc(var(--vh-full, 100lvh) - var(--wt-header-height) - env(safe-area-inset-top, 0px)) !important;
+    height: calc(100lvh - var(--wt-header-height) - env(safe-area-inset-top, 0px)) !important;
+    max-height: calc(100lvh - var(--wt-header-height) - env(safe-area-inset-top, 0px)) !important;
     padding: 4rem 40px 3rem;
     position: relative;
     display: flex;
@@ -681,7 +681,7 @@ footer {
 
     .hero-image {
         // Use lvh which is stable on Firefox iOS (svh behaves like dvh there)
-        max-height: calc(var(--vh-full, 100lvh) * 0.55);
+        max-height: calc(100lvh * 0.55);
         width: auto;
         aspect-ratio: 1;
         object-fit: contain;
@@ -879,7 +879,7 @@ ul > li::marker {
     left: 0;
     width: min(260px, 70vw);
     // Use lvh which is stable on Firefox iOS (svh behaves like dvh there)
-    height: calc(var(--vh-full, 100lvh) - var(--wt-header-height) - env(safe-area-inset-top, 0px));
+    height: calc(100lvh - var(--wt-header-height) - env(safe-area-inset-top, 0px));
     background: var(--wt-color-bg-elevated);
     border-right: 1px solid var(--wt-color-border-subtle);
     z-index: 200;
@@ -1012,7 +1012,7 @@ body.mobile-menu-open {
     .hero {
         // Use lvh (large viewport height) which should be stable on Firefox iOS
         // unlike svh which incorrectly behaves like dvh
-        height: calc(var(--vh-full, 100lvh) - var(--wt-header-height) - env(safe-area-inset-top, 0px));
+        height: calc(100lvh - var(--wt-header-height) - env(safe-area-inset-top, 0px));
         padding: 2rem 20px;
         flex-direction: column;
         gap: 2rem;
