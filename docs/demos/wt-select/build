@@ -2,7 +2,7 @@
 """Build script for wt select demo GIF.
 
 Creates a demo environment using cherry-picked commits from this repo,
-records the GIF, and saves output to demos/wt-select/out/.
+records the GIF, and saves output to docs/demos/wt-select/out/.
 
 DEMO GOALS
 ==========
@@ -57,14 +57,14 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# Add demos/ to path for shared library
+# Add docs/demos/ to path for shared library
 SCRIPT_DIR = Path(__file__).parent
 DEMOS_DIR = SCRIPT_DIR.parent
 sys.path.insert(0, str(DEMOS_DIR))
 
 from lib import DemoEnv, run, git, render_tape, record_vhs, build_wt, REAL_HOME
 
-REPO_ROOT = DEMOS_DIR.parent
+REPO_ROOT = DEMOS_DIR.parent.parent
 FIXTURES_DIR = SCRIPT_DIR / "fixtures"
 OUT_DIR = SCRIPT_DIR / "out"
 TAPE_TEMPLATE = SCRIPT_DIR / "demo.tape"

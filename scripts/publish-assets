@@ -8,8 +8,8 @@ ASSETS_REPO="$REPO_ROOT/../worktrunk-assets"
 
 # Demo sources: name|source_path
 DEMOS=(
-    "wt-demo.gif|$REPO_ROOT/demos/wt-demo/out/wt-demo.gif"
-    "wt-select.gif|$REPO_ROOT/demos/wt-select/out/wt-select.gif"
+    "wt-demo.gif|$REPO_ROOT/docs/demos/wt/out/wt-demo.gif"
+    "wt-select.gif|$REPO_ROOT/docs/demos/wt-select/out/wt-select.gif"
 )
 
 # Clone assets repo if needed
@@ -47,8 +47,8 @@ done
 
 if [[ ${#copied[@]} -eq 0 ]]; then
     echo "No demo GIFs found. Build them first:"
-    echo "  ./dev/wt-demo-build"
-    echo "  ./demos/wt-select/build"
+    echo "  ./docs/demos/wt/build"
+    echo "  ./docs/demos/wt-select/build"
     exit 1
 fi
 

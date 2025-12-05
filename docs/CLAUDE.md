@@ -197,9 +197,9 @@ Demo GIFs (~2MB each) are stored in a separate `worktrunk-assets` repo to avoid 
 
 **To update demos:**
 ```bash
-./demos/wt-demo/build       # Build from VHS tape file
-./demos/wt-select/build     # Build select demo
-./scripts/publish-assets    # Push to assets repo
+./docs/demos/wt/build          # Build from VHS tape file
+./docs/demos/wt-select/build   # Build select demo
+./scripts/publish-assets       # Push to assets repo
 ```
 
 Deploy runs `fetch-assets` before building.

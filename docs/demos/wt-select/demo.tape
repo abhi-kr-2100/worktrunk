@@ -8,7 +8,7 @@ Set FontSize 19
 Set FontFamily "Geist Mono, Berkeley Mono, Fira Code, JetBrains Mono, Menlo, Apple Color Emoji"
 Set Width 1600
 Set Height 800
-Set Theme { "name": "GitHub Light Custom", "black": "#8c959f", "red": "#d73a49", "green": "#22863a", "yellow": "#d29922", "blue": "#0969da", "magenta": "#8250df", "cyan": "#1b7c83", "white": "#8c959f", "brightBlack": "#8c959f", "brightRed": "#cb2431", "brightGreen": "#2ea043", "brightYellow": "#f2cc60", "brightBlue": "#218bff", "brightMagenta": "#a475f9", "brightCyan": "#39c5cf", "brightWhite": "#8c959f", "background": "#f0f2f5", "foreground": "#1f2328", "cursor": "#0969da", "selection": "#ddf4ff" }
+Set Theme { "name": "Warm Gold Light", "black": "#8c959f", "red": "#d73a49", "green": "#22863a", "yellow": "#d29922", "blue": "#0969da", "magenta": "#8250df", "cyan": "#1b7c83", "white": "#8c959f", "brightBlack": "#8c959f", "brightRed": "#cb2431", "brightGreen": "#2ea043", "brightYellow": "#f2cc60", "brightBlue": "#218bff", "brightMagenta": "#a475f9", "brightCyan": "#39c5cf", "brightWhite": "#8c959f", "background": "#FFF9E8", "foreground": "#1f2328", "cursor": "#0969da", "selection": "#FFF0C8" }
 Set Padding 18
 Set LineHeight 1.12
 Set TypingSpeed 28ms
@@ -39,7 +39,6 @@ Type "clear"
 Enter
 Sleep 500ms
 Show
-Set KeyStrokes Show
 Sleep 500ms
 
 # Launch wt select

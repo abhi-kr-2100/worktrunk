@@ -3,12 +3,12 @@
 ## Running the Demo
 
 ```bash
-./demos/wt-select/build
+./docs/demos/wt-select/build
 ```
 
 Creates:
-- `demos/wt-select/out/wt-select.gif` - Animated demo
-- Demo repo at `demos/wt-select/out/.demo-select/` (gitignored)
+- `docs/demos/wt-select/out/wt-select.gif` - Animated demo
+- Demo repo at `docs/demos/wt-select/out/.demo-select/` (gitignored)
 
 ## Demo Goals
 
@@ -60,8 +60,8 @@ Without the future timestamp, cache expires during recording → tries to fetch 
 **Do NOT use `open` on the GIF** - that's for the user to do manually.
 
 Inline viewing options:
-- Quick Look: `qlmanage -p dev/wt-select-demo/out/wt-select-demo.gif`
-- iTerm2: `imgcat dev/wt-select-demo/out/wt-select-demo.gif`
+- Quick Look: `qlmanage -p docs/demos/wt-select/out/wt-select.gif`
+- iTerm2: `imgcat docs/demos/wt-select/out/wt-select.gif`
 
 ## Prerequisites
 
@@ -77,14 +77,14 @@ This demo uses a **custom fork of VHS** with keystroke overlay support:
 
 The fork adds a large keystroke overlay that appears in the center of the screen, showing what keys are being pressed. This is essential for demo GIFs where viewers need to see what's being typed.
 
-To build (from the `demos/wt-select/` directory):
+To build (from the `docs/demos/wt-select/` directory):
 ```bash
 git clone -b keypress-overlay https://github.com/max-sixty/vhs.git vhs-keystrokes
 cd vhs-keystrokes
 go build -o vhs-keystrokes .
 ```
 
-The build script looks for the binary at `demos/wt-select/vhs-keystrokes/vhs-keystrokes` by default.
+The build script looks for the binary at `docs/demos/wt-select/vhs-keystrokes/vhs-keystrokes` by default.
 Override with: `VHS_KEYSTROKES=/path/to/binary ./build`
 
 ### Keystroke Timing Calibration
