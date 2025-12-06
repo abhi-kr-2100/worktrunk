@@ -466,10 +466,11 @@ fn test_remove_main_worktree_vs_linked_worktree() {
     let linked_wt_path = repo.add_worktree("feature");
 
     // Part 1: Verify linked worktree CAN be removed (from within it)
+    // Use --no-background to ensure removal completes before creating next worktree
     snapshot_remove(
         "remove_main_vs_linked__from_linked_succeeds",
         &repo,
-        &[],
+        &["--no-background"],
         Some(&linked_wt_path),
     );
 

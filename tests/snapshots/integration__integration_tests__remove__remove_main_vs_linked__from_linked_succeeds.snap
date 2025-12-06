@@ -4,6 +4,7 @@ info:
   program: wt
   args:
     - remove
+    - "--no-background"
   env:
     CLICOLOR_FORCE: "1"
     COLUMNS: "150"
@@ -22,4 +23,5 @@ exit_code: 0
 ----- stdout -----
 
 ----- stderr -----
-🔄 [36m[36mRemoving [1mfeature[22m worktree & branch in background (already in main)[39m[39m
+🔄 [36mRemoving current worktree...[39m
+✅ [32mRemoved [1mfeature[22m worktree & branch; changed directory to [1m[REPO][22m (already in main)[39m
