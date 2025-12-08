@@ -6,7 +6,9 @@ use std::process;
 use worktrunk::config::{WorktrunkConfig, set_config_path};
 use worktrunk::git::{Repository, exit_code, is_command_not_approved, set_base_path};
 use worktrunk::path::format_path_for_display;
-use worktrunk::styling::{format_with_gutter, println};
+use worktrunk::styling::{
+    format_with_gutter, hint_message, info_message, println, success_message, warning_message,
+};
 
 mod cli;
 mod commands;
@@ -506,10 +508,10 @@ fn main() {
                                 // which is handled internally by prompt_for_confirmation()
                                 match result.action {
                                     ConfigAction::Added | ConfigAction::Created => {
-                                        crate::output::success(message)?;
+                                        crate::output::print(success_message(message))?;
                                     }
                                     ConfigAction::AlreadyExists => {
-                                        crate::output::info(message)?;
+                                        crate::output::print(info_message(message))?;
                                     }
                                     ConfigAction::WouldAdd | ConfigAction::WouldCreate => {
                                         unreachable!("Preview actions handled by confirmation prompt")
@@ -528,10 +530,10 @@ fn main() {
                                     );
                                     match comp_result.action {
                                         ConfigAction::Added | ConfigAction::Created => {
-                                            crate::output::success(comp_message)?;
+                                            crate::output::print(success_message(comp_message))?;
                                         }
                                         ConfigAction::AlreadyExists => {
-                                            crate::output::info(comp_message)?;
+                                            crate::output::print(info_message(comp_message))?;
                                         }
                                         ConfigAction::WouldAdd | ConfigAction::WouldCreate => {
                                             unreachable!("Preview actions handled by confirmation prompt")
@@ -543,9 +545,9 @@ fn main() {
                             // Show skipped shells
                             for (shell, path) in &scan_result.skipped {
                                 let path = format_path_for_display(path);
-                                crate::output::hint(cformat!(
+                                crate::output::print(hint_message(cformat!(
                                     "Skipped <bright-black>{shell}</>; {path} not found"
-                                ))?;
+                                )))?;
                             }
 
                             // Exit with error if no shells configured
@@ -560,12 +562,12 @@ fn main() {
                             if shells_configured_count > 0 {
                                 crate::output::blank()?;
                                 let plural = if shells_configured_count == 1 { "" } else { "s" };
-                                crate::output::success(format!(
+                                crate::output::print(success_message(format!(
                                     "Configured {shells_configured_count} shell{plural}"
-                                ))?;
+                                )))?;
                             } else {
                                 // No action: all shells were already configured
-                                crate::output::success("All shells already configured")?;
+                                crate::output::print(success_message("All shells already configured"))?;
                             }
 
                             // Restart hint: only shown if the current shell's extension changed
@@ -594,12 +596,12 @@ fn main() {
                                     // Fish auto-sources from conf.d, so just say "Restart shell"
                                     // Bash/Zsh can source directly for immediate activation
                                     if matches!(result.shell, worktrunk::shell::Shell::Fish) {
-                                        crate::output::hint("Restart shell to activate")?;
+                                        crate::output::print(hint_message("Restart shell to activate"))?;
                                     } else {
                                         let path = format_path_for_display(&result.path);
-                                        crate::output::hint(format!(
+                                        crate::output::print(hint_message(format!(
                                             "Restart shell or run: source {path}"
-                                        ))?;
+                                        )))?;
                                     }
                                 }
                             }
@@ -630,10 +632,10 @@ fn main() {
                                         "shell extension"
                                     };
 
-                                    crate::output::success(cformat!(
+                                    crate::output::print(success_message(cformat!(
                                         "{} {what} for <bold>{shell}</> @ <bold>{path}</>",
                                         result.action.description(),
-                                    ))?;
+                                    )))?;
                                 }
 
                                 // Show completion results
@@ -641,10 +643,10 @@ fn main() {
                                     let shell = result.shell;
                                     let path = format_path_for_display(&result.path);
 
-                                    crate::output::success(cformat!(
+                                    crate::output::print(success_message(cformat!(
                                         "{} completions for <bold>{shell}</> @ <bold>{path}</>",
                                         result.action.description(),
-                                    ))?;
+                                    )))?;
                                 }
 
                                 // Show not found - warning if explicit shell, hint if auto-scan
@@ -661,13 +663,13 @@ fn main() {
                                         "shell extension"
                                     };
                                     if explicit_shell {
-                                        crate::output::warning(format!(
+                                        crate::output::print(warning_message(format!(
                                             "No {what} found in {path}"
-                                        ))?;
+                                        )))?;
                                     } else {
-                                        crate::output::hint(cformat!(
+                                        crate::output::print(hint_message(cformat!(
                                             "No <bright-black>{shell}</> {what} in {path}"
-                                        ))?;
+                                        )))?;
                                     }
                                 }
 
@@ -682,13 +684,13 @@ fn main() {
                                     }
                                     let path = format_path_for_display(path);
                                     if explicit_shell {
-                                        crate::output::warning(format!(
+                                        crate::output::print(warning_message(format!(
                                             "No completions found in {path}"
-                                        ))?;
+                                        )))?;
                                     } else {
-                                        crate::output::hint(cformat!(
+                                        crate::output::print(hint_message(cformat!(
                                             "No <bright-black>{shell}</> completions in {path}"
-                                        ))?;
+                                        )))?;
                                     }
                                 }
 
@@ -698,9 +700,9 @@ fn main() {
                                 if total_changes == 0 {
                                     if all_not_found == 0 {
                                         crate::output::blank()?;
-                                        crate::output::hint(
+                                        crate::output::print(hint_message(
                                             "No shell integration found to remove",
-                                        )?;
+                                        ))?;
                                     }
                                     return Ok(());
                                 }
@@ -708,9 +710,9 @@ fn main() {
                                 // Summary
                                 crate::output::blank()?;
                                 let plural = if shell_count == 1 { "" } else { "s" };
-                                crate::output::success(format!(
+                                crate::output::print(success_message(format!(
                                     "Removed integration from {shell_count} shell{plural}"
-                                ))?;
+                                )))?;
 
                                 // Hint about restarting shell (only if current shell was affected)
                                 let current_shell = std::env::var("SHELL")
@@ -725,7 +727,9 @@ fn main() {
                                     });
 
                                 if current_shell_affected {
-                                    crate::output::hint("Restart shell to complete uninstall")?;
+                                    crate::output::print(hint_message(
+                                        "Restart shell to complete uninstall",
+                                    ))?;
                                 }
                                 Ok(())
                             })
@@ -780,12 +784,14 @@ fn main() {
                     match handle_squash(target.as_deref(), force, !verify, false, stage_final)? {
                         SquashResult::Squashed | SquashResult::NoNetChanges => {}
                         SquashResult::NoCommitsAhead(branch) => {
-                            crate::output::info(format!(
+                            crate::output::print(info_message(format!(
                                 "Nothing to squash; no commits ahead of {branch}"
-                            ))?;
+                            )))?;
                         }
                         SquashResult::AlreadySingleCommit => {
-                            crate::output::info("Nothing to squash; already a single commit")?;
+                            crate::output::print(info_message(
+                                "Nothing to squash; already a single commit",
+                            ))?;
                         }
                     }
                     Ok(())
@@ -798,7 +804,9 @@ fn main() {
                 handle_rebase(target.as_deref()).and_then(|result| match result {
                     RebaseResult::Rebased => Ok(()),
                     RebaseResult::UpToDate(branch) => {
-                        crate::output::info(format!("Already up-to-date with {branch}"))?;
+                        crate::output::print(info_message(format!(
+                            "Already up-to-date with {branch}"
+                        )))?;
                         Ok(())
                     }
                 })
