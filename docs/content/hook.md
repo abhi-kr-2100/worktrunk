@@ -323,6 +323,44 @@ cache = "ln -sf {{ repo_root }}/node_modules node_modules"
 env = "cp {{ repo_root }}/.env.local .env"
 ```
 
+## JSON context
+
+Hooks receive context as JSON on stdin, enabling hooks written in any language (Python, Node, Ruby, etc.) to access repository information without parsing template variables.
+
+**Example: Reading context in Python**
+
+```toml
+post-create = "python scripts/setup.py"
+```
+
+```python
+import json
+import sys
+
+context = json.load(sys.stdin)
+print(f"Setting up {context['branch']} in {context['worktree']}")
+```
+
+**Available fields:**
+
+| Field | Example | Description |
+|-------|---------|-------------|
+| `repo` | my-project | Repository name |
+| `branch` | feature-foo | Branch name (sanitized: / → -) |
+| `worktree` | /path/to/worktree | Absolute worktree path |
+| `worktree_name` | my-project.feature-foo | Worktree directory name |
+| `repo_root` | /path/to/main | Repository root path |
+| `default_branch` | main | Default branch name |
+| `commit` | a1b2c3d4e5f6... | Full HEAD commit SHA |
+| `short_commit` | a1b2c3d | Short HEAD commit SHA |
+| `remote` | origin | Primary remote name |
+| `upstream` | origin/feature | Upstream tracking branch |
+| `hook_type` | post-create | Hook phase (post-create, pre-merge, etc.) |
+| `hook_name` | install | Command name (named commands only) |
+| `target` | main | Target branch (merge hooks only) |
+
+Fields without values are omitted from the JSON.
+
 ## See also
 
 - [wt merge](@/merge.md) — Runs hooks automatically during merge
