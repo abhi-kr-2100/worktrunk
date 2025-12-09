@@ -129,11 +129,3 @@ Shell integration tests require bash, zsh, and fish:
 ```bash
 $ cargo test --test integration --features shell-integration-tests
 ```
-
-### Releases
-
-1. **Update the changelog**: Move items from `## Unreleased` to a new version section
-2. **Bump version and commit**: Update `Cargo.toml` version, commit with "Release x.y.z"
-3. **Merge to main**: `wt merge --no-remove` (squashes to main, keeps worktree for tagging)
-4. **Tag and push**: `git tag vX.Y.Z main && git push origin vX.Y.Z`
-5. **Update Homebrew**: After CI completes, run `./dev/update-homebrew.sh`
