@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Added
+
+- **Squash-merge integration detection**: Improved branch cleanup detection with four ordered checks to identify when branch content is already in the target branch. This enables accurate removal of squash-merged branches even after target advances. New status symbols: `·` for same commit, `⊂` for content integrated via different history. ([6325be2](https://github.com/max-sixty/worktrunk/commit/6325be28))
+- **CI absence caching**: Cache "no CI found" results to avoid repeated API calls for branches without CI configured. Reduces unnecessary rate limit consumption. ([8db3928](https://github.com/max-sixty/worktrunk/commit/8db39285))
+- **Shell completion tests**: Black-box snapshot tests for zsh, bash, and fish completions that verify actual completion output. ([#117](https://github.com/max-sixty/worktrunk/pull/117))
+
+### Changed
+
+- **Merge conflict indicator**: Changed from `⊘` to `⚔` (crossed swords) for better visual distinction from the rebase symbol. ([f3b96a8](https://github.com/max-sixty/worktrunk/commit/f3b96a83))
+
+### Documentation
+
+- **Hook JSON context**: Document all JSON fields available to hooks on stdin with examples for Python and other languages. ([af80589](https://github.com/max-sixty/worktrunk/commit/af805898))
+- **CI caching**: Document that CI results are cached for 30-60 seconds and how to use `wt config cache` to manage the cache. ([4804913](https://github.com/max-sixty/worktrunk/commit/48049132))
+- **Status column clarifications**: Clarify that the Status column contains multiple subcolumns with priority ordering. ([1f9bb38](https://github.com/max-sixty/worktrunk/commit/1f9bb38f))
+
 ## 0.1.15
 
 ### Added
