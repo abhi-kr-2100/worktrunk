@@ -101,7 +101,7 @@ CI is only checked for branches that track a remote — local-only branches show
 
 ## Status symbols
 
-Symbols appear in the Status column in this order:
+The Status column has multiple subcolumns. Within each, only the first matching symbol is shown (listed in priority order):
 
 | Subcolumn | Symbol | Meaning |
 |-----------|--------|---------|
