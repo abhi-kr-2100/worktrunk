@@ -113,7 +113,7 @@ The Status column has multiple subcolumns. Within each, only the first matching 
 | | `⋈` | Merge in progress |
 | | `⚔` | Would conflict if merged to main |
 | | `·` | Same commit |
-| | `⊂` | Content integrated (`--full` detects additional cases) |
+| | `⊂` | [Content integrated](@/remove.md#branch-cleanup) (`--full` detects additional cases) |
 | Main divergence | `^` | Is the main branch |
 | | `↕` | Diverged from main |
 | | `↑` | Ahead of main |
