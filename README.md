@@ -25,10 +25,10 @@ Here's a quick demo:
 
 ## Context: git worktrees
 
-AI agents like Claude and Codex can increasingly handle longer tasks without
-supervision, and it's very practical to run several in parallel. Git worktrees
-are a great primitive for giving each agent its own working directory, avoiding
-agents stepping on each other's changes.
+AI agents like Claude Code and Codex can increasingly handle longer tasks
+without supervision, and it's very practical to run several in parallel. Git
+worktrees provide each agent with its own working directory, avoiding agents
+stepping on each other's changes.
 
 But the git worktree UX is clunky. Even something as simple as "start a new worktree" is complicated:
 `git worktree add -b feature ../repo.feature`, then `cd ../repo.feature`.
