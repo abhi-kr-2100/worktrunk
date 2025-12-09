@@ -43,5 +43,5 @@ pre-commit = "pre-commit run --all-files"
 [pre-merge]
 # Build test helpers first (dev-detach isn't a compile-time dependency)
 build = "cargo build -p dev-detach"
-insta = "NEXTEST_STATUS_LEVEL=fail NEXTEST_SUCCESS_OUTPUT=never cargo insta test --check --test-runner nextest --test-runner-fallback true --features shell-integration-tests"
+insta = "NEXTEST_STATUS_LEVEL=fail NEXTEST_SUCCESS_OUTPUT=never cargo insta test --dnd --check --test-runner nextest --test-runner-fallback true --features shell-integration-tests"
 doc = "RUSTDOCFLAGS='-Dwarnings' cargo doc --no-deps"
