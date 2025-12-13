@@ -682,12 +682,14 @@ pub fn collect(
 
         let initial_footer = format!("{INFO_EMOJI} {dim}{footer_base} (loading...){dim:#}");
 
-        Some(ProgressiveTable::new(
+        let table = ProgressiveTable::new(
             layout.format_header_line(),
             skeletons,
             initial_footer,
             max_width,
-        )?)
+        );
+        table.render_initial()?;
+        Some(table)
     } else {
         None
     };

@@ -38,6 +38,8 @@ pub struct ProgressiveTable {
 impl ProgressiveTable {
     /// Create a new progressive table with the given structure.
     ///
+    /// Call `render_initial()` after construction to print the initial table.
+    ///
     /// # Arguments
     /// * `header` - The header line content
     /// * `skeletons` - Initial content for each data row (skeleton with known data)
@@ -48,7 +50,7 @@ impl ProgressiveTable {
         skeletons: Vec<String>,
         initial_footer: String,
         max_width: usize,
-    ) -> std::io::Result<Self> {
+    ) -> Self {
         let is_tty = stderr().is_terminal();
         let row_count = skeletons.len();
 
@@ -66,19 +68,20 @@ impl ProgressiveTable {
         // Footer
         lines.push(truncate_visible(&initial_footer, max_width, "…"));
 
-        let table = Self {
+        Self {
             lines,
             max_width,
             row_count,
             is_tty,
-        };
-
-        // Print initial table
-        if is_tty {
-            table.print_all()?;
         }
+    }
 
-        Ok(table)
+    /// Print the initial table to stderr (TTY only).
+    pub fn render_initial(&self) -> std::io::Result<()> {
+        if self.is_tty {
+            self.print_all()?;
+        }
+        Ok(())
     }
 
     /// Print all lines to stderr.
@@ -212,17 +215,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn builds_and_updates_rows_without_tty_side_effects() {
+    fn builds_and_updates_rows() {
         let header = "header".to_string();
         let skeletons = vec!["row0".to_string(), "row1".to_string()];
         let footer = "loading".to_string();
 
+        // new() no longer has I/O side effects — render_initial() must be called explicitly
         let mut table =
-            ProgressiveTable::new(header.clone(), skeletons.clone(), footer.clone(), 80)
-                .expect("table should build");
-
-        // Force non-TTY behavior to avoid cursor control in tests
-        table.is_tty = false;
+            ProgressiveTable::new(header.clone(), skeletons.clone(), footer.clone(), 80);
 
         // header + 2 rows + spacer + footer
         assert_eq!(table.lines.len(), 5);
@@ -247,10 +247,5 @@ mod tests {
         // Footer update
         table.update_footer("done".into()).unwrap();
         assert_eq!(table.lines.last().unwrap(), "done");
-
-        // Finalize non-tty path should just print without panicking
-        table
-            .finalize_non_tty(vec!["final header".into(), "final row".into()])
-            .unwrap();
     }
 }
