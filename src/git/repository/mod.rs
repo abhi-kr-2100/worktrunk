@@ -623,9 +623,12 @@ impl Repository {
 
     /// Check if two refs point to the same commit.
     pub fn same_commit(&self, ref1: &str, ref2: &str) -> anyhow::Result<bool> {
-        let sha1 = self.run_command(&["rev-parse", ref1])?;
-        let sha2 = self.run_command(&["rev-parse", ref2])?;
-        Ok(sha1.trim() == sha2.trim())
+        // Parse both refs in a single git command
+        let output = self.run_command(&["rev-parse", ref1, ref2])?;
+        let mut lines = output.lines();
+        let sha1 = lines.next().unwrap_or_default().trim();
+        let sha2 = lines.next().unwrap_or_default().trim();
+        Ok(sha1 == sha2)
     }
 
     /// Check if a branch has file changes beyond the merge-base with target.
@@ -1307,8 +1310,15 @@ impl Repository {
     /// Useful for detecting squash merges or rebases where the content has been
     /// integrated but commit ancestry doesn't show the relationship.
     pub fn trees_match(&self, ref1: &str, ref2: &str) -> anyhow::Result<bool> {
-        let tree1 = self.rev_parse_tree(&format!("{ref1}^{{tree}}"))?;
-        let tree2 = self.rev_parse_tree(&format!("{ref2}^{{tree}}"))?;
+        // Parse both tree refs in a single git command
+        let output = self.run_command(&[
+            "rev-parse",
+            &format!("{ref1}^{{tree}}"),
+            &format!("{ref2}^{{tree}}"),
+        ])?;
+        let mut lines = output.lines();
+        let tree1 = lines.next().unwrap_or_default().trim();
+        let tree2 = lines.next().unwrap_or_default().trim();
         Ok(tree1 == tree2)
     }
 
