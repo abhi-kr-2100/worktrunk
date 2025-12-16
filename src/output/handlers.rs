@@ -207,11 +207,9 @@ fn get_flag_note(
             let Some(target) = target_branch else {
                 return String::new();
             };
+            let symbol = reason.symbol();
             let desc = reason.description();
-            match reason {
-                IntegrationReason::NoAddedChanges => format!(" ({desc})"),
-                _ => format!(" ({desc} {target})"),
-            }
+            cformat!(" ({desc} <bold>{target}</>, <dim>{symbol}</>)")
         }
     }
 }
@@ -975,35 +973,32 @@ mod tests {
             " (--force-delete)"
         );
 
-        // Integration reasons
+        // Integration reasons - check description and target separately since target is styled
         let cases = [
-            (IntegrationReason::SameCommit, "same commit as main"),
-            (IntegrationReason::Ancestor, "ancestor of main"),
-            (IntegrationReason::TreesMatch, "tree matches main"),
-            (IntegrationReason::MergeAddsNothing, "all changes in main"),
+            (IntegrationReason::SameCommit, "same commit as"),
+            (IntegrationReason::Ancestor, "ancestor of"),
+            (IntegrationReason::NoAddedChanges, "no added changes on"),
+            (IntegrationReason::TreesMatch, "tree matches"),
+            (IntegrationReason::MergeAddsNothing, "all changes in"),
         ];
-        for (reason, expected_contains) in cases {
+        for (reason, expected_desc) in cases {
             let note = get_flag_note(
                 BranchDeletionMode::SafeDelete,
                 &BranchDeletionOutcome::Integrated(reason),
                 Some("main"),
             );
             assert!(
-                note.contains(expected_contains),
+                note.contains(expected_desc),
                 "reason {:?} should contain '{}'",
                 reason,
-                expected_contains
+                expected_desc
+            );
+            assert!(
+                note.contains("main"),
+                "reason {:?} should contain target 'main'",
+                reason
             );
         }
-
-        // NoAddedChanges is special - no target shown
-        let note = get_flag_note(
-            BranchDeletionMode::SafeDelete,
-            &BranchDeletionOutcome::Integrated(IntegrationReason::NoAddedChanges),
-            Some("main"),
-        );
-        assert!(note.contains("no added changes"));
-        assert!(!note.contains("main"));
     }
 
     #[test]
@@ -1022,7 +1017,8 @@ mod tests {
         );
         assert!(msg.contains("feature"));
         assert!(msg.contains("worktree & branch"));
-        assert!(msg.contains("same commit as main"));
+        assert!(msg.contains("same commit as"));
+        assert!(msg.contains("main"));
 
         // Removed worktree only (--no-delete-branch)
         let msg = format_remove_worktree_message(

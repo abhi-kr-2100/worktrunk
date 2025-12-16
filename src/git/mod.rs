@@ -95,15 +95,26 @@ pub enum IntegrationReason {
 impl IntegrationReason {
     /// Human-readable description for use in messages (e.g., `wt remove` output).
     ///
-    /// Returns the phrase to appear inside parentheses. Some include `{target}`
-    /// placeholder for the target branch name.
+    /// Returns a phrase that expects the target branch name to follow
+    /// (e.g., "same commit as" + "main" → "same commit as main").
     pub fn description(&self) -> &'static str {
         match self {
             Self::SameCommit => "same commit as",
             Self::Ancestor => "ancestor of",
-            Self::NoAddedChanges => "no added changes",
+            Self::NoAddedChanges => "no added changes on",
             Self::TreesMatch => "tree matches",
             Self::MergeAddsNothing => "all changes in",
+        }
+    }
+
+    /// Status symbol used in `wt list` for this integration reason.
+    ///
+    /// - `SameCommit` → `_` (matches `MainState::Empty`)
+    /// - Others → `⊂` (matches `MainState::Integrated`)
+    pub fn symbol(&self) -> &'static str {
+        match self {
+            Self::SameCommit => "_",
+            _ => "⊂",
         }
     }
 }
@@ -600,7 +611,7 @@ mod tests {
         assert_eq!(IntegrationReason::Ancestor.description(), "ancestor of");
         assert_eq!(
             IntegrationReason::NoAddedChanges.description(),
-            "no added changes"
+            "no added changes on"
         );
         assert_eq!(IntegrationReason::TreesMatch.description(), "tree matches");
         assert_eq!(
