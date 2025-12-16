@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.0
+
+### Improved
+
+- **Path column hidden when redundant**: Path column is deprioritized when all paths match the naming template, showing only at wider terminal widths (~125+ columns).
+- **Better error formatting**: Errors with context now show a header with the root cause in a gutter block, improving readability for git errors.
+- **Clearer integration target**: Separated `default_branch` (for stats like ahead/behind) from `target` (for integration checks), catching branches merged remotely before pulling.
+
+### Fixed
+
+- **Untracked files block integration**: Untracked files now prevent a worktree from being flagged as integrated, avoiding accidental data loss on removal.
+- **Dirty worktree count includes untracked**: Summary now correctly counts worktrees with untracked files as dirty.
+- **Branch name disambiguation**: Fixed `refname:short` issues when a branch and remote have the same name.
+- **JSON output uses kebab-case**: Enum values changed from snake_case to kebab-case (e.g., `same_commit` → `same-commit`). (Breaking: scripts parsing JSON output may need updates)
+- **Legacy marker format removed**: Plain-text markers no longer parsed. (Breaking: re-set markers with `wt config state marker set`)
+
+### Internal
+
+- **Unified command execution**: All external commands now go through `shell_exec::run()` for consistent logging and tracing.
+
 ## 0.4.0
 
 ### Added

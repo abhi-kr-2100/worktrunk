@@ -46,7 +46,14 @@ Notable changes to document:
 - New features or commands
 - User-visible behavior changes
 - Bug fixes users might encounter
-- Breaking changes
+
+**Section order:** Improved, Fixed, Internal. Within each section, list most interesting/impactful changes first. Internal is for selected notable internal changes (not everything).
+
+**Breaking changes:** Note inline with the entry, not as a separate section:
+
+```markdown
+- **Feature name**: Description. (Breaking: old behavior no longer supported)
+```
 
 Skip: internal refactors, doc-only changes, test additions (unless user-facing like shell completion tests).
 
