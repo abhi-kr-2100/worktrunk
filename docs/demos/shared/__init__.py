@@ -13,6 +13,11 @@ from .lib import (
     prepare_base_repo,
     setup_gh_mock,
     prepare_demo_repo,
+    # Demo recording infrastructure
+    check_dependencies,
+    setup_demo_output,
+    build_shell_env,
+    record_all_themes,
 )
 from .themes import THEMES, format_theme_for_vhs
 
@@ -31,4 +36,9 @@ __all__ = [
     "prepare_demo_repo",
     "THEMES",
     "format_theme_for_vhs",
+    # Demo recording infrastructure
+    "check_dependencies",
+    "setup_demo_output",
+    "build_shell_env",
+    "record_all_themes",
 ]
