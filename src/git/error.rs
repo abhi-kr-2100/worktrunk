@@ -148,7 +148,7 @@ impl std::fmt::Display for GitError {
                 };
                 write!(
                     f,
-                    "{}\n\n{}",
+                    "{}\n{}",
                     error_message(&message),
                     hint_message(cformat!(
                         "To switch to a branch, run <bright-black>git switch <<branch>></>"
@@ -171,7 +171,7 @@ impl std::fmt::Display for GitError {
                 };
                 write!(
                     f,
-                    "{}\n\n{}",
+                    "{}\n{}",
                     error_message(&message),
                     hint_message("Commit or stash changes first")
                 )
@@ -181,7 +181,7 @@ impl std::fmt::Display for GitError {
                 let switch_cmd = suggest_command("switch", &[branch], &[]);
                 write!(
                     f,
-                    "{}\n\n{}",
+                    "{}\n{}",
                     error_message(cformat!("Branch <bold>{branch}</> already exists")),
                     hint_message(cformat!(
                         "To switch to the existing branch, remove <bright-black>--create</>; run <bright-black>{switch_cmd}</>"
@@ -194,7 +194,7 @@ impl std::fmt::Display for GitError {
                 let list_cmd = suggest_command("list", &[], &["--branches", "--remotes"]);
                 write!(
                     f,
-                    "{}\n\n{}",
+                    "{}\n{}",
                     error_message(cformat!("Branch <bold>{reference}</> not found")),
                     hint_message(cformat!(
                         "To create a new branch, run <bright-black>{create_cmd}</>; to list branches, run <bright-black>{list_cmd}</>"
@@ -205,7 +205,7 @@ impl std::fmt::Display for GitError {
             GitError::WorktreeMissing { branch } => {
                 write!(
                     f,
-                    "{}\n\n{}",
+                    "{}\n{}",
                     error_message(cformat!("Worktree directory missing for <bold>{branch}</>")),
                     hint_message(cformat!(
                         "To clean up, run <bright-black>git worktree prune</>"
@@ -225,7 +225,7 @@ impl std::fmt::Display for GitError {
                 let cmd = suggest_command("switch", &[branch], &[]);
                 cwrite!(
                     f,
-                    "{ERROR_SYMBOL} <red>Branch <bold>{branch}</> exists only on remote ({remote}/{branch})</>\n\n{HINT_SYMBOL} <dim>To create a local worktree, run <bright-black>{cmd}</></>"
+                    "{ERROR_SYMBOL} <red>Branch <bold>{branch}</> exists only on remote ({remote}/{branch})</>\n{HINT_SYMBOL} <dim>To create a local worktree, run <bright-black>{cmd}</></>"
                 )
             }
 
@@ -248,7 +248,7 @@ impl std::fmt::Display for GitError {
                 let command = format!("cd {path_escaped} && git switch {branch}");
                 write!(
                     f,
-                    "{}\n\n{}\n{}",
+                    "{}\n{}\n{}",
                     error_message(cformat!(
                         "Cannot create worktree for <bold>{branch}</>: {error_detail}"
                     )),
@@ -273,7 +273,7 @@ impl std::fmt::Display for GitError {
                 let switch_cmd = suggest_command("switch", &[branch], flags);
                 write!(
                     f,
-                    "{}\n\n{}",
+                    "{}\n{}",
                     error_message(cformat!(
                         "Directory already exists: <bold>{path_display}</>"
                     )),
@@ -395,7 +395,7 @@ impl std::fmt::Display for GitError {
                 } else {
                     write!(
                         f,
-                        "\n\n{}\n{}",
+                        "\n{}\n{}",
                         hint_message(cformat!(
                             "To continue after resolving conflicts, run <bright-black>git rebase --continue</>"
                         )),
@@ -410,7 +410,7 @@ impl std::fmt::Display for GitError {
                 let rebase_cmd = suggest_command("step", &["rebase", target_branch], &[]);
                 write!(
                     f,
-                    "{}\n\n{}",
+                    "{}\n{}",
                     error_message(cformat!("Branch not rebased onto <bold>{target_branch}</>")),
                     hint_message(cformat!(
                         "Remove <bright-black>--no-rebase</>; or to rebase first, run <bright-black>{rebase_cmd}</>"
@@ -432,7 +432,7 @@ impl std::fmt::Display for GitError {
                 let approvals_cmd = suggest_command("hook", &["approvals", "add"], &[]);
                 write!(
                     f,
-                    "{}\n\n{}",
+                    "{}\n{}",
                     error_message("Cannot prompt for approval in non-interactive environment"),
                     hint_message(cformat!(
                         "To skip prompts in CI/CD, add <bright-black>--force</>; to pre-approve commands, run <bright-black>{approvals_cmd}</>"
@@ -477,7 +477,7 @@ impl std::fmt::Display for GitError {
                 let command_gutter = format_with_gutter(display_command, None);
                 write!(
                     f,
-                    "{}\n\n{}\n{}",
+                    "{}\n{}\n{}",
                     error_block.trim_end(),
                     info_message("Ran command:"),
                     command_gutter.trim_end()
@@ -488,7 +488,7 @@ impl std::fmt::Display for GitError {
                 let path_display = format_path_for_display(config_path);
                 write!(
                     f,
-                    "{}\n\n{}",
+                    "{}\n{}",
                     error_message("No project configuration found"),
                     hint_message(cformat!("Create a config file at: <bold>{path_display}</>"))
                 )
@@ -628,7 +628,7 @@ impl std::fmt::Display for HookErrorWithHint {
         // Can't derive command from hook type (e.g., PreRemove is used by both `wt remove` and `wt merge`)
         write!(
             f,
-            "\n\n{}",
+            "\n{}",
             hint_message(cformat!(
                 "To skip {} hooks, re-run with <bright-black>--no-verify</>",
                 self.hook_type
@@ -662,9 +662,8 @@ mod tests {
     #[test]
     fn snapshot_detached_head_display() {
         let err = GitError::DetachedHead { action: None };
-        assert_snapshot!(err.to_string(), @r"
+        assert_snapshot!(err.to_string(), @"
         [31m✗[39m [31mNot on a branch (detached HEAD)[39m
-
         [2m↳[22m [2mTo switch to a branch, run [90mgit switch <branch>[39m[22m
         ");
     }
@@ -675,9 +674,8 @@ mod tests {
             action: Some("merge".into()),
             worktree: Some("wt".into()),
         };
-        assert_snapshot!(err.to_string(), @r"
+        assert_snapshot!(err.to_string(), @"
         [31m✗[39m [31mCannot merge: [1mwt[22m has uncommitted changes[39m
-
         [2m↳[22m [2mCommit or stash changes first[22m
         ");
     }
@@ -691,9 +689,8 @@ mod tests {
         .into();
 
         let downcast = err.downcast_ref::<GitError>().expect("Should downcast");
-        assert_snapshot!(downcast.to_string(), @r"
+        assert_snapshot!(downcast.to_string(), @"
         [31m✗[39m [31mBranch [1mmain[22m already exists[39m
-
         [2m↳[22m [2mTo switch to the existing branch, remove [90m--create[39m; run [90mwt switch main[39m[22m
         ");
     }
@@ -721,7 +718,6 @@ mod tests {
         };
         assert_snapshot!(err.to_string(), @"
         [31m✗[39m [31mDirectory already exists: [1m/some/path[22m[39m
-
         [2m↳[22m [2mTo remove manually, run [90mrm -rf /some/path[39m; to overwrite (with backup), run [90mwt switch feature --clobber[39m[22m
         ");
     }
@@ -735,7 +731,6 @@ mod tests {
         };
         assert_snapshot!(err.to_string(), @"
         [31m✗[39m [31mDirectory already exists: [1m/some/path[22m[39m
-
         [2m↳[22m [2mTo remove manually, run [90mrm -rf /some/path[39m; to overwrite (with backup), run [90mwt switch feature --create --clobber[39m[22m
         ");
     }

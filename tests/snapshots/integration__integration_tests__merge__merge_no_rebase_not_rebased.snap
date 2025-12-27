@@ -32,5 +32,4 @@ exit_code: 1
 
 ----- stderr -----
 [31m✗[39m [31mBranch not rebased onto [1mmain[22m[39m
-
 [2m↳[22m [2mRemove [90m--no-rebase[39m; or to rebase first, run [90mwt step rebase main[39m[22m

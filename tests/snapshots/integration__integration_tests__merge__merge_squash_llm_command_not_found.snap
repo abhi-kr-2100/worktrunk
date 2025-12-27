@@ -35,6 +35,5 @@ exit_code: 1
 [36m◎[39m [36mGenerating squash commit message...[39m
 [31m✗[39m [31mCommit generation command failed[39m
 [107m [0m Failed to spawn LLM command
-
 [2m○[22m Ran command:
 [107m [0m wt step squash --show-prompt | nonexistent-llm-command

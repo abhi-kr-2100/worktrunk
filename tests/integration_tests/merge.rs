@@ -1683,7 +1683,6 @@ fn test_merge_no_commit_with_dirty_tree(mut repo: TestRepo) {
 
         ----- stderr -----
         [31m✗[39m [31mCannot merge with --no-commit: [1mfeature[22m has uncommitted changes[39m
-
         [2m↳[22m [2mCommit or stash changes first[22m
         ");
     });
