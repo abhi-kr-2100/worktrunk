@@ -247,7 +247,7 @@ squash-template = "..."
 # Optional: Load squash template from file
 squash-template-file = "~/.config/worktrunk/squash-template.txt"
 
-# Approved Commands (auto-populated by wt switch --execute --force)
+# Approved Commands (auto-populated by wt switch --execute --yes)
 [projects."github.com/user/repo"]
 approved-commands = ["npm install"]
 ```
@@ -273,7 +273,7 @@ approved-commands = ["npm install"]
 
 ### Approved Commands Not Persisting
 
-- Approved commands are auto-populated when using `wt switch --execute "cmd" --force`
+- Approved commands are auto-populated when using `wt switch --execute "cmd" --yes`
 - Manual editing is possible but discouraged (use the tool's approval system)
 
 ## User Hooks

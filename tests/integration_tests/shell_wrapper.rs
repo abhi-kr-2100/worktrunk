@@ -577,7 +577,7 @@ fn exec_through_wrapper_from(
 /// * `shell` - The shell to use (e.g., "bash", "zsh", "fish")
 /// * `repo` - The test repository
 /// * `subcommand` - The wt subcommand (e.g., "merge", "switch")
-/// * `args` - Arguments to the subcommand (without --force)
+/// * `args` - Arguments to the subcommand (without --yes)
 /// * `working_dir` - Working directory for the command
 /// * `inputs` - Input strings to send (e.g., `&["y\n"]` for approval prompts)
 ///
