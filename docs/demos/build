@@ -11,11 +11,14 @@ Output is written to docs/static/assets/{mode}/{theme}/, ensuring docs and socia
 builds don't overwrite each other. The assets repo mirrors this structure.
 """
 
+from __future__ import annotations
+
 import argparse
 import os
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 # Add docs/demos/ to path for shared library
@@ -24,7 +27,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 from shared import (
     VALIDATION_RS,
-    DemoEnv, git, prepare_demo_repo,
+    DemoEnv, DemoSize, git, prepare_demo_repo,
     setup_claude_code_config, setup_zellij_config, setup_fish_config,
     check_dependencies, setup_demo_output, record_all_themes,
     SIZE_DOCS, SIZE_SOCIAL,
@@ -116,6 +119,11 @@ cleanup = "{cleanup_cmd}"
     prepare_demo_repo(env, REPO_ROOT, hooks_config=hooks_config)
     _write_user_config(env, approved)
     _add_billing_branch(env)
+
+
+def prepare_with_hooks_deps(env: DemoEnv):
+    """Standard hooks demo with deps (for pickling compatibility)."""
+    prepare_with_hooks(env, include_deps=True)
 
 
 def prepare_with_llm_commit(env: DemoEnv):
@@ -254,6 +262,7 @@ echo "Add placeholder module for user profile settings."
 
 # Format: (tape_file, output_name, setup_func, vhs_type)
 # All demos in a mode use that mode's default size.
+# Note: setup_func must be a named function (not lambda) for multiprocessing.
 
 DOCS_DEMOS = [
     ("wt-core.tape", "wt-core", prepare_with_hooks, "vhs"),
@@ -267,7 +276,7 @@ SOCIAL_DEMOS = [
     ("wt-statusline.tape", "wt-statusline", prepare_switch, "vhs"),
     ("wt-list.tape", "wt-list", prepare_with_hooks, "vhs"),
     ("wt-list-remove.tape", "wt-list-remove", prepare_with_hooks, "vhs"),
-    ("wt-hooks.tape", "wt-hooks", lambda env: prepare_with_hooks(env, include_deps=True), "vhs"),
+    ("wt-hooks.tape", "wt-hooks", prepare_with_hooks_deps, "vhs"),
     ("wt-devserver.tape", "wt-devserver", prepare_devserver, "vhs"),
     ("wt-commit.tape", "wt-commit", prepare_with_llm_commit, "vhs"),
     ("wt-merge.tape", "wt-merge", prepare_merge_only, "vhs"),
@@ -288,6 +297,53 @@ TARGETS = {
         "themes": ["light"],
     },
 }
+
+
+# =============================================================================
+# Parallel Recording
+# =============================================================================
+
+def record_demo(
+    tape_file: str,
+    output_name: str,
+    setup_func,
+    vhs_type: str,
+    mode_out_dir: Path,
+    themes: list[str],
+    demo_size: DemoSize,
+    text_mode: bool = False,
+):
+    """Record a single demo (runs in subprocess for parallel execution)."""
+    tape_path = TAPES_DIR / tape_file
+    if not tape_path.exists():
+        raise FileNotFoundError(f"{tape_file} not found")
+
+    if text_mode and is_interactive_tape(tape_path):
+        raise ValueError("interactive demo (has TUI/Zellij)")
+
+    vhs_binary = VHS_KEYSTROKES if vhs_type == "vhs-keystrokes" else "vhs"
+
+    # Create fresh environment in temp directory
+    demo_env_dir = Path(tempfile.mkdtemp(prefix="wt-demo-"))
+    setup_demo_output(demo_env_dir)
+    env = DemoEnv(name=output_name, out_dir=demo_env_dir, repo_name="acme")
+    setup_func(env)
+
+    replacements = build_tape_replacements(env, REPO_ROOT)
+
+    if text_mode:
+        output_txt = mode_out_dir / f"{output_name}.txt"
+        record_text(env, tape_path, output_txt, replacements)
+        print(f"✓ {output_name}: Text saved to {output_txt}")
+    else:
+        output_gifs = {}
+        for theme in themes:
+            theme_dir = mode_out_dir / theme
+            theme_dir.mkdir(parents=True, exist_ok=True)
+            output_gifs[theme] = theme_dir / f"{output_name}.gif"
+
+        record_all_themes(env, tape_path, output_gifs, REPO_ROOT, vhs_binary=vhs_binary, size=demo_size)
+        print(f"✓ {output_name}: GIFs saved: {', '.join(themes)}")
 
 
 # =============================================================================
@@ -335,6 +391,8 @@ Examples:
                         help="Build demo and spawn interactive shell for debugging (requires --only)")
     parser.add_argument("--text", action="store_true",
                         help="Record text output instead of GIFs (skips interactive demos)")
+    parser.add_argument("--sequential", action="store_true",
+                        help="Record demos sequentially instead of in parallel")
     args = parser.parse_args()
 
     if args.shell and not args.only:
@@ -377,52 +435,56 @@ Examples:
         print("See docs/demos/CLAUDE.md for build instructions", file=sys.stderr)
         sys.exit(1)
 
-    # Record each demo
-    for tape_file, output_name, setup_func, vhs_type in demos:
-        tape_path = TAPES_DIR / tape_file
-        if not tape_path.exists():
-            print(f"Skipping {output_name}: {tape_file} not found")
-            continue
-
-        # Skip interactive demos in text mode
-        if args.text and is_interactive_tape(tape_path):
-            print(f"Skipping {output_name}: interactive demo (has TUI/Zellij)")
-            continue
-
-        vhs_binary = VHS_KEYSTROKES if vhs_type == "vhs-keystrokes" else "vhs"
-
-        print(f"\n{'='*60}")
-        print(f"Recording {output_name} ({args.target}){' [text]' if args.text else ''}...")
-        print(f"{'='*60}")
-
-        # Create fresh environment in temp directory (keeps output dir clean)
+    # Handle --shell mode (interactive, must be sequential)
+    if args.shell:
+        tape_file, output_name, setup_func, vhs_type = demos[0]
         demo_env_dir = Path(tempfile.mkdtemp(prefix="wt-demo-"))
         setup_demo_output(demo_env_dir)
         env = DemoEnv(name=output_name, out_dir=demo_env_dir, repo_name="acme")
         setup_func(env)
-
         print(f"Demo repo: {env.repo}")
+        spawn_debug_shell(env, starship_config)
+        return
 
-        if args.shell:
-            spawn_debug_shell(env, starship_config)
-            return  # Only debug one demo at a time
+    # Record demos
+    if args.sequential or len(demos) == 1:
+        print(f"\nRecording {len(demos)} demo(s) sequentially...")
+        failed = []
+        for tape_file, output_name, setup_func, vhs_type in demos:
+            try:
+                record_demo(
+                    tape_file, output_name, setup_func, vhs_type,
+                    mode_out_dir, themes, demo_size, args.text,
+                )
+            except Exception as e:
+                print(f"✗ {output_name}: {e}")
+                failed.append(output_name)
+    else:
+        print(f"\nRecording {len(demos)} demo(s) in parallel...")
+        max_workers = min(len(demos), os.cpu_count() or 4)
 
-        replacements = build_tape_replacements(env, REPO_ROOT)
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(
+                    record_demo, tape_file, output_name, setup_func, vhs_type,
+                    mode_out_dir, themes, demo_size, args.text,
+                ): output_name
+                for tape_file, output_name, setup_func, vhs_type in demos
+            }
 
-        if args.text:
-            # Text output goes to mode directory (not theme subdirectory)
-            output_txt = mode_out_dir / f"{output_name}.txt"
-            record_text(env, tape_path, output_txt, replacements)
-            print(f"Text saved to {output_txt}")
-        else:
-            # Build output GIF paths: mode/theme/name.gif
-            output_gifs = {}
-            for theme in themes:
-                theme_dir = mode_out_dir / theme
-                theme_dir.mkdir(parents=True, exist_ok=True)
-                output_gifs[theme] = theme_dir / f"{output_name}.gif"
+            failed = []
+            for future in as_completed(futures):
+                output_name = futures[future]
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"✗ {output_name}: {e}")
+                    failed.append(output_name)
 
-            record_all_themes(env, tape_path, output_gifs, REPO_ROOT, vhs_binary=vhs_binary, size=demo_size)
+    if failed:
+        print(f"\n{'='*60}")
+        print(f"Failed: {', '.join(failed)}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
