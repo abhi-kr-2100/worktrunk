@@ -93,7 +93,7 @@ use worktrunk::styling::{
 
 use super::command_executor::CommandContext;
 use super::hooks::{HookFailureStrategy, HookPipeline, HookSource};
-use super::repository_ext::RepositoryCliExt;
+use super::repository_ext::{RemoveTarget, RepositoryCliExt};
 
 /// Generate a backup path for the given path with a timestamp suffix.
 ///
@@ -756,8 +756,8 @@ pub fn handle_remove(
         )))?;
     }
 
-    repo.remove_worktree_by_name(
-        worktree_name,
+    repo.prepare_worktree_removal(
+        RemoveTarget::Branch(worktree_name),
         BranchDeletionMode::from_flags(no_delete_branch, force_delete),
         force_worktree,
     )
@@ -780,7 +780,8 @@ pub fn handle_remove_current(
         crate::output::print(progress_message("Removing current worktree..."))?;
     }
 
-    repo.remove_current_worktree(
+    repo.prepare_worktree_removal(
+        RemoveTarget::Current,
         BranchDeletionMode::from_flags(no_delete_branch, force_delete),
         force_worktree,
     )

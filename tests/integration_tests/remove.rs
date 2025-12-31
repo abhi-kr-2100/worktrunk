@@ -745,6 +745,23 @@ fn test_remove_main_worktree_vs_linked_worktree(mut repo: TestRepo) {
         &[],
         None,
     );
+
+    // Part 6: Verify main worktree CANNOT be removed by name from a linked worktree
+    // Switch back to main branch in main worktree, then create a new linked worktree
+    let mut cmd = std::process::Command::new("git");
+    repo.configure_git_cmd(&mut cmd);
+    cmd.args(["switch", "main"])
+        .current_dir(repo.root_path())
+        .output()
+        .unwrap();
+
+    let linked_for_test = repo.add_worktree("test-from-linked");
+    snapshot_remove(
+        "remove_main_vs_linked__main_by_name_from_linked_fails",
+        &repo,
+        &["main"],
+        Some(&linked_for_test),
+    );
 }
 
 /// Test that removing a worktree for the default branch doesn't show tautological reason.

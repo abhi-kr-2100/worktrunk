@@ -623,7 +623,16 @@ impl Repository {
             .map(PathBuf::as_path)
     }
 
-    /// Check if the path is in a worktree (vs the main repository).
+    /// Check if this is a linked worktree (vs the main worktree).
+    ///
+    /// Returns `true` for linked worktrees (created via `git worktree add`),
+    /// `false` for the main worktree (original clone location).
+    ///
+    /// Implementation: compares `git_dir` vs `common_dir`. In linked worktrees,
+    /// the `.git` file points to `.git/worktrees/NAME`, so they differ. In the
+    /// main worktree, both point to the same `.git` directory.
+    ///
+    /// For bare repos, all worktrees are "linked" (returns `true`).
     pub fn is_in_worktree(&self) -> anyhow::Result<bool> {
         let git_dir = self.git_dir()?;
         let common_dir = self.git_common_dir()?;

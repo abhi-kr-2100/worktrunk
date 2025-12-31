@@ -10,6 +10,15 @@ use worktrunk::git::{GitError, IntegrationReason, Repository};
 use worktrunk::path::format_path_for_display;
 use worktrunk::styling::{format_with_gutter, progress_message, warning_message};
 
+/// Target for worktree removal.
+#[derive(Debug)]
+pub enum RemoveTarget<'a> {
+    /// Remove worktree by branch name
+    Branch(&'a str),
+    /// Remove the current worktree (supports detached HEAD)
+    Current,
+}
+
 /// CLI-only helpers implemented on [`Repository`] via an extension trait so we can keep orphan
 /// implementations inside the binary crate.
 pub trait RepositoryCliExt {
@@ -19,22 +28,13 @@ pub trait RepositoryCliExt {
     /// Warn about untracked files being auto-staged.
     fn warn_if_auto_staging_untracked(&self) -> anyhow::Result<()>;
 
-    /// Remove a worktree identified by branch name.
-    fn remove_worktree_by_name(
-        &self,
-        branch_name: &str,
-        deletion_mode: BranchDeletionMode,
-        force_worktree: bool,
-    ) -> anyhow::Result<RemoveResult>;
-
-    /// Remove the current worktree (handles detached HEAD state).
+    /// Prepare a worktree removal by branch name or current worktree.
     ///
-    /// This method removes the worktree we're currently in, even if HEAD is detached.
-    /// It finds the branch from:
-    /// 1. The worktree's metadata (if not detached)
-    /// 2. The reflog (if detached from a branch)
-    fn remove_current_worktree(
+    /// Returns a `RemoveResult` describing what will be removed. The actual
+    /// removal is performed by the output handler.
+    fn prepare_worktree_removal(
         &self,
+        target: RemoveTarget,
         deletion_mode: BranchDeletionMode,
         force_worktree: bool,
     ) -> anyhow::Result<RemoveResult>;
@@ -73,114 +73,85 @@ impl RepositoryCliExt for Repository {
         warn_about_untracked_files(&status)
     }
 
-    fn remove_worktree_by_name(
+    fn prepare_worktree_removal(
         &self,
-        branch_name: &str,
+        target: RemoveTarget,
         deletion_mode: BranchDeletionMode,
         force_worktree: bool,
     ) -> anyhow::Result<RemoveResult> {
-        let worktree_path = match self.worktree_for_branch(branch_name)? {
-            Some(path) => path,
-            None => {
-                // No worktree found - check if the branch exists locally
-                if self.local_branch_exists(branch_name)? {
-                    // Branch exists but no worktree - return BranchOnly to attempt branch deletion
-                    return Ok(RemoveResult::BranchOnly {
-                        branch_name: branch_name.to_string(),
-                        deletion_mode,
-                    });
-                }
-                // Check if branch exists on a remote
-                let remotes = self.remotes_with_branch(branch_name)?;
-                if !remotes.is_empty() {
-                    return Err(GitError::RemoteOnlyBranch {
-                        branch: branch_name.into(),
-                        remote: remotes[0].clone(),
-                    }
-                    .into());
-                }
-                return Err(GitError::NoWorktreeFound {
-                    branch: branch_name.into(),
-                }
-                .into());
-            }
-        };
-
-        if !worktree_path.exists() {
-            return Err(GitError::WorktreeMissing {
-                branch: branch_name.into(),
-            }
-            .into());
-        }
-
-        let target_repo = Repository::at(&worktree_path);
-        target_repo.ensure_clean_working_tree("remove worktree", Some(branch_name))?;
-
-        let current_worktree = self.worktree_root()?.to_path_buf();
-        let removing_current = current_worktree == worktree_path;
-
-        // Cannot remove the main working tree (only linked worktrees can be removed)
-        if removing_current && !self.is_in_worktree()? {
-            return Err(GitError::CannotRemoveMainWorktree.into());
-        }
-
-        let (main_path, changed_directory) = if removing_current {
-            let worktrees = self.list_worktrees()?;
-            (worktrees[0].path.clone(), true)
-        } else {
-            (current_worktree, false)
-        };
-
-        // Resolve default branch for integration reason display
-        // Skip if removing the default branch itself (avoids tautological "main (ancestor of main)")
-        let default_branch = self.default_branch().ok();
-        let target_branch = match &default_branch {
-            Some(db) if db == branch_name => None,
-            _ => default_branch,
-        };
-
-        // Pre-compute integration reason to avoid race conditions when removing
-        // multiple worktrees in background mode. Background git processes can hold
-        // locks that cause subsequent integration checks to fail.
-        let integration_reason = compute_integration_reason(
-            &main_path,
-            Some(branch_name),
-            target_branch.as_deref(),
-            deletion_mode,
-        );
-
-        Ok(RemoveResult::RemovedWorktree {
-            main_path,
-            worktree_path,
-            changed_directory,
-            branch_name: Some(branch_name.to_string()),
-            deletion_mode,
-            target_branch,
-            integration_reason,
-            force_worktree,
-        })
-    }
-
-    fn remove_current_worktree(
-        &self,
-        deletion_mode: BranchDeletionMode,
-        force_worktree: bool,
-    ) -> anyhow::Result<RemoveResult> {
-        // Cannot remove the main working tree (only linked worktrees can be removed)
-        if !self.is_in_worktree()? {
-            return Err(GitError::CannotRemoveMainWorktree.into());
-        }
-
-        // Get current worktree path and branch
         let current_path = self.worktree_root()?.to_path_buf();
-        let branch_name = self.current_branch()?.map(str::to_string);
+        let worktrees = self.list_worktrees()?;
+        let main_worktree_path = worktrees[0].path.clone();
+
+        // Resolve target to worktree path and branch
+        let (worktree_path, branch_name, is_current) = match target {
+            RemoveTarget::Branch(branch) => {
+                match worktrees
+                    .iter()
+                    .find(|wt| wt.branch.as_deref() == Some(branch))
+                {
+                    Some(wt) => {
+                        if !wt.path.exists() {
+                            return Err(GitError::WorktreeMissing {
+                                branch: branch.into(),
+                            }
+                            .into());
+                        }
+                        let is_current = current_path == wt.path;
+                        (wt.path.clone(), Some(branch.to_string()), is_current)
+                    }
+                    None => {
+                        // No worktree found - check if the branch exists locally
+                        if self.local_branch_exists(branch)? {
+                            return Ok(RemoveResult::BranchOnly {
+                                branch_name: branch.to_string(),
+                                deletion_mode,
+                            });
+                        }
+                        // Check if branch exists on a remote
+                        let remotes = self.remotes_with_branch(branch)?;
+                        if !remotes.is_empty() {
+                            return Err(GitError::RemoteOnlyBranch {
+                                branch: branch.into(),
+                                remote: remotes[0].clone(),
+                            }
+                            .into());
+                        }
+                        return Err(GitError::NoWorktreeFound {
+                            branch: branch.into(),
+                        }
+                        .into());
+                    }
+                }
+            }
+            RemoveTarget::Current => {
+                let wt = worktrees
+                    .iter()
+                    .find(|wt| wt.path == current_path)
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("Current worktree not found in worktree list")
+                    })?;
+                (wt.path.clone(), wt.branch.clone(), true)
+            }
+        };
+
+        // Create Repository at target for validation
+        let target_repo = Repository::at(&worktree_path);
+
+        // Cannot remove the main working tree (only linked worktrees can be removed)
+        if !target_repo.is_in_worktree()? {
+            return Err(GitError::CannotRemoveMainWorktree.into());
+        }
 
         // Ensure the working tree is clean
-        self.ensure_clean_working_tree("remove worktree", branch_name.as_deref())?;
+        target_repo.ensure_clean_working_tree("remove worktree", branch_name.as_deref())?;
 
-        // Get main worktree path (we're removing current, so we'll cd to main)
-        let worktrees = self.list_worktrees()?;
-        let main_path = worktrees[0].path.clone();
+        // Compute main_path and changed_directory based on whether we're removing current
+        let (main_path, changed_directory) = if is_current {
+            (main_worktree_path, true)
+        } else {
+            (current_path, false)
+        };
 
         // Resolve default branch for integration reason display
         // Skip if removing the default branch itself (avoids tautological "main (ancestor of main)")
@@ -190,7 +161,8 @@ impl RepositoryCliExt for Repository {
             _ => default_branch,
         };
 
-        // Pre-compute integration reason (same logic as remove_worktree_by_name)
+        // Pre-compute integration reason to avoid race conditions when removing
+        // multiple worktrees in background mode.
         let integration_reason = compute_integration_reason(
             &main_path,
             branch_name.as_deref(),
@@ -200,8 +172,8 @@ impl RepositoryCliExt for Repository {
 
         Ok(RemoveResult::RemovedWorktree {
             main_path,
-            worktree_path: current_path,
-            changed_directory: true,
+            worktree_path,
+            changed_directory,
             branch_name,
             deletion_mode,
             target_branch,
