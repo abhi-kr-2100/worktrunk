@@ -297,7 +297,12 @@ jobs:
       - host
     runs-on: ubuntu-latest
     if: ${{ needs.plan.outputs.publishing == 'true' }}
+    env:
+      GH_TOKEN: ${{ secrets.WORKTRUNK_BOT_TOKEN }}
     steps:
+      - name: Sync winget-pkgs fork with upstream
+        run: |
+          gh api -X POST repos/max-sixty/winget-pkgs/merge-upstream -f branch=master
       - name: Publish to winget
         uses: vedantmgoyal9/winget-releaser@v2
         with:
