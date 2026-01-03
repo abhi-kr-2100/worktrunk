@@ -1282,7 +1282,7 @@ fn main() {
                     let ctx = CommandContext::new(
                         &repo,
                         &config,
-                        Some(branch_info.branch()),
+                        Some(&branch_info.branch),
                         result.path(),
                         &repo_root,
                         yes,
