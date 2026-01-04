@@ -323,39 +323,72 @@ fn warn_about_untracked_files(status_output: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Stash guard that auto-restores on drop.
+///
+/// Created by `prepare_target_worktree()` when the target worktree has changes
+/// that don't conflict with the push. Automatically restores the stash when
+/// dropped, ensuring cleanup happens in both success and error paths.
+#[must_use = "stash guard restores immediately if dropped; hold it until push completes"]
 pub(crate) struct TargetWorktreeStash {
+    /// Inner data wrapped in Option so we can take() in Drop.
+    /// None means already restored (or disarmed).
+    inner: Option<StashData>,
+}
+
+struct StashData {
     repo: Repository,
     path: PathBuf,
     stash_ref: String,
 }
 
-impl TargetWorktreeStash {
-    pub(crate) fn new(path: &Path, stash_ref: String) -> Self {
-        Self {
-            repo: Repository::at(path),
-            path: path.to_path_buf(),
-            stash_ref,
-        }
-    }
-
-    pub(crate) fn restore(self) -> anyhow::Result<()> {
-        crate::output::print(progress_message(cformat!(
+impl StashData {
+    /// Restore the stash, printing progress and warning on failure.
+    fn restore(self) {
+        let _ = crate::output::print(progress_message(cformat!(
             "Restoring stashed changes in <bold>{}</>...",
             format_path_for_display(&self.path)
-        )))?;
+        )));
 
         if let Err(_e) = self
             .repo
             .run_command(&["stash", "pop", "--quiet", &self.stash_ref])
         {
-            crate::output::print(warning_message(cformat!(
+            let _ = crate::output::print(warning_message(cformat!(
                 "Failed to restore stash <bold>{stash_ref}</> - run <bold>git stash pop {stash_ref}</> in <bold>{path}</>",
                 stash_ref = self.stash_ref,
                 path = format_path_for_display(&self.path),
-            )))?;
+            )));
         }
+    }
+}
 
-        Ok(())
+impl Drop for TargetWorktreeStash {
+    fn drop(&mut self) {
+        if let Some(data) = self.inner.take() {
+            data.restore();
+        }
+    }
+}
+
+impl TargetWorktreeStash {
+    pub(crate) fn new(path: &Path, stash_ref: String) -> Self {
+        Self {
+            inner: Some(StashData {
+                repo: Repository::at(path),
+                path: path.to_path_buf(),
+                stash_ref,
+            }),
+        }
+    }
+
+    /// Explicitly restore the stash now, preventing Drop from restoring again.
+    ///
+    /// Use this when you need the restore to happen at a specific point
+    /// (e.g., before a success message). Drop handles errors/early returns.
+    pub(crate) fn restore_now(&mut self) {
+        if let Some(data) = self.inner.take() {
+            data.restore();
+        }
     }
 }
 
@@ -509,5 +542,36 @@ mod tests {
     fn test_parse_untracked_files_no_untracked() {
         // All files are tracked (modified, staged, etc.)
         assert!(parse_untracked_files(" M file1.txt\0M  file2.txt\0").is_empty());
+    }
+
+    #[test]
+    fn test_stash_guard_restore_now_clears_inner() {
+        // Create a guard - note: this doesn't actually create a stash since we're not
+        // in a real git repo with that stash ref. We're just testing the state machine.
+        let mut guard = TargetWorktreeStash::new(std::path::Path::new("/tmp"), "stash@{0}".into());
+
+        // Inner should be populated
+        assert!(guard.inner.is_some());
+
+        // restore_now() should clear inner (the restore itself will fail since no real repo,
+        // but that's expected - we're testing the state transition)
+        guard.restore_now();
+
+        // Inner should now be None
+        assert!(guard.inner.is_none());
+
+        // Calling restore_now() again is a no-op
+        guard.restore_now();
+        assert!(guard.inner.is_none());
+    }
+
+    #[test]
+    fn test_stash_guard_drop_clears_inner() {
+        // Test that Drop also consumes the inner
+        let guard = TargetWorktreeStash::new(std::path::Path::new("/tmp"), "stash@{0}".into());
+
+        // Just drop it - the restore will fail (no real repo) but Drop shouldn't panic
+        drop(guard);
+        // If we get here, Drop worked without panicking
     }
 }
