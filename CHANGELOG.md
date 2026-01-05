@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.9.3
+
+### Improved
+
+- **Terminal hyperlinks for URLs**: The URL column in `wt list` now shows clickable links (OSC 8) in supported terminals, displaying a compact `:port` that links to the full URL.
+- **Statusline truncation**: Statusline output now intelligently truncates by dropping low-priority segments (URL, CI) before high-priority ones (branch, model) when exceeding terminal width.
+- **Statusline URL**: When a project has a `[list] url` template configured, the URL now appears in statusline output for shell prompts.
+- **Bare repo default branch detection**: Uses `symbolic-ref HEAD` as a heuristic for detecting the default branch in bare repos and empty repos before the first commit.
+- **Terminology**: Renamed "path mismatch" to "branch-worktree mismatch" for clarity. In JSON output (`wt list --format=json`), the field `path_mismatch` is now `branch_worktree_mismatch`.
+
+### Fixed
+
+- **Empty bare repo bootstrap**: `wt switch --create main` now works in empty bare repos by handling unborn branches correctly.
+
+### Documentation
+
+- **CLI help text**: Improved descriptions across multiple commands including `wt`, `wt list`, `wt select`, `wt step`, `wt merge`, `wt remove`, and `wt hook`.
+- **Web docs copy button**: Fixed copy button position so it stays at top-right when scrolling horizontally through code blocks.
+
+### Internal
+
+- **Claude Code plugin detection**: `wt config show` now displays whether the worktrunk Claude Code plugin is installed, with install hints if needed.
+- **Hyperlink diagnostics**: `wt config show` shows hyperlink support status (active/inactive).
+
 ## 0.9.2
 
 ### Fixed
