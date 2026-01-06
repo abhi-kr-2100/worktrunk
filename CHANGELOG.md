@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.9.4
+
+### Improved
+
+- **Diagnostic report generation**: `wt list --verbose` generates diagnostic reports (`.git/wt-logs/diagnostic.md`) when warnings or errors occur, with a `gh issue create` command hint when GitHub CLI is available.
+- **Alias bypass detection**: `wt config show` detects shell aliases that point to binary paths (e.g., `alias gwt="/usr/bin/wt"`) and warns that they bypass shell integration with suggested fixes.
+- **Switch message clarity**: Messages now explicitly state what was created — "Created branch X and worktree" vs "Created worktree for X" vs "Switched to worktree for X".
+- **Worktree-path hint**: One-time hint after first `wt switch --create` suggesting `wt config create` to customize worktree locations.
+- **Path mismatch warnings**: `wt remove` and `wt merge` show warnings when worktree paths don't match the config template.
+- **CLI command ordering**: Commands reordered by usage frequency in `--help` (switch, list, remove, merge...).
+
+### Fixed
+
+- **Progress counter overflow**: Fixed `wt list` progressive rendering when URL sends caused completed count to exceed expected count.
+- **Windows shell integration**: Shell function now correctly strips `.exe` suffix, relying on MSYS2/Git Bash automatic resolution (fixes [#348](https://github.com/max-sixty/worktrunk/issues/348)).
+- **Prunable worktrees**: Gracefully handle worktrees where the directory was deleted but git still tracks metadata.
+- **Help text tables**: Disabled clap text wrapping to preserve markdown tables in `--help` output.
+
+### Documentation
+
+- **FAQ entries**: Added entries for "What files does Worktrunk create?" and "What can Worktrunk delete?".
+
+### Internal
+
+- **Hint state management**: New `wt config state hints` subcommand for viewing and clearing shown hints.
+- **Deprecated config deduplication**: Migration files (`.new`) only written once per repo, tracked via git config hints.
+
 ## 0.9.3
 
 ### Improved
