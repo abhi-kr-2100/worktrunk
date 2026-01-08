@@ -11,11 +11,15 @@ Help users work with Worktrunk, a CLI tool for managing git worktrees.
 
 ## Available Documentation
 
-- **SKILL.md**: Configuration workflows and common patterns
-- **reference/user-config.md**: User config (LLM, worktree paths, command defaults)
-- **reference/project-config.md**: Project config (lifecycle hooks)
-- **reference/hook-types-reference.md**: Detailed hook behavior and timing
+Reference files are synced from [worktrunk.dev](https://worktrunk.dev) documentation:
+
+- **reference/config.md**: User and project configuration (LLM, hooks, command defaults)
+- **reference/hook.md**: Hook types, timing, and execution order
+- **reference/switch.md**, **merge.md**, **list.md**, etc.: Command documentation
+- **reference/llm-commits.md**: LLM commit message generation
+- **reference/tips-patterns.md**: Language-specific tips and patterns
 - **reference/shell-integration.md**: Shell integration debugging
+- **reference/troubleshooting.md**: Troubleshooting for LLM and hooks (Claude-specific)
 
 For command-specific options, run `wt <command> --help`. For configuration, follow the workflows below.
 
@@ -28,14 +32,14 @@ Worktrunk uses two separate config files with different scopes and behaviors:
 - **Location**: `~/.config/worktrunk/config.toml` (never checked into git)
 - **Contains**: LLM integration, worktree path templates, command settings, user hooks, approved commands
 - **Permission model**: Always propose changes and get consent before editing
-- **See**: `reference/user-config.md` for detailed guidance
+- **See**: `reference/config.md` for detailed guidance
 
 ### Project Config (`.config/wt.toml`)
 - **Scope**: Team-wide automation shared by all developers
 - **Location**: `<repo>/.config/wt.toml` (checked into git)
 - **Contains**: Hooks for worktree lifecycle (post-create, pre-merge, etc.)
 - **Permission model**: Proactive (create directly, changes are reversible via git)
-- **See**: `reference/project-config.md` for detailed guidance
+- **See**: `reference/hook.md` for detailed guidance
 
 ## Determining Which Config to Use
 
@@ -96,7 +100,7 @@ Most common request. Follow this sequence:
    wt merge  # in a repo with uncommitted changes
    ```
 
-**See `reference/user-config.md` for complete details.**
+**See `reference/config.md` and `reference/llm-commits.md` for complete details.**
 
 ### Setting Up Project Hooks (Project Config)
 
@@ -147,7 +151,58 @@ Common request for workflow automation. Follow discovery process:
    wt switch --create test-hooks
    ```
 
-**See `reference/project-config.md` for complete details.**
+**See `reference/hook.md` for complete details.**
+
+### Adding Hooks to Existing Config
+
+When users want to add automation to an existing project:
+
+1. **Read existing config**: `cat .config/wt.toml`
+
+2. **Determine hook type** - When should this run?
+   - Creating worktree (blocking) → `post-create`
+   - Creating worktree (background) → `post-start`
+   - Every switch → `post-switch`
+   - Before committing → `pre-commit`
+   - Before merging → `pre-merge`
+   - After merging → `post-merge`
+   - Before removal → `pre-remove`
+
+3. **Handle format conversion if needed**
+
+   Single command to named table:
+   ```toml
+   # Before
+   post-create = "npm install"
+
+   # After (adding db:migrate)
+   [post-create]
+   install = "npm install"
+   migrate = "npm run db:migrate"
+   ```
+
+4. **Preserve existing structure and comments**
+
+### Validation Before Adding Commands
+
+Before adding hooks, validate:
+
+```bash
+# Verify command exists
+which npm
+which cargo
+
+# For npm, verify script exists
+npm run lint --dry-run
+
+# For shell commands, check syntax
+bash -n -c "if [ true ]; then echo ok; fi"
+```
+
+**Dangerous patterns** — Warn users before creating hooks with:
+- Destructive commands: `rm -rf`, `DROP TABLE`
+- External dependencies: `curl http://...`
+- Privilege escalation: `sudo`
 
 ## Permission Models
 
@@ -166,20 +221,17 @@ Common request for workflow automation. Follow discovery process:
 ## Common Tasks Reference
 
 ### User Config Tasks
-- Set up LLM integration → `reference/user-config.md#llm-setup`
-- Customize worktree paths → `reference/user-config.md#worktree-paths`
-- Custom commit templates → `reference/user-config.md#templates`
-- Configure command defaults → `reference/user-config.md#command-settings`
-- Set up personal hooks → `reference/user-config.md#user-hooks`
-- Troubleshoot LLM issues → `reference/user-config.md#troubleshooting`
+- Set up LLM integration → `reference/llm-commits.md`
+- Customize worktree paths → `reference/config.md#worktree-path-template`
+- Custom commit templates → `reference/llm-commits.md#templates`
+- Configure command defaults → `reference/config.md#command-settings`
+- Set up personal hooks → `reference/config.md#user-hooks`
 
 ### Project Config Tasks
-- Set up hooks for new project → `reference/project-config.md#new-project`
-- Add hook to existing config → `reference/project-config.md#add-hook`
-- Use template variables → `reference/project-config.md#variables`
-- Convert command formats → `reference/project-config.md#formats`
-- Add dev server URL to list → `reference/project-config.md#dev-server-url`
-- Troubleshoot hook execution → `reference/project-config.md#troubleshooting`
+- Set up hooks for new project → `reference/hook.md`
+- Add hook to existing config → `reference/hook.md#configuration`
+- Use template variables → `reference/hook.md#template-variables`
+- Add dev server URL to list → `reference/config.md#dev-server-url`
 
 ## Key Commands
 
@@ -200,7 +252,7 @@ Load **reference files** for detailed configuration, hook specifications, and tr
 
 Find specific sections with grep:
 ```bash
-grep -A 20 "## LLM Setup" reference/user-config.md
-grep -A 30 "### post-create" reference/project-config.md
+grep -A 20 "## Setup" reference/llm-commits.md
+grep -A 30 "### post-create" reference/hook.md
 grep -A 20 "## Warning Messages" reference/shell-integration.md
 ```
