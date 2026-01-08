@@ -5,7 +5,10 @@ use crate::commands::Shell;
 #[derive(Subcommand)]
 pub enum ConfigShellCommand {
     /// Generate shell integration code
-    #[command(after_long_help = r#"## Manual Setup
+    #[command(
+        after_long_help = r#"Outputs shell code for `eval` or sourcing. Most users should run `wt config shell install` instead, which adds this automatically.
+
+## Manual setup
 
 Add one line to the shell config:
 
@@ -22,11 +25,8 @@ wt config shell init fish | source
 Zsh (~/.zshrc):
 ```zsh
 eval "$(wt config shell init zsh)"
-```
-
-## Auto setup
-
-Use `wt config shell install` to add to the shell config automatically."#)]
+```"#
+    )]
     Init {
         /// Shell to generate code for
         #[arg(value_enum)]
@@ -42,9 +42,12 @@ Use `wt config shell install` to add to the shell config automatically."#)]
     },
 
     /// Write shell integration to config files
-    #[command(after_long_help = r#"## Auto setup
+    #[command(
+        after_long_help = r#"Detects existing shell config files and adds the integration line.
 
-Detects existing shell config files and adds integration:
+## Examples
+
+Install for all detected shells:
 ```console
 wt config shell install
 ```
@@ -55,7 +58,8 @@ wt config shell install zsh
 ```
 
 Shows proposed changes and waits for confirmation before modifying any files.
-Use --yes to skip confirmation."#)]
+Use --yes to skip confirmation."#
+    )]
     Install {
         /// Shell to install (default: all)
         #[arg(value_enum)]
@@ -75,14 +79,17 @@ Use --yes to skip confirmation."#)]
     },
 
     /// Remove shell integration from config files
-    #[command(after_long_help = r#"## Removal
+    #[command(
+        after_long_help = r#"Removes shell integration lines from config files.
 
-Removes shell integration lines from config files:
+## Examples
+
+Uninstall from all shells:
 ```console
 wt config shell uninstall
 ```
 
-Remove from specific shell only:
+Uninstall from specific shell only:
 ```console
 wt config shell uninstall zsh
 ```
@@ -96,7 +103,8 @@ wt config shell uninstall --yes
 
 Detects various forms of the integration pattern regardless of:
 - Command prefix (wt, worktree, etc.)
-- Minor syntax variations between versions"#)]
+- Minor syntax variations between versions"#
+    )]
     Uninstall {
         /// Shell to uninstall (default: all)
         #[arg(value_enum)]
