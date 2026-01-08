@@ -113,6 +113,7 @@ termimad = "0.34.1"
 rayon-join-macro = "0.1.1"
 urlencoding = "2.1"
 regex = "1.12"
+nucleo-matcher = "0.3"
 
 [target.'cfg(unix)'.dependencies]
 skim = "0.20"
