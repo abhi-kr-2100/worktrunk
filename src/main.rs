@@ -1125,25 +1125,59 @@ fn main() {
                 expanded,
             } => handle_hook_show(hook_type.as_deref(), expanded),
             HookCommand::PostCreate { name, yes, vars } => {
-                run_hook(HookType::PostCreate, yes, name.as_deref(), &vars)
+                run_hook(HookType::PostCreate, yes, None, name.as_deref(), &vars)
             }
-            HookCommand::PostStart { name, yes, vars } => {
-                run_hook(HookType::PostStart, yes, name.as_deref(), &vars)
+            HookCommand::PostStart {
+                name,
+                yes,
+                foreground,
+                no_background,
+                vars,
+            } => {
+                if no_background {
+                    let _ = output::print(warning_message(
+                        "--no-background is deprecated; use --foreground instead",
+                    ));
+                }
+                run_hook(
+                    HookType::PostStart,
+                    yes,
+                    Some(foreground || no_background),
+                    name.as_deref(),
+                    &vars,
+                )
             }
-            HookCommand::PostSwitch { name, yes, vars } => {
-                run_hook(HookType::PostSwitch, yes, name.as_deref(), &vars)
+            HookCommand::PostSwitch {
+                name,
+                yes,
+                foreground,
+                no_background,
+                vars,
+            } => {
+                if no_background {
+                    let _ = output::print(warning_message(
+                        "--no-background is deprecated; use --foreground instead",
+                    ));
+                }
+                run_hook(
+                    HookType::PostSwitch,
+                    yes,
+                    Some(foreground || no_background),
+                    name.as_deref(),
+                    &vars,
+                )
             }
             HookCommand::PreCommit { name, yes, vars } => {
-                run_hook(HookType::PreCommit, yes, name.as_deref(), &vars)
+                run_hook(HookType::PreCommit, yes, None, name.as_deref(), &vars)
             }
             HookCommand::PreMerge { name, yes, vars } => {
-                run_hook(HookType::PreMerge, yes, name.as_deref(), &vars)
+                run_hook(HookType::PreMerge, yes, None, name.as_deref(), &vars)
             }
             HookCommand::PostMerge { name, yes, vars } => {
-                run_hook(HookType::PostMerge, yes, name.as_deref(), &vars)
+                run_hook(HookType::PostMerge, yes, None, name.as_deref(), &vars)
             }
             HookCommand::PreRemove { name, yes, vars } => {
-                run_hook(HookType::PreRemove, yes, name.as_deref(), &vars)
+                run_hook(HookType::PreRemove, yes, None, name.as_deref(), &vars)
             }
             HookCommand::Approvals { action } => match action {
                 ApprovalsCommand::Add { all } => add_approvals(all),
@@ -1366,13 +1400,22 @@ fn main() {
             branches,
             delete_branch,
             force_delete,
-            background,
+            foreground,
+            no_background,
             verify,
             yes,
             force,
         } => WorktrunkConfig::load()
             .context("Failed to load config")
             .and_then(|config| {
+                // Handle deprecated --no-background flag
+                if no_background {
+                    output::print(warning_message(
+                        "--no-background is deprecated; use --foreground instead",
+                    ))?;
+                }
+                let background = !(foreground || no_background);
+
                 // Validate conflicting flags
                 if !delete_branch && force_delete {
                     return Err(worktrunk::git::GitError::Other {

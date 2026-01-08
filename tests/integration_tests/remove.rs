@@ -387,11 +387,26 @@ fn test_remove_foreground(mut repo: TestRepo) {
     // Create a worktree
     let _worktree_path = repo.add_worktree("feature-fg");
 
-    // Remove it with --no-background flag from main repo
+    // Remove it with --foreground flag from main repo
     assert_cmd_snapshot!(make_snapshot_cmd(
         &repo,
         "remove",
-        &["--no-background", "feature-fg"],
+        &["--foreground", "feature-fg"],
+        None
+    ));
+}
+
+/// Tests deprecated --no-background flag shows warning but still works
+#[rstest]
+fn test_remove_no_background_deprecated(mut repo: TestRepo) {
+    // Create a worktree
+    let _worktree_path = repo.add_worktree("feature-deprecated");
+
+    // Remove it with deprecated --no-background flag from main repo
+    assert_cmd_snapshot!(make_snapshot_cmd(
+        &repo,
+        "remove",
+        &["--no-background", "feature-deprecated"],
         None
     ));
 }
@@ -414,12 +429,12 @@ fn test_remove_foreground_unmerged(mut repo: TestRepo) {
         .output()
         .unwrap();
 
-    // Remove it with --no-background flag from main repo
+    // Remove it with --foreground flag from main repo
     // Branch deletion should fail but worktree removal should succeed
     assert_cmd_snapshot!(make_snapshot_cmd(
         &repo,
         "remove",
-        &["--no-background", "feature-unmerged-fg"],
+        &["--foreground", "feature-unmerged-fg"],
         None
     ));
 }
@@ -431,11 +446,11 @@ fn test_remove_foreground_no_delete_branch(mut repo: TestRepo) {
     // Create a worktree (integrated - same commit as main)
     let _worktree_path = repo.add_worktree("feature-fg-keep");
 
-    // Remove with both --no-background and --no-delete-branch
+    // Remove with both --foreground and --no-delete-branch
     assert_cmd_snapshot!(make_snapshot_cmd(
         &repo,
         "remove",
-        &["--no-background", "--no-delete-branch", "feature-fg-keep"],
+        &["--foreground", "--no-delete-branch", "feature-fg-keep"],
         None
     ));
 }
@@ -466,7 +481,7 @@ fn test_remove_foreground_no_delete_branch_unmerged(mut repo: TestRepo) {
         .output()
         .unwrap();
 
-    // Remove with both --no-background and --no-delete-branch
+    // Remove with both --foreground and --no-delete-branch
     // No hint because:
     // - Branch is unmerged (wouldn't be deleted anyway)
     // - --no-delete-branch had no effect
@@ -474,7 +489,7 @@ fn test_remove_foreground_no_delete_branch_unmerged(mut repo: TestRepo) {
         &repo,
         "remove",
         &[
-            "--no-background",
+            "--foreground",
             "--no-delete-branch",
             "feature-fg-unmerged-keep",
         ],
@@ -657,7 +672,7 @@ fn test_remove_foreground_detached_head(mut repo: TestRepo) {
     assert_cmd_snapshot!(make_snapshot_cmd(
         &repo,
         "remove",
-        &["--no-background"],
+        &["--foreground"],
         Some(&worktree_path)
     ));
 }
@@ -783,10 +798,10 @@ fn test_remove_main_worktree_vs_linked_worktree(mut repo: TestRepo) {
     let linked_wt_path = repo.add_worktree("feature");
 
     // Part 1: Verify linked worktree CAN be removed (from within it)
-    // Use --no-background to ensure removal completes before creating next worktree
+    // Use --foreground to ensure removal completes before creating next worktree
     assert_cmd_snapshot!(
         "remove_main_vs_linked__from_linked_succeeds",
-        make_snapshot_cmd(&repo, "remove", &["--no-background"], Some(&linked_wt_path))
+        make_snapshot_cmd(&repo, "remove", &["--foreground"], Some(&linked_wt_path))
     );
 
     // Part 2: Recreate the linked worktree for the next test
@@ -843,7 +858,7 @@ fn test_remove_default_branch_no_tautology() {
     let settings = setup_temp_snapshot_settings(test.temp_path());
     settings.bind(|| {
         let mut cmd = test.wt_command();
-        cmd.args(["remove", "--no-background", "main"])
+        cmd.args(["remove", "--foreground", "main"])
             .current_dir(&feature_worktree);
 
         assert_cmd_snapshot!("remove_default_branch_no_tautology", cmd);
@@ -974,11 +989,11 @@ approved-commands = ["echo 'About to remove worktree'"]
     // Create a worktree to remove
     let _worktree_path = repo.add_worktree("feature-hook");
 
-    // Remove with --no-background to ensure synchronous execution
+    // Remove with --foreground to ensure synchronous execution
     assert_cmd_snapshot!(make_snapshot_cmd(
         &repo,
         "remove",
-        &["--no-background", "feature-hook"],
+        &["--foreground", "feature-hook"],
         None
     ));
 }
@@ -1009,11 +1024,11 @@ approved-commands = [
     // Create a worktree to remove
     let _worktree_path = repo.add_worktree("feature-templates");
 
-    // Remove with --no-background
+    // Remove with --foreground
     assert_cmd_snapshot!(make_snapshot_cmd(
         &repo,
         "remove",
-        &["--no-background", "feature-templates"],
+        &["--foreground", "feature-templates"],
         None
     ));
 }
@@ -1083,7 +1098,7 @@ approved-commands = ["exit 1"]
     assert_cmd_snapshot!(make_snapshot_cmd(
         &repo,
         "remove",
-        &["--no-background", "feature-fail"],
+        &["--foreground", "feature-fail"],
         None
     ));
 
@@ -1168,7 +1183,7 @@ approved-commands = ["echo 'hook ran' > {}"]
     assert_cmd_snapshot!(make_snapshot_cmd(
         &repo,
         "remove",
-        &["--no-background", "--no-verify", "feature-skip"],
+        &["--foreground", "--no-verify", "feature-skip"],
         None
     ));
 
@@ -1221,11 +1236,11 @@ approved-commands = ["touch {marker_path}"]
     let worktree_path = repo.add_worktree("feature-detached-hook");
     repo.detach_head_in_worktree("feature-detached-hook");
 
-    // Remove with --no-background to ensure synchronous execution
+    // Remove with --foreground to ensure synchronous execution
     assert_cmd_snapshot!(make_snapshot_cmd(
         &repo,
         "remove",
-        &["--no-background"],
+        &["--foreground"],
         Some(&worktree_path)
     ));
 
@@ -1314,7 +1329,7 @@ approved-commands = ["echo 'branch={{{{ branch }}}}' > {branch_path}"]
 
     // Run wt remove (not a snapshot test - just verify behavior)
     let output = wt_command()
-        .args(["remove", "--no-background"])
+        .args(["remove", "--foreground"])
         .current_dir(&worktree_path)
         .env("WORKTRUNK_CONFIG_PATH", repo.test_config_path())
         .output()
@@ -1388,7 +1403,7 @@ fn test_remove_path_mismatch_warning_foreground(repo: TestRepo) {
     assert_cmd_snapshot!(make_snapshot_cmd(
         &repo,
         "remove",
-        &["--no-background", "feature-fg"],
+        &["--foreground", "feature-fg"],
         None
     ));
 }

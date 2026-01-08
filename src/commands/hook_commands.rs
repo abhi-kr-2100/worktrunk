@@ -38,9 +38,16 @@ use super::project_config::collect_commands_for_hooks;
 ///
 /// Custom variables from `--var KEY=VALUE` are merged into the template context,
 /// allowing hooks to be tested with different values without being in that context.
+///
+/// The `foreground` parameter controls execution mode for hooks that normally run
+/// in background (post-start, post-switch):
+/// - `None` = use default behavior for this hook type
+/// - `Some(true)` = run in foreground (for debugging)
+/// - `Some(false)` = run in background (default for post-start/post-switch)
 pub fn run_hook(
     hook_type: HookType,
     yes: bool,
+    foreground: Option<bool>,
     name_filter: Option<&str>,
     custom_vars: &[(String, String)],
 ) -> anyhow::Result<()> {
@@ -112,42 +119,82 @@ pub fn run_hook(
             )
         }
         HookType::PostStart => {
-            // post-start hooks spawn in background (matching their normal behavior during switch)
             let user_config = user_hook!(post_start);
             let project_config = project_config
                 .as_ref()
                 .and_then(|c| c.hooks.post_start.as_ref());
             require_hooks(user_config, project_config, hook_type)?;
-            let commands = prepare_hook_commands(
-                &ctx,
-                user_config,
-                project_config,
-                hook_type,
-                &custom_vars_refs,
-                name_filter,
-                None,
-            )?;
-            check_name_filter_matched(name_filter, commands.len(), user_config, project_config)?;
-            spawn_hook_commands_background(&ctx, commands, hook_type)
+
+            // Default to background (matching normal behavior during switch)
+            // Use --foreground to run in foreground for debugging
+            if !foreground.unwrap_or(false) {
+                let commands = prepare_hook_commands(
+                    &ctx,
+                    user_config,
+                    project_config,
+                    hook_type,
+                    &custom_vars_refs,
+                    name_filter,
+                    None,
+                )?;
+                check_name_filter_matched(
+                    name_filter,
+                    commands.len(),
+                    user_config,
+                    project_config,
+                )?;
+                spawn_hook_commands_background(&ctx, commands, hook_type)
+            } else {
+                run_hook_with_filter(
+                    &ctx,
+                    user_config,
+                    project_config,
+                    hook_type,
+                    &custom_vars_refs,
+                    HookFailureStrategy::Warn,
+                    name_filter,
+                    crate::output::pre_hook_display_path(ctx.worktree_path),
+                )
+            }
         }
         HookType::PostSwitch => {
-            // post-switch hooks spawn in background (matching their normal behavior during switch)
             let user_config = user_hook!(post_switch);
             let project_config = project_config
                 .as_ref()
                 .and_then(|c| c.hooks.post_switch.as_ref());
             require_hooks(user_config, project_config, hook_type)?;
-            let commands = prepare_hook_commands(
-                &ctx,
-                user_config,
-                project_config,
-                hook_type,
-                &custom_vars_refs,
-                name_filter,
-                None,
-            )?;
-            check_name_filter_matched(name_filter, commands.len(), user_config, project_config)?;
-            spawn_hook_commands_background(&ctx, commands, hook_type)
+
+            // Default to background (matching normal behavior during switch)
+            // Use --foreground to run in foreground for debugging
+            if !foreground.unwrap_or(false) {
+                let commands = prepare_hook_commands(
+                    &ctx,
+                    user_config,
+                    project_config,
+                    hook_type,
+                    &custom_vars_refs,
+                    name_filter,
+                    None,
+                )?;
+                check_name_filter_matched(
+                    name_filter,
+                    commands.len(),
+                    user_config,
+                    project_config,
+                )?;
+                spawn_hook_commands_background(&ctx, commands, hook_type)
+            } else {
+                run_hook_with_filter(
+                    &ctx,
+                    user_config,
+                    project_config,
+                    hook_type,
+                    &custom_vars_refs,
+                    HookFailureStrategy::Warn,
+                    name_filter,
+                    crate::output::pre_hook_display_path(ctx.worktree_path),
+                )
+            }
         }
         HookType::PreCommit => {
             let user_config = user_hook!(pre_commit);
